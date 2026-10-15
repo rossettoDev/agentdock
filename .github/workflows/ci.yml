@@ -101,7 +101,10 @@ jobs:
       - name: Run PHPUnit tests
         env:
           SIMPLETEST_DB: pgsql://postgres@localhost/drupal11
-          SIMPLETEST_BASE_URL: http://localhost
+          SIMPLETEST_BASE_URL: http://localhost:8080
         run: |
           mkdir -p web/sites/simpletest/browser_output
-          php vendor/bin/phpunit --testsuite=unit
+          chmod 777 web/sites/simpletest/browser_output
+          php -S localhost:8080 -t web &
+          sleep 2
+          php vendor/bin/phpunit

@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-15  
-**Marco atual:** M1 — US-06/T02 concluída; US-06/T03 segue todo. US-07 permanece done.
+**Marco atual:** M1 — US-06 concluída. US-08 segue todo. US-07 permanece done.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -882,7 +882,7 @@ PHPStan: exit 0
 
 ## US-06 — Gerenciar workspace pela interface
 
-**Status:** in_progress  
+**Status:** done  
 **Dependências:** US-05 ✅  
 **Objetivo:** Administrar o workspace pela interface, sem abrir o escopo por um parâmetro de URL.
 
@@ -960,7 +960,41 @@ PHPStan: exit 0
 
 **Bloqueios:** nenhum nesta task.
 
-**Próxima ação:** US-06/T03.
+**Próxima ação:** —
+
+#### US-06/T03 — Testar revogação de associação
+
+**Status:** done  
+**Entrega:** Revogar um membro invalida o cache da lista dele e a próxima leitura apaga o workspace selecionado na sessão. A requisição seguinte não reaproveita o acesso antigo.
+
+**Contrato:**
+- `MembershipManager::remove()` continua sendo a revogação. A gravação dispara a tag `ab_membership_list:{uid}`
+- uma entrada de render cache com essa tag e a mesma chave deixa de ser servida depois da revogação
+- a sessão pode ainda guardar o UUID. A leitura seguinte de `WorkspaceContext::workspace()` não devolve o workspace e remove a chave
+- a requisição HTTP seguinte, na mesma sessão, responde 404 para `/workspaces/{uuid}` e a listagem não mostra o workspace
+- o owner continua com acesso
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit web/modules/custom/ab_core/tests web/modules/custom/ab_ui/tests
+OK (67 tests, 766 assertions)
+```
+
+`MembershipRevocationCacheKernelTest` grava "Casa Ada" no render cache, confirma o hit e, depois da revogação, recebe o conteúdo novo. A sessão que ainda apontava para o UUID fica vazia. `WorkspaceRevocationCacheTest` mantém o browser do membro, revoga no mesmo processo e a requisição seguinte não mostra o workspace. As deprecações do PHPUnit são o aviso de metadata `@group`.
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice \
+    --extensions=php,yml web/modules/custom/ab_core web/modules/custom/ab_ui
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse
+PHPStan: exit 0
+```
+
+**Bloqueios:** nenhum nesta task.
+
+**Próxima ação:** US-08/T01.
 
 ---
 
@@ -1075,7 +1109,7 @@ $ lando php vendor/bin/phpstan analyse
 PHPStan: exit 0
 ```
 
-**Bloqueios:** nenhum nesta task. US-08 depende de US-06, que segue todo.
+**Bloqueios:** nenhum nesta task. US-08 depende de US-06, agora concluída.
 
 **Próxima ação:** —
 
@@ -1085,15 +1119,15 @@ PHPStan: exit 0
 
 - **Total de tasks:** 83 (conforme backlog)
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
-- **M1:** US-04 done; US-05 done; US-06 in_progress (T01 e T02 done)
-- **M2:** US-07 done; US-08 em diante seguem todo e US-08 depende de US-06
+- **M1:** US-04 done; US-05 done; US-06 done
+- **M2:** US-07 done; US-08 em diante seguem todo
 
 ---
 
 ## Próximos Passos
 
-1. US-06/T03 — revogação, cache e sessão de contexto. US-08 espera US-06
-2. US-06 continua a dependência de interface das próximas mutações de board
+1. US-08/T01 — entidade e serviço de board, com workspace obrigatório e eventos
+2. US-08/T02 — listagem e formulários no escopo do workspace
 
 ---
 

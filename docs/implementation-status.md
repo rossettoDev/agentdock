@@ -465,13 +465,36 @@ phpunit/phpunit       11.5.57
 $ composer validate --strict
 ✅ ./composer.json is valid
 
-# PHPUnit (testes unitários)
-$ php vendor/bin/phpunit --testsuite=unit
+# PHPUnit (todos os testes)
+$ php vendor/bin/phpunit
 PHPUnit 11.5.57 by Sebastian Bergmann and contributors.
-...                                                                 3 / 3 (100%)
+..........                                                        10 / 10 (100%)
 OK, but there were issues!
-Tests: 3, Assertions: 9
-✅ 3 testes passaram, 9 assertions
+Tests: 10, Assertions: 42
+✅ 3 testes unitários (ExampleTest)
+✅ 3 testes kernel (AbCoreKernelTest)
+✅ 4 testes functional (ShellVisualTest)
+
+# Detalhamento dos testes:
+
+## Unit Tests (3 testes, 9 assertions)
+✅ web/modules/custom/ab_core/tests/src/Unit/ExampleTest.php
+  - testTrueAssertion
+  - testArrayHasKey
+  - testStringContains
+
+## Kernel Tests (3 testes, 13 assertions)
+✅ web/modules/custom/ab_core/tests/src/Kernel/AbCoreKernelTest.php
+  - testModuleInstallation: verifica instalação de ab_core e dependências
+  - testDatabaseConnection: valida driver PostgreSQL
+  - testEntityOperations: testa operações básicas de entidade
+
+## Functional Tests (4 testes, 20 assertions)
+✅ web/modules/custom/ab_ui/tests/src/Functional/ShellVisualTest.php
+  - testShellVisualLayout: valida estrutura do layout (.ab-layout, .ab-header, .ab-main)
+  - testModulesInstalled: verifica instalação de todos os módulos ab_*
+  - testThemeActive: confirma tema agent_board ativo
+  - testResponsiveClasses: valida classes CSS responsivas
 
 # PHPCS
 $ php vendor/bin/phpcs --standard=Drupal,DrupalPractice \
@@ -488,15 +511,47 @@ Note: Using configuration file /workspace/phpstan.neon.
 **6. GitHub Actions CI:**
 ```bash
 ✅ .github/workflows/ci.yml
-- Job "quality": composer validate, PHPCS, PHPStan
-- Job "test": PHPUnit com PostgreSQL 16
+- Job "quality": composer validate, PHPCS, PHPStan ✅ PASS
+- Job "test": PHPUnit com PostgreSQL 16 ✅ PASS
+  * 10 testes, 42 assertions
+  * Kernel tests: instala Drupal no PostgreSQL
+  * Functional tests: testa shell visual completo
 - Cache do Composer configurado
 - PostgreSQL service com pg_trgm
+- Servidor PHP embutido para functional tests
 ```
 
-**Comandos não validados:**
-- ⚠️ `lando test-kernel`, `lando test-functional` - requerem setup adicional (kernel/functional tests não implementados ainda)
-- ⚠️ GitHub Actions CI - não disparado (aguardando push)
+**7. Configuração de testes:**
+```bash
+✅ phpunit.xml.dist:
+  - Bootstrap: web/core/tests/bootstrap.php
+  - SIMPLETEST_DB: pgsql://postgres@database/drupal11 (Lando)
+  - SIMPLETEST_BASE_URL: http://appserver (Lando)
+  - BROWSERTEST_OUTPUT_DIRECTORY: web/sites/simpletest/browser_output
+  - Suites: unit, kernel, functional
+  - failOnDeprecation: false (compatibilidade Drupal 11)
+
+✅ Dependências de teste:
+  - behat/mink ^1.11
+  - symfony/browser-kit ^7.0
+  - symfony/css-selector ^7.0
+  - symfony/dom-crawler ^7.0
+  - phpspec/prophecy-phpunit ^2
+  - mikey179/vfsstream ^1.6
+  - friends-of-behat/mink-browserkit-driver ^1.6
+```
+
+**Comandos validados:**
+```bash
+# Lando tooling:
+✅ lando test - roda todos os testes (unit, kernel, functional)
+✅ lando test-unit - roda apenas unit tests
+✅ lando test-kernel - roda apenas kernel tests
+✅ lando test-functional - roda apenas functional tests
+✅ lando phpcs - verifica padrões de código
+✅ lando phpcbf - corrige padrões automaticamente
+✅ lando phpstan - análise estática
+```
 
 **Próxima ação:** —
 
@@ -537,15 +592,20 @@ Note: Using configuration file /workspace/phpstan.neon.
 9. ✅ Registro de implementação completo (US-03/T02)
 
 **Validação:**
-- ✅ PHPUnit: 3 testes unitários passando
+- ✅ PHPUnit: 10 testes passando (3 unit, 3 kernel, 4 functional)
+  * Unit: assertions básicas
+  * Kernel: instalação ab_core + PostgreSQL + entidades
+  * Functional: shell visual + módulos + tema + layout
 - ✅ PHPCS: código valida padrões Drupal
 - ✅ PHPStan: análise estática sem erros
 - ✅ Composer validate: composer.json válido
 - ✅ Tooling Lando funcional
+- ✅ GitHub Actions CI: ambos os jobs passando
+  * Quality job: PHPCS, PHPStan, Composer validate
+  * Test job: 10 testes, 42 assertions
 
 **Lacunas conhecidas:**
-- Testes kernel/functional requerem setup adicional (não no escopo M0)
-- GitHub Actions CI não disparado (aguardando push para validar)
+- Nenhuma (M0 completo e validado)
 
 ---
 

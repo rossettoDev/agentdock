@@ -63,3 +63,11 @@
 /drush
 /drupal.phar
 /drupal
+
+# AgentDock specific
+.env
+web/sites/default/settings.local.php
+web/sites/default/settings.php
+
+# Lando
+.lando.local.yml

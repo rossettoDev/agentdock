@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-15  
-**Marco atual:** M1 — US-04/T02 concluída; US-04/T03 segue todo. US-07 permanece done.
+**Marco atual:** M1 — US-04 concluída; US-05 segue todo. US-07 permanece done.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -611,7 +611,7 @@ Note: Using configuration file /workspace/phpstan.neon.
 
 ## US-04 — Persistir workspaces e membros
 
-**Status:** in_progress  
+**Status:** done  
 **Dependências:** US-02 ✅, US-03 ✅  
 **Objetivo:** Persistir a área de trabalho de um usuário.
 
@@ -713,7 +713,55 @@ PHPStan: exit 0
 
 **Bloqueios:** nenhum nesta task. Não há tela nem autorização.
 
-**Próxima ação:** US-04/T03.
+**Próxima ação:** —
+
+#### US-04/T03 — Criar workspace pessoal
+
+**Status:** done  
+**Entrega:** `PersonalWorkspaceProvisioner::provision()` cria o workspace pessoal e a membership `owner` na mesma transação.
+
+**Contrato:**
+- o campo `personal` distingue o workspace pessoal. O índice parcial `ab_workspace__personal_owner__key` garante um único `personal = 1` por `owner`
+- nome `Pessoal`, timezone `America/Sao_Paulo`, status `active`, papel `owner`
+- a repetição devolve o mesmo workspace e não cria outra membership
+- um workspace comum do mesmo owner não é reaproveitado
+- se a membership falha, o rollback desfaz o workspace
+- o serviço é dono da transação. Não grava evento: a mutação de domínio com outbox começa nas histórias de M2
+
+**Evidências:**
+```bash
+$ lando drush updatedb -y
+> [notice] Update started: ab_core_update_11003
+> [notice] Installed the personal workspace field. Installed the personal owner index.
+> [notice] Update completed: ab_core_update_11003
+
+$ lando drush ev "echo \Drupal::keyValue('system.schema')->get('ab_core');"
+11003
+
+$ lando drush sql:query "SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'ab_workspace' AND indexname LIKE '%personal_owner%'"
+ab_workspace__personal_owner__key  UNIQUE (owner) WHERE (personal = 1)
+```
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit web/modules/custom/ab_core/tests
+OK (26 tests, 222 assertions)
+```
+
+`PersonalWorkspaceProvisionerKernelTest` cobre a criação, a repetição, usuários distintos, workspace comum, a rejeição do segundo pessoal no banco, o rollback quando a membership falha, o anônimo e o update idempotente. As deprecações do PHPUnit são o aviso de metadata `@group`.
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice \
+    --extensions=php,install,yml web/modules/custom/ab_core
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse
+PHPStan: exit 0
+```
+
+**Bloqueios:** nenhum nesta task. Autorização continua na US-05. Não há tela.
+
+**Próxima ação:** US-05/T01.
 
 ---
 
@@ -838,15 +886,15 @@ PHPStan: exit 0
 
 - **Total de tasks:** 83 (conforme backlog)
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
-- **M1:** US-04 in_progress (T01 e T02 done); US-05 e US-06 seguem todo
+- **M1:** US-04 done; US-05 e US-06 seguem todo
 - **M2:** US-07 done; US-08 em diante seguem todo e US-08 depende de US-06
 
 ---
 
 ## Próximos Passos
 
-1. US-04/T03 — provisionar workspace pessoal. US-08 espera US-06
-2. M1 (US-04 a US-06) continua a dependência de autorização das próximas mutações
+1. US-05/T01 — ActorContext humano e a matriz de papéis. US-08 espera US-06
+2. US-06 continua a dependência de interface das próximas mutações de board
 
 ---
 

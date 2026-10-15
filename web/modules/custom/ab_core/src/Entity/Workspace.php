@@ -29,6 +29,9 @@ use Drupal\user\EntityOwnerTrait;
     'label' => 'name',
     'owner' => 'owner',
   ],
+  handlers: [
+    'storage_schema' => 'Drupal\ab_core\WorkspaceStorageSchema',
+  ],
   base_table: 'ab_workspace',
 )]
 class Workspace extends ContentEntityBase implements EntityOwnerInterface {
@@ -63,6 +66,11 @@ class Workspace extends ContentEntityBase implements EntityOwnerInterface {
       ->addPropertyConstraints('value', [
         'AbWorkspaceTimezone' => [],
       ]);
+
+    $fields['personal'] = BaseFieldDefinition::create('boolean')
+      ->setLabel(new TranslatableMarkup('Personal'))
+      ->setDescription(new TranslatableMarkup('Marks the one personal workspace of its owner.'))
+      ->setDefaultValue(FALSE);
 
     $fields['status'] = BaseFieldDefinition::create('list_string')
       ->setLabel(new TranslatableMarkup('Status'))

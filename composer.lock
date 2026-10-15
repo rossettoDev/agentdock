@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a1055c9e38d257c9125eddb818a0d754",
+    "content-hash": "1b7fd1ce88eb9ea3c89d02ac1616cc4b",
     "packages": [
         {
             "name": "asm89/stack-cors",
@@ -7020,6 +7020,69 @@
                 "source": "https://www.drupal.org/project/coder"
             },
             "time": "2026-06-21T08:51:40+00:00"
+        },
+        {
+            "name": "friends-of-behat/mink-browserkit-driver",
+            "version": "v1.6.3",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/FriendsOfBehat/MinkBrowserKitDriver.git",
+                "reference": "2a47704e2fb4a1701fc5779b45148f3a7ec6ec2d"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/FriendsOfBehat/MinkBrowserKitDriver/zipball/2a47704e2fb4a1701fc5779b45148f3a7ec6ec2d",
+                "reference": "2a47704e2fb4a1701fc5779b45148f3a7ec6ec2d",
+                "shasum": ""
+            },
+            "require": {
+                "behat/mink": "^1.7",
+                "php": "^7.4|^8.0",
+                "symfony/browser-kit": "^4.4|^5.0|^6.0|^7.0|^8.0",
+                "symfony/dom-crawler": "^4.4|^5.0|^6.0|^7.0|^8.0"
+            },
+            "replace": {
+                "behat/mink-browserkit-driver": "self.version"
+            },
+            "require-dev": {
+                "friends-of-behat/mink-driver-testsuite": "dev-master",
+                "symfony/http-kernel": "^4.4|^5.0|^6.0|^7.0|^8.0"
+            },
+            "type": "mink-driver",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.3.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Behat\\Mink\\Driver\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Konstantin Kudryashov",
+                    "email": "ever.zet@gmail.com",
+                    "homepage": "http://everzet.com"
+                }
+            ],
+            "description": "Symfony2 BrowserKit driver for Mink framework",
+            "homepage": "http://mink.behat.org/",
+            "keywords": [
+                "Mink",
+                "Symfony2",
+                "browser",
+                "testing"
+            ],
+            "support": {
+                "source": "https://github.com/FriendsOfBehat/MinkBrowserKitDriver/tree/v1.6.3"
+            },
+            "abandoned": "behat/mink-browserkit-driver",
+            "time": "2026-03-23T09:38:29+00:00"
         },
         {
             "name": "mglaman/phpstan-drupal",

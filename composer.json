@@ -104,6 +104,7 @@
     "require-dev": {
         "behat/mink": "^1.11",
         "drupal/coder": "^9.0",
+        "friends-of-behat/mink-browserkit-driver": "^1.6",
         "mglaman/phpstan-drupal": "^2.2",
         "mikey179/vfsstream": "^1.6",
         "phpspec/prophecy-phpunit": "^2",

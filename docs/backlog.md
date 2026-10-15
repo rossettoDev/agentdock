@@ -165,7 +165,7 @@ Como owner, quero que meus dados fiquem isolados.
 
 ### US-05/T02 — Aplicar escopo a consultas e cache
 
-- [ ] **Entrega:** Access handlers, checks, repositórios com escopo e cache contexts/tags; referências cruzadas inválidas.
+- [x] **Entrega:** Access handlers, checks, repositórios com escopo e cache contexts/tags; referências cruzadas inválidas.
 - **Aceite:** Dois usuários não veem dados alheios em listagens, contagens e cache.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

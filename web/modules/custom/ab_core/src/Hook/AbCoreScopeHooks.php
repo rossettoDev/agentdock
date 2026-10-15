@@ -51,7 +51,12 @@ final class AbCoreScopeHooks {
     if ($uid === '') {
       return;
     }
-    $this->cacheTagsInvalidator->invalidateTags(['ab_membership_list:' . $uid]);
+    $tags = ['ab_membership_list:' . $uid];
+    $workspace_id = $entity->get('workspace')->getString();
+    if ($workspace_id !== '') {
+      $tags[] = 'ab_workspace_members:' . $workspace_id;
+    }
+    $this->cacheTagsInvalidator->invalidateTags($tags);
   }
 
 }

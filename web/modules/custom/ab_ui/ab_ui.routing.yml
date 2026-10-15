@@ -22,3 +22,12 @@ ab_ui.workspace_view:
   requirements:
     _user_is_logged_in: 'TRUE'
     uuid: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+
+ab_ui.workspace_members:
+  path: '/workspaces/{uuid}/members'
+  defaults:
+    _controller: '\Drupal\ab_ui\Controller\WorkspaceController::members'
+    _title: 'Membros'
+  requirements:
+    _user_is_logged_in: 'TRUE'
+    uuid: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'

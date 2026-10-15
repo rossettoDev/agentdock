@@ -189,7 +189,7 @@ Como owner, quero administrar colaboradores existentes.
 
 ### US-06/T02 — Gerenciar memberships e ownership
 
-- [ ] **Entrega:** Adicionar usuários cadastrados, alterar papel/remover, transferir ownership; impedir perda do último owner.
+- [x] **Entrega:** Adicionar usuários cadastrados, alterar papel/remover, transferir ownership; impedir perda do último owner.
 - **Aceite:** Admin não promove a owner nem remove owner; transferência é transacional.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

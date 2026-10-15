@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\ab_core;
 
 use Drupal\ab_core\Authorization\MembershipScope;
-use Drupal\ab_core\Authorization\ScopedOperationDeniedException;
 use Drupal\ab_core\Authorization\ScopedResourceNotFoundException;
 use Drupal\ab_core\Authorization\WorkspacePermission;
 use Drupal\ab_core\Entity\Membership;
@@ -23,6 +22,7 @@ final class MembershipRepository {
     private readonly EntityTypeManagerInterface $entityTypeManager,
     private readonly MembershipScope $scope,
     private readonly UuidLookup $uuidLookup,
+    private readonly MembershipManager $membershipManager,
   ) {}
 
   /**
@@ -54,18 +54,7 @@ final class MembershipRepository {
       throw new ScopedResourceNotFoundException('Membership was not found.');
     }
     [$membership, $workspace] = $loaded;
-    $account = $this->currentUser->getAccount();
-    $can_manage = $this->scope->allows(
-      $account,
-      $workspace,
-      WorkspacePermission::MANAGE_MEMBERS,
-    );
-    if (!$can_manage) {
-      throw new ScopedOperationDeniedException('Membership cannot be changed.');
-    }
-    $membership->set('role', $role);
-    $membership->save();
-    return $membership;
+    return $this->membershipManager->changeRole($workspace, $membership->uuid(), $role);
   }
 
   /**

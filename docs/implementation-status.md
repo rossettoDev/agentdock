@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-15  
-**Marco atual:** M1 — US-06/T01 concluída; US-06/T02 segue todo. US-07 permanece done.
+**Marco atual:** M1 — US-06/T02 concluída; US-06/T03 segue todo. US-07 permanece done.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -921,7 +921,46 @@ PHPStan: exit 0
 
 **Bloqueios:** nenhum nesta task.
 
-**Próxima ação:** US-06/T02.
+**Próxima ação:** —
+
+#### US-06/T02 — Gerenciar memberships e ownership
+
+**Status:** done  
+**Entrega:** O owner adiciona um usuário já cadastrado, muda o papel e revoga a membership. A transferência troca o owner e rebaixa o anterior na mesma transação. O workspace não fica sem owner.
+
+**Contrato:**
+- `MembershipManager` é o caminho de escrita. O papel `owner` não entra no formulário de adição nem na troca de papel
+- admin com `membership.manage` altera e revoga membros que não são owner. Não promove a owner e não remove o owner
+- `transferOwnership()` exige `membership.transfer`. Grava a nova membership owner, rebaixa a anterior para `admin` e atualiza `ab_workspace.owner` na mesma transação. Uma falha desfaz as três escritas
+- o workspace pessoal não é transferido
+- remover grava `status = revoked`. Incluir de novo o mesmo usuário reativa a linha, por causa da unicidade workspace/usuário
+- `/workspaces/{uuid}/members` responde 404 fora do escopo e não muda o workspace selecionado na sessão
+- a lista de membros usa a tag `ab_workspace_members:{id}`, invalidada ao gravar a membership
+- a prova de que a requisição seguinte não reaproveita cache ou sessão depois da revogação continua na US-06/T03
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit web/modules/custom/ab_core/tests web/modules/custom/ab_ui/tests
+OK (64 tests, 705 assertions)
+```
+
+`MembershipManagerKernelTest` cobre a recusa do admin, a transferência com um único owner, o rollback, o workspace pessoal e o membro sem permissão de administrar. `WorkspaceMembersUiTest` cobre a tela, a ausência do papel owner para o admin, o 404 e a transferência. As deprecações do PHPUnit são o aviso de metadata `@group`.
+
+Na tela local, a conta `ada` abriu os membros de Casa Ada, adicionou e removeu `grace`, e o UUID de Casa Grace respondeu 404 sem trocar o workspace selecionado.
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice \
+    --extensions=php,yml web/modules/custom/ab_core web/modules/custom/ab_ui
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse
+PHPStan: exit 0
+```
+
+**Bloqueios:** nenhum nesta task.
+
+**Próxima ação:** US-06/T03.
 
 ---
 
@@ -1046,14 +1085,14 @@ PHPStan: exit 0
 
 - **Total de tasks:** 83 (conforme backlog)
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
-- **M1:** US-04 done; US-05 done; US-06 in_progress (T01 done)
+- **M1:** US-04 done; US-05 done; US-06 in_progress (T01 e T02 done)
 - **M2:** US-07 done; US-08 em diante seguem todo e US-08 depende de US-06
 
 ---
 
 ## Próximos Passos
 
-1. US-06/T02 — membros, papéis e transferência de ownership. US-08 espera US-06
+1. US-06/T03 — revogação, cache e sessão de contexto. US-08 espera US-06
 2. US-06 continua a dependência de interface das próximas mutações de board
 
 ---

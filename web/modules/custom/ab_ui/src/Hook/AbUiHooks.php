@@ -39,6 +39,11 @@ final class AbUiHooks {
           'select_form' => NULL,
         ],
       ],
+      'ab_ui_member_list' => [
+        'variables' => [
+          'items' => [],
+        ],
+      ],
     ];
   }
 

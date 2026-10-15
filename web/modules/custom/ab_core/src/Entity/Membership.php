@@ -57,6 +57,7 @@ class Membership extends ContentEntityBase {
       ->setLabel(new TranslatableMarkup('User'))
       ->setRequired(TRUE)
       ->setSetting('target_type', 'user')
+      ->setSetting('handler', 'ab_membership')
       ->addPropertyConstraints('target_id', [
         'AbMembershipReference' => [],
       ]);

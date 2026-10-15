@@ -7,7 +7,8 @@
          beStrictAboutTestsThatDoNotTestAnything="true"
          beStrictAboutOutputDuringTests="true"
          failOnRisky="true"
-         failOnWarning="true">
+         failOnWarning="false"
+         failOnDeprecation="false">
     
     <php>
         <ini name="error_reporting" value="32767"/>

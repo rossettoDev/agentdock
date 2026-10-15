@@ -1,0 +1,9 @@
+name: agentdock
+recipe: drupal11
+config:
+  php: '8.3'
+  composer_version: '2-latest'
+  via: apache:2.4
+  webroot: web
+  database: postgres:17
+  drush: ^13

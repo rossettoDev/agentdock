@@ -203,7 +203,7 @@ Como owner, quero administrar colaboradores existentes.
 
 Como sistema, quero registrar alterações sem perder consistência.
 
-**Dependências:** US-05. **Status:** in_progress.
+**Dependências:** US-05. **Status:** done.
 
 ### US-07/T01 — Criar schema de eventos e outbox
 
@@ -219,7 +219,7 @@ Como sistema, quero registrar alterações sem perder consistência.
 
 ### US-07/T03 — Criar testes de rollback e concorrência
 
-- [ ] **Entrega:** Usar conexões independentes para ordenação e validar ausência de eventos não confirmados.
+- [x] **Entrega:** Usar conexões independentes para ordenação e validar ausência de eventos não confirmados.
 - **Aceite:** Nenhum evento de transação revertida aparece no fluxo.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

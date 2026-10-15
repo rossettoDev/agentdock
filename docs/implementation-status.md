@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-15  
-**Marco atual:** M1 — US-04 concluída; US-05 segue todo. US-07 permanece done.
+**Marco atual:** M1 — US-05/T01 concluída; US-05/T02 segue todo. US-07 permanece done.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -761,7 +761,52 @@ PHPStan: exit 0
 
 **Bloqueios:** nenhum nesta task. Autorização continua na US-05. Não há tela.
 
-**Próxima ação:** US-05/T01.
+**Próxima ação:** —
+
+---
+
+## US-05 — Aplicar autorização por workspace
+
+**Status:** in_progress  
+**Dependências:** US-04 ✅  
+**Objetivo:** Isolar os dados pelo workspace.
+
+#### US-05/T01 — Implementar ActorContext humano e policy
+
+**Status:** done  
+**Entrega:** `HumanActorContextFactory` monta o `ActorContext` do usuário autenticado. `WorkspaceRolePolicy` concede as permissões do papel da membership. Roles globais do Drupal não entram na tenancy.
+
+**Contrato:**
+- o ator humano usa o id da conta autenticada e o UUID do workspace. Não há parâmetro de `author_id`
+- humano não carrega token
+- viewer ativo: `read`. Não recebe `write` nem `review`
+- member ativo: `read`, `write`, `review`. Não recebe `membership.manage` nem `membership.transfer`
+- admin ativo: o que o member recebe, mais `membership.manage`, `agent.manage` e `board.manage`. Não transfere ownership, não administra credenciais nem o workspace
+- owner ativo: o que o admin recebe, mais `workspace.manage`, `credential.manage` e `membership.transfer`
+- membership ausente, revogada ou de outro workspace não concede permissão
+- a proteção do último owner continua na US-06. Access handlers e cache continuam na US-05/T02
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit web/modules/custom/ab_core/tests
+OK (39 tests, 309 assertions)
+```
+
+`WorkspaceRolePolicyTest` cobre a matriz. `HumanActorContextKernelTest` cobre viewer sem escrita, member sem administrar membros, role global `administer site configuration` sem efeito, workspace alheio e membership revogada.
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice \
+    --extensions=php,yml web/modules/custom/ab_core
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse
+PHPStan: exit 0
+```
+
+**Bloqueios:** nenhum nesta task. Não há tela nem filtro de listagem.
+
+**Próxima ação:** US-05/T02.
 
 ---
 
@@ -886,14 +931,14 @@ PHPStan: exit 0
 
 - **Total de tasks:** 83 (conforme backlog)
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
-- **M1:** US-04 done; US-05 e US-06 seguem todo
+- **M1:** US-04 done; US-05 in_progress (T01 done); US-06 segue todo
 - **M2:** US-07 done; US-08 em diante seguem todo e US-08 depende de US-06
 
 ---
 
 ## Próximos Passos
 
-1. US-05/T01 — ActorContext humano e a matriz de papéis. US-08 espera US-06
+1. US-05/T02 — aplicar escopo a consultas e cache. US-08 espera US-06
 2. US-06 continua a dependência de interface das próximas mutações de board
 
 ---

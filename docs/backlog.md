@@ -155,11 +155,11 @@ Como humano, quero uma área própria de trabalho.
 
 Como owner, quero que meus dados fiquem isolados.
 
-**Dependências:** US-04. **Status:** todo.
+**Dependências:** US-04. **Status:** in_progress.
 
 ### US-05/T01 — Implementar ActorContext humano e policy
 
-- [ ] **Entrega:** Criar contexto autenticado e matriz owner/admin/member/viewer, sem usar roles globais para tenancy.
+- [x] **Entrega:** Criar contexto autenticado e matriz owner/admin/member/viewer, sem usar roles globais para tenancy.
 - **Aceite:** Viewer não escreve; member não administra membros.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

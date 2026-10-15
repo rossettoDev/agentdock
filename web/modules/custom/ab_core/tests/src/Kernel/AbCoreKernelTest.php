@@ -16,7 +16,7 @@ class AbCoreKernelTest extends KernelTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = ['system', 'user', 'ab_core'];
+  protected static $modules = ['system', 'user', 'options', 'ab_core'];
 
   /**
    * {@inheritdoc}
@@ -42,7 +42,7 @@ class AbCoreKernelTest extends KernelTestBase {
   public function testDatabaseConnection(): void {
     $database = \Drupal::database();
     $this->assertNotNull($database, 'Database connection exists');
-    
+
     $driver = $database->driver();
     $this->assertEquals('pgsql', $driver, 'Database driver is PostgreSQL');
   }
@@ -51,10 +51,10 @@ class AbCoreKernelTest extends KernelTestBase {
    * Tests basic entity operations.
    */
   public function testEntityOperations(): void {
-    // Test that we can query users
+    // Test that we can query users.
     $storage = \Drupal::entityTypeManager()->getStorage('user');
     $this->assertNotNull($storage, 'User entity storage is available');
-    
+
     $users = $storage->loadMultiple();
     $this->assertIsArray($users, 'Can load users');
   }

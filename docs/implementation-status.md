@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-15  
-**Marco atual:** M2 — US-07 concluída; M1 (US-04 a US-06) segue todo
+**Marco atual:** M1 — US-04/T01 concluída; US-04/T02 segue todo. US-07 permanece done.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -611,9 +611,62 @@ Note: Using configuration file /workspace/phpstan.neon.
 
 ## US-04 — Persistir workspaces e membros
 
-**Status:** todo  
+**Status:** in_progress  
 **Dependências:** US-02 ✅, US-03 ✅  
-**Próxima ação:** Implementar US-04/T01
+**Objetivo:** Persistir a área de trabalho de um usuário.
+
+#### US-04/T01 — Criar entidade workspace
+
+**Status:** done  
+**Entrega:** Entidade de conteúdo `ab_workspace` com UUID, nome, owner, timezone, status, created e changed.
+
+**Contrato:**
+- `name`: string obrigatória, máximo 255
+- `owner`: referência a `user`, obrigatória, sem default. O usuário anônimo (uid 0) é recusado. O campo não usa o default do `EntityOwnerTrait`, que preencheria o usuário atual
+- `timezone`: string obrigatória, máximo 64, identificador IANA (`DateTimeZone::listIdentifiers()`). Não há default `America/Sao_Paulo`; isso fica para o serviço de workspace pessoal
+- `status`: `list_string`, valores `active` e `archived`, default `active`
+- `save()` chama `validate()` e lança `EntityStorageException` se houver violação
+- o schema SQL marca `NOT NULL` só em chaves de entidade, exceto o label. `owner` é `NOT NULL`; `name` e `timezone` aceitam NULL no PostgreSQL. A recusa de timezone inválido e owner ausente é da entidade, não de um `CHECK`
+
+**Evidências:**
+```bash
+$ lando drush updatedb -y
+> [notice] Update started: ab_core_update_11001
+> [notice] Installed the workspace entity schema.
+> [notice] Update completed: ab_core_update_11001
+
+$ lando drush ev "echo \Drupal::keyValue('system.schema')->get('ab_core');"
+11001
+
+$ lando drush sql:query "SELECT column_name, character_maximum_length, is_nullable FROM information_schema.columns WHERE table_name = 'ab_workspace' AND column_name IN ('name','owner','timezone','status') ORDER BY column_name"
+name	255	YES
+owner		NO
+status	255	YES
+timezone	64	YES
+```
+
+O módulo `options` já estava habilitado; `list_string` depende dele. `ab_core.info.yml` passou a declarar `drupal:options`.
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit web/modules/custom/ab_core/tests
+OK (11 tests, 76 assertions)
+```
+
+`WorkspaceEntityKernelTest` cobre gravação válida, timezone `Mars/Olympus`, owner ausente, uid 0 e a instalação idempotente do schema. As 11 deprecações do PHPUnit são o aviso de metadata `@group` no docblock, o mesmo padrão das outras classes de kernel.
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice \
+    --extensions=php,install,yml web/modules/custom/ab_core
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse
+PHPStan: exit 0
+```
+
+**Bloqueios:** nenhum nesta task. Autorização continua na US-05. Membership é a US-04/T02.
+
+**Próxima ação:** US-04/T02.
 
 ---
 
@@ -730,7 +783,7 @@ PHPStan: exit 0
 
 **Bloqueios:** nenhum nesta task. US-08 depende de US-06, que segue todo.
 
-**Próxima ação:** US-04/T01, porque US-08 espera US-06.
+**Próxima ação:** —
 
 ---
 
@@ -738,15 +791,15 @@ PHPStan: exit 0
 
 - **Total de tasks:** 83 (conforme backlog)
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
-- **M1:** todo
+- **M1:** US-04 in_progress (T01 done); US-05 e US-06 seguem todo
 - **M2:** US-07 done; US-08 em diante seguem todo e US-08 depende de US-06
 
 ---
 
 ## Próximos Passos
 
-1. US-04/T01 — persistir workspace. US-08 espera US-06
-2. M1 (US-04 a US-06) continua pendente e é a dependência de autorização das próximas mutações
+1. US-04/T02 — persistir membership. US-08 espera US-06
+2. M1 (US-04 a US-06) continua a dependência de autorização das próximas mutações
 
 ---
 

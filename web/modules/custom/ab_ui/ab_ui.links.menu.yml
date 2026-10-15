@@ -1,0 +1,4 @@
+ab_ui.workspaces:
+  title: 'Meus workspaces'
+  route_name: ab_ui.workspaces
+  menu_name: main

@@ -36,9 +36,7 @@ class ShellVisualTest extends BrowserTestBase {
    */
   protected function setUp(): void {
     parent::setUp();
-    
-    // Install agent_board theme
-    \Drupal::service('theme_installer')->install(['agent_board']);
+    $this->container->get('theme_installer')->install(['agent_board']);
     $this->config('system.theme')
       ->set('default', 'agent_board')
       ->save();
@@ -50,16 +48,10 @@ class ShellVisualTest extends BrowserTestBase {
   public function testShellVisualLayout(): void {
     $this->drupalGet('<front>');
     $this->assertSession()->statusCodeEquals(200);
-    
-    // Verify main layout structure
     $this->assertSession()->elementExists('css', '.ab-layout');
     $this->assertSession()->elementExists('css', '.ab-header');
     $this->assertSession()->elementExists('css', '.ab-main');
-    
-    // Verify header components
     $this->assertSession()->elementExists('css', '.ab-logo');
-    
-    // Verify content area
     $this->assertSession()->elementExists('css', '.ab-content');
   }
 
@@ -68,7 +60,6 @@ class ShellVisualTest extends BrowserTestBase {
    */
   public function testModulesInstalled(): void {
     $module_handler = \Drupal::moduleHandler();
-    
     $expected_modules = [
       'ab_core',
       'ab_board',
@@ -76,7 +67,6 @@ class ShellVisualTest extends BrowserTestBase {
       'ab_communication',
       'ab_ui',
     ];
-    
     foreach ($expected_modules as $module) {
       $this->assertTrue(
         $module_handler->moduleExists($module),
@@ -98,8 +88,6 @@ class ShellVisualTest extends BrowserTestBase {
    */
   public function testResponsiveClasses(): void {
     $this->drupalGet('<front>');
-    
-    // Check that layout uses flexbox (from CSS)
     $element = $this->assertSession()->elementExists('css', '.ab-layout');
     $this->assertNotNull($element, 'Layout container exists');
   }

@@ -18,6 +18,9 @@ services:
     arguments:
       - '@current_user'
       - '@Drupal\ab_core\Authorization\MembershipScope'
+  Drupal\ab_core\WorkspaceCreator:
+    arguments:
+      - '@database'
   Drupal\ab_core\UuidLookup:
     arguments:
       - '@entity_type.manager'

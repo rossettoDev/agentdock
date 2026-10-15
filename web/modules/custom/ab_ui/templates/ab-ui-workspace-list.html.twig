@@ -1,0 +1,33 @@
+{#
+/**
+ * @file
+ * Lists the workspaces the current user can read.
+ */
+#}
+<div class="ab-workspace-list">
+  {% if current_label %}
+    <p class="ab-workspace-current">{{ 'Workspace atual: @name'|t({'@name': current_label}) }}</p>
+  {% else %}
+    <p class="ab-workspace-current">{{ 'Nenhum workspace selecionado.'|t }}</p>
+  {% endif %}
+
+  <p>
+    <a class="ab-button" href="{{ add_url }}">{{ 'Criar workspace'|t }}</a>
+  </p>
+
+  {% if items %}
+    <ul class="ab-workspace-items">
+      {% for item in items %}
+        <li class="ab-card">
+          {{ item.label }}
+          {% if item.current %}
+            <span class="ab-workspace-current-mark">({{ 'atual'|t }})</span>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+    {{ select_form }}
+  {% else %}
+    <p>{{ 'Você ainda não tem um workspace.'|t }}</p>
+  {% endif %}
+</div>

@@ -1,0 +1,11 @@
+services:
+  Drupal\ab_ui\WorkspaceContext:
+    arguments:
+      - '@request_stack'
+      - '@Drupal\ab_core\WorkspaceRepository'
+  cache_context.ab_workspace:
+    class: Drupal\ab_ui\Cache\WorkspaceContextCacheContext
+    arguments:
+      - '@Drupal\ab_ui\WorkspaceContext'
+    tags:
+      - { name: cache.context }

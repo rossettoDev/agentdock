@@ -179,7 +179,7 @@ Como owner, quero que meus dados fiquem isolados.
 
 Como owner, quero administrar colaboradores existentes.
 
-**Dependências:** US-05. **Status:** in_progress.
+**Dependências:** US-05. **Status:** done.
 
 ### US-06/T01 — Criar listagem e formulário de workspace
 
@@ -195,7 +195,7 @@ Como owner, quero administrar colaboradores existentes.
 
 ### US-06/T03 — Testar revogação de associação
 
-- [ ] **Entrega:** Revogar membro e invalidar cache e sessão de contexto aplicável.
+- [x] **Entrega:** Revogar membro e invalidar cache e sessão de contexto aplicável.
 - **Aceite:** Próxima requisição não mantém acesso por cache antigo.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

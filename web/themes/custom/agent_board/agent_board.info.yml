@@ -1,0 +1,14 @@
+name: 'Agent Board'
+type: theme
+description: 'Tema customizado para AgentDock'
+package: 'AgentDock'
+base theme: olivero
+core_version_requirement: ^11
+regions:
+  header: Header
+  primary_menu: 'Primary menu'
+  secondary_menu: 'Secondary menu'
+  breadcrumb: Breadcrumb
+  content: Content
+  sidebar: Sidebar
+  footer: Footer

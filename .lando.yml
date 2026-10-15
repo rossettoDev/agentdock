@@ -7,3 +7,39 @@ config:
   webroot: web
   database: postgres:16
   drush: ^13
+
+tooling:
+  test:
+    service: appserver
+    description: 'Run PHPUnit tests'
+    cmd: php vendor/bin/phpunit
+  
+  test-unit:
+    service: appserver
+    description: 'Run PHPUnit unit tests only'
+    cmd: php vendor/bin/phpunit --testsuite=unit
+  
+  test-kernel:
+    service: appserver
+    description: 'Run PHPUnit kernel tests only'
+    cmd: php vendor/bin/phpunit --testsuite=kernel
+  
+  test-functional:
+    service: appserver
+    description: 'Run PHPUnit functional tests only'
+    cmd: php vendor/bin/phpunit --testsuite=functional
+  
+  phpcs:
+    service: appserver
+    description: 'Run PHPCS code sniffer'
+    cmd: php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,module,inc,install,test,profile,theme,css,info,txt,md,yml web/modules/custom web/themes/custom
+  
+  phpcbf:
+    service: appserver
+    description: 'Run PHPCS code beautifier and fixer'
+    cmd: php vendor/bin/phpcbf --standard=Drupal,DrupalPractice --extensions=php,module,inc,install,test,profile,theme,css,info,txt,md,yml web/modules/custom web/themes/custom
+  
+  phpstan:
+    service: appserver
+    description: 'Run PHPStan static analysis'
+    cmd: php vendor/bin/phpstan analyse

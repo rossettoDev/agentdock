@@ -100,5 +100,11 @@
                 "      composer remove drupal/core-project-message"
             ]
         }
+    },
+    "require-dev": {
+        "drupal/coder": "^9.0",
+        "mglaman/phpstan-drupal": "^2.2",
+        "phpstan/phpstan": "^2.3",
+        "phpunit/phpunit": "^11"
     }
 }

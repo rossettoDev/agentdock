@@ -1,0 +1,7 @@
+name: 'AgentDock Agent'
+type: module
+description: 'Agentes, tokens, grants, execução e leases'
+package: 'AgentDock'
+core_version_requirement: ^11
+dependencies:
+  - ab_board

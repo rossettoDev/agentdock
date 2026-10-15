@@ -1,0 +1,7 @@
+name: 'AgentDock Core'
+type: module
+description: 'Workspace, membership, ActorContext e autorização'
+package: 'AgentDock'
+core_version_requirement: ^11
+dependencies:
+  - drupal:user

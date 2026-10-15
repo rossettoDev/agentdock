@@ -1,0 +1,7 @@
+name: 'AgentDock Event'
+type: module
+description: 'Eventos, contador, outbox, worker e sincronização'
+package: 'AgentDock'
+core_version_requirement: ^11
+dependencies:
+  - ab_core

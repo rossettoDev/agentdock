@@ -1,0 +1,7 @@
+name: 'AgentDock Board'
+type: module
+description: 'Board, task, dependências, ordenação e transições'
+package: 'AgentDock'
+core_version_requirement: ^11
+dependencies:
+  - ab_core

@@ -1,0 +1,59 @@
+/**
+ * @file
+ * Agent Board theme template for the page.
+ */
+#}
+<div class="ab-layout">
+  <header class="ab-header" role="banner">
+    <div class="ab-header__inner">
+      <div class="ab-logo">
+        <a href="{{ front_page }}" title="{{ 'Home'|t }}">
+          {{ site_name }}
+        </a>
+      </div>
+      
+      {% if workspace_selector %}
+        <div class="ab-workspace-selector">
+          {{ workspace_selector }}
+        </div>
+      {% endif %}
+
+      {% if primary_menu %}
+        <nav class="ab-primary-menu" role="navigation">
+          {{ primary_menu }}
+        </nav>
+      {% endif %}
+
+      {% if secondary_menu %}
+        <nav class="ab-secondary-menu" role="navigation">
+          {{ secondary_menu }}
+        </nav>
+      {% endif %}
+    </div>
+  </header>
+
+  {% if breadcrumb %}
+    <div class="ab-breadcrumb">
+      {{ breadcrumb }}
+    </div>
+  {% endif %}
+
+  <div class="ab-main">
+    {% if sidebar %}
+      <aside class="ab-sidebar" role="complementary">
+        {{ sidebar }}
+      </aside>
+    {% endif %}
+
+    <main class="ab-content" role="main">
+      <a id="main-content" tabindex="-1"></a>
+      {{ page.content }}
+    </main>
+  </div>
+
+  {% if footer %}
+    <footer class="ab-footer" role="contentinfo">
+      {{ footer }}
+    </footer>
+  {% endif %}
+</div>

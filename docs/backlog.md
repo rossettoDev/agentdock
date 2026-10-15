@@ -203,11 +203,11 @@ Como owner, quero administrar colaboradores existentes.
 
 Como sistema, quero registrar alterações sem perder consistência.
 
-**Dependências:** US-05. **Status:** todo.
+**Dependências:** US-05. **Status:** in_progress.
 
 ### US-07/T01 — Criar schema de eventos e outbox
 
-- [ ] **Entrega:** Contador por workspace, event store e outbox com índices; contrato independente das entidades consumidoras.
+- [x] **Entrega:** Contador por workspace, event store e outbox com índices; contrato independente das entidades consumidoras.
 - **Aceite:** Instalação/update cria índices e unicidades previstos.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

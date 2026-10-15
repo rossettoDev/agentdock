@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-15  
-**Marco atual:** M0 — Fundação
+**Marco atual:** M2 — US-07/T01 concluída; M1 (US-04 a US-06) segue todo
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -617,24 +617,82 @@ Note: Using configuration file /workspace/phpstan.neon.
 
 ---
 
+## M2 — Eventos, boards e Kanban
+
+### US-07 — Criar fundação transacional de eventos
+
+**Status:** in_progress  
+**Dependências:** US-05 ainda todo. A T01 não referencia entidades de workspace, board, tarefa ou agente.  
+**Objetivo:** Registrar alterações sem perder consistência.
+
+#### US-07/T01 — Criar schema de eventos e outbox
+
+**Status:** done  
+**Entrega:** Contador por workspace, event store e outbox com índices. Identificadores opacos, sem dependência de entidades consumidoras.
+
+**Contrato:**
+- `ab_workspace_sequence`: `workspace_id` (UUID, PK) e `sequence` (bigint, default 0)
+- `ab_event`: `event_id` (UUID, PK), `workspace_id`, `sequence`, `type`, `resource_id`, `actor_type`, `actor_id`, `created` (unix UTC), `payload` (JSON em texto)
+- unicidade real: `(workspace_id, sequence)`
+- `ab_outbox`: PK `(event_id, destination)`, mais `attempts`, `available_at`, `processed_at`, `last_error`
+- índice real: `(processed_at, available_at)`
+- a entrada `foreign keys` do schema API é documental; o PostgreSQL não cria FK por ela
+
+**Evidências:**
+```bash
+# Instalação no site local
+$ lando drush en ab_event -y
+[success] Module ab_event has been installed.
+
+$ lando drush sql:query "SELECT indexname, indexdef FROM pg_indexes WHERE tablename IN ('ab_event','ab_outbox','ab_workspace_sequence') ORDER BY tablename, indexname"
+ab_event____pkey                         UNIQUE (event_id)
+ab_event__workspace_sequence__key        UNIQUE (workspace_id, sequence)
+ab_outbox____pkey                        UNIQUE (event_id, destination)
+ab_outbox__processed_available__idx      (processed_at, available_at)
+ab_workspace_sequence____pkey            UNIQUE (workspace_id)
+
+$ lando drush ev "echo \Drupal::keyValue('system.schema')->get('ab_event');"
+11001
+```
+
+A versão de schema 11001 foi registrada na instalação nova. `ab_event_update_11001()` não rodou pelo `updatedb` neste site porque o módulo ainda não estava habilitado. O hook chama `EventSchemaInstaller::installMissing()`, exercitado no teste de kernel com tabelas removidas e na repetição idempotente.
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit web/modules/custom/ab_event/tests/src/Kernel/EventSchemaKernelTest.php
+OK (2 tests, 78 assertions)
+```
+
+O ambiente do container define `SIMPLETEST_DB=mysql://...`. O `phpunit.xml.dist` aponta para PostgreSQL, mas o PHPUnit não sobrescreve variável já existente. A execução acima força o DSN do Postgres. `lando test-kernel` também define esse DSN.
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice \
+    --extensions=php,install web/modules/custom/ab_event
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse
+PHPStan: exit 0
+```
+
+**Bloqueios:** nenhum para a T01. US-07/T02 em diante continua dependente, na história, da autorização da US-05, que não foi implementada.
+
+**Próxima ação:** US-07/T02 — gravação de evento e outbox na mesma transação.
+
+---
+
 ## Estatísticas
 
 - **Total de tasks:** 83 (conforme backlog)
-- **Concluídas:** 3 (US-01/T01, US-01/T02, US-01/T03)
-- **Em progresso:** 0
-- **Bloqueadas:** 0
-- **A fazer:** 80
-
-**Marco M0 (US-01):** ✅ Completo
+- **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
+- **M1:** todo
+- **M2:** US-07/T01 done; demais tasks do marco seguem todo
 
 ---
 
 ## Próximos Passos
 
-1. Commit e push das alterações de US-01
-2. Criar Pull Request contra `main`
-3. Aguardar revisão
-4. Após merge, iniciar US-02 ou US-03
+1. US-07/T02 — reservar sequência por workspace e gravar evento/outbox na transação do chamador
+2. M1 (US-04 a US-06) continua pendente e é dependência declarada de US-07 para autorização
 
 ---
 

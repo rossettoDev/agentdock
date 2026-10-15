@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-15  
-**Marco atual:** M2 — US-07/T02 concluída; M1 (US-04 a US-06) segue todo
+**Marco atual:** M2 — US-07 concluída; M1 (US-04 a US-06) segue todo
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -621,8 +621,8 @@ Note: Using configuration file /workspace/phpstan.neon.
 
 ### US-07 — Criar fundação transacional de eventos
 
-**Status:** in_progress  
-**Dependências:** US-05 ainda todo. A T01 não referencia entidades de workspace, board, tarefa ou agente.  
+**Status:** done  
+**Dependências:** US-05 ainda todo. As tasks desta história não aplicam autorização.  
 **Objetivo:** Registrar alterações sem perder consistência.
 
 #### US-07/T01 — Criar schema de eventos e outbox
@@ -709,19 +709,44 @@ PHPStan: exit 0
 
 ---
 
+#### US-07/T03 — Criar testes de rollback e concorrência
+
+**Status:** done  
+**Entrega:** Uma conexão independente lê o fluxo em `READ COMMITTED` enquanto outra transação grava e desfaz um evento. A ordenação visível contém só eventos confirmados.
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit web/modules/custom/ab_event/tests
+OK (10 tests, 221 assertions)
+```
+
+A leitura independente, com a transação ainda aberta e depois do rollback, vê só `task.created` na sequência 1. O `task.rejected` revertido não aparece no evento nem na outbox. A conexão seguinte confirma `task.updated` na sequência 2, e o fluxo fica `1, 2` sem o evento desfeito.
+
+```bash
+$ lando php vendor/bin/phpstan analyse
+PHPStan: exit 0
+```
+
+**Bloqueios:** nenhum nesta task. US-08 depende de US-06, que segue todo.
+
+**Próxima ação:** US-04/T01, porque US-08 espera US-06.
+
+---
+
 ## Estatísticas
 
 - **Total de tasks:** 83 (conforme backlog)
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** todo
-- **M2:** US-07/T01 e US-07/T02 done; demais tasks do marco seguem todo
+- **M2:** US-07 done; US-08 em diante seguem todo e US-08 depende de US-06
 
 ---
 
 ## Próximos Passos
 
-1. US-07/T03 — conexões independentes para ordenação e ausência de eventos não confirmados
-2. M1 (US-04 a US-06) continua pendente e é dependência declarada de US-07 para autorização
+1. US-04/T01 — persistir workspace. US-08 espera US-06
+2. M1 (US-04 a US-06) continua pendente e é a dependência de autorização das próximas mutações
 
 ---
 

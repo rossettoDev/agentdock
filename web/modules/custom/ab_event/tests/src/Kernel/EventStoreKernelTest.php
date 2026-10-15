@@ -163,6 +163,79 @@ class EventStoreKernelTest extends KernelTestBase {
   }
 
   /**
+   * Another connection does not see a rolled-back event.
+   */
+  public function testRolledBackEventIsHiddenFromIndependentConnection(): void {
+    $workspaceId = '22222222-2222-4222-8222-222222222222';
+    $this->assertStringStartsWith('test', $this->connectionOptions()['prefix']);
+
+    $committed = $this->database()->startTransaction();
+    $visible = $this->store()->record($this->draft('task.created', $workspaceId));
+    unset($committed);
+
+    $open = $this->database()->startTransaction();
+    $hidden = $this->store()->record($this->draft('task.rejected', $workspaceId));
+    $during = $this->observeFlow($workspaceId, $hidden->eventId);
+    $open->rollBack();
+    unset($open);
+    $after = $this->observeFlow($workspaceId, $hidden->eventId);
+
+    $this->assertConfirmedFlow($during, [$visible->eventId], ['task.created']);
+    $this->assertSame(0, $during['hidden_outbox_count']);
+    $this->assertConfirmedFlow($after, [$visible->eventId], ['task.created']);
+    $this->assertSame(0, $after['hidden_outbox_count']);
+
+    $resultFile = tempnam(sys_get_temp_dir(), 'ab_event_');
+    $traceFile = tempnam(sys_get_temp_dir(), 'ab_event_trace_');
+    $this->assertIsString($resultFile);
+    $this->assertIsString($traceFile);
+    $pipes = [];
+    try {
+      $process = $this->startConcurrentRecorder($workspaceId, $resultFile, $traceFile, $pipes);
+      $sequence = $this->finishConcurrentRecorder($process, $pipes, $resultFile);
+      $recorded = json_decode((string) file_get_contents($resultFile), TRUE);
+    }
+    finally {
+      if (is_file($resultFile)) {
+        unlink($resultFile);
+      }
+      if (is_file($traceFile)) {
+        unlink($traceFile);
+      }
+    }
+
+    $this->assertSame(2, $sequence);
+    $this->assertIsArray($recorded);
+    $final = $this->observeFlow($workspaceId, $hidden->eventId);
+    $this->assertConfirmedFlow($final, [
+      $visible->eventId,
+      $recorded['event_id'],
+    ], ['task.created', 'task.updated']);
+    $this->assertSame(0, $final['hidden_outbox_count']);
+    $this->assertSame(2, $final['outbox_count']);
+  }
+
+  /**
+   * Asserts the ordered flow visible to another connection.
+   *
+   * @param array<string, mixed> $flow
+   *   Observation returned by the independent connection.
+   * @param string[] $eventIds
+   *   Event ids that must be present, in order. The rolled-back id is absent.
+   * @param string[] $types
+   *   Event types in sequence order.
+   */
+  private function assertConfirmedFlow(array $flow, array $eventIds, array $types): void {
+    $this->assertIsArray($flow['events']);
+    $events = $flow['events'];
+    $this->assertSame($eventIds, array_column($events, 'event_id'));
+    $this->assertSame($types, array_column($events, 'type'));
+    $this->assertSame(range(1, count($events)), array_column($events, 'sequence'));
+    $this->assertSame(count($events), $flow['sequence']);
+    $this->assertSame(count($events), $flow['outbox_count']);
+  }
+
+  /**
    * Returns the event store service.
    */
   private function store(): EventStoreInterface {
@@ -265,15 +338,9 @@ class EventStoreKernelTest extends KernelTestBase {
    *   The child process.
    */
   private function startConcurrentRecorder(string $workspaceId, string $resultFile, string $traceFile, array &$pipes) {
-    $options = $this->database()->getConnectionOptions();
-    unset($options['pdo']);
-    foreach ($options as $key => $value) {
-      if (is_object($value)) {
-        unset($options[$key]);
-      }
-    }
-    $request = json_encode([
-      'connection' => $options,
+    $request = [
+      'mode' => 'record',
+      'connection' => $this->connectionOptions(),
       'draft' => [
         'workspace_id' => $workspaceId,
         'type' => 'task.updated',
@@ -282,11 +349,89 @@ class EventStoreKernelTest extends KernelTestBase {
         'actor_id' => '8',
         'payload' => ['title' => 'child'],
       ],
-    ], JSON_THROW_ON_ERROR);
+    ];
+    return $this->openChild($request, $resultFile, $traceFile, $pipes);
+  }
+
+  /**
+   * Reads the committed flow from a new database connection.
+   *
+   * @param string $workspaceId
+   *   Workspace whose committed events are read.
+   * @param string $hiddenEventId
+   *   Event id that must stay invisible when its transaction rolls back.
+   *
+   * @return array<string, mixed>
+   *   Events, outbox count and workspace sequence visible to the reader.
+   */
+  private function observeFlow(string $workspaceId, string $hiddenEventId): array {
+    $resultFile = tempnam(sys_get_temp_dir(), 'ab_event_observe_');
+    $traceFile = tempnam(sys_get_temp_dir(), 'ab_event_trace_');
+    $this->assertIsString($resultFile);
+    $this->assertIsString($traceFile);
+    $pipes = [];
+    try {
+      $process = $this->openChild([
+        'mode' => 'observe',
+        'connection' => $this->connectionOptions(),
+        'workspace_id' => $workspaceId,
+        'hidden_event_id' => $hiddenEventId,
+      ], $resultFile, $traceFile, $pipes);
+      $this->finishConcurrentRecorder($process, $pipes, $resultFile);
+      $decoded = json_decode((string) file_get_contents($resultFile), TRUE);
+    }
+    finally {
+      if (is_file($resultFile)) {
+        unlink($resultFile);
+      }
+      if (is_file($traceFile)) {
+        unlink($traceFile);
+      }
+    }
+    $this->assertIsArray($decoded);
+    return $decoded;
+  }
+
+  /**
+   * Returns connection options that stay on the prefixed test database.
+   *
+   * @return array<string, mixed>
+   *   Driver options safe to pass to another process.
+   */
+  private function connectionOptions(): array {
+    $options = $this->database()->getConnectionOptions();
+    unset($options['pdo']);
+    foreach ($options as $key => $value) {
+      if (is_object($value)) {
+        unset($options[$key]);
+      }
+    }
+    $prefix = $options['prefix'] ?? '';
+    $this->assertIsString($prefix);
+    $this->assertStringStartsWith('test', $prefix);
+    return $options;
+  }
+
+  /**
+   * Starts the independent script.
+   *
+   * @param array<string, mixed> $request
+   *   Payload for the child process.
+   * @param string $resultFile
+   *   File that receives the child result.
+   * @param string $traceFile
+   *   File that receives child progress markers.
+   * @param array<int, resource> $pipes
+   *   Process pipes, filled by reference.
+   *
+   * @return resource
+   *   The child process.
+   */
+  private function openChild(array $request, string $resultFile, string $traceFile, array &$pipes) {
     $env = getenv();
     $this->assertIsArray($env);
     $env['AGENTDOCK_AUTOLOAD'] = dirname(DRUPAL_ROOT) . '/vendor/autoload.php';
-    $env['AGENTDOCK_RECORD_REQUEST'] = $request;
+    $env['AGENTDOCK_RECORD_REQUEST'] = json_encode($request, JSON_THROW_ON_ERROR);
     $env['AGENTDOCK_RESULT_FILE'] = $resultFile;
     $env['AGENTDOCK_TRACE_FILE'] = $traceFile;
 

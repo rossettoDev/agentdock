@@ -1,0 +1,132 @@
+/**
+ * Agent Board Theme - Main Stylesheet
+ */
+
+:root {
+  --ab-primary: #2563eb;
+  --ab-secondary: #64748b;
+  --ab-success: #10b981;
+  --ab-warning: #f59e0b;
+  --ab-danger: #ef4444;
+  --ab-bg: #ffffff;
+  --ab-surface: #f8fafc;
+  --ab-text: #1e293b;
+  --ab-border: #e2e8f0;
+  --ab-spacing: 1rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.ab-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.ab-header {
+  background: var(--ab-surface);
+  border-bottom: 1px solid var(--ab-border);
+  padding: var(--ab-spacing);
+}
+
+.ab-header__inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--ab-spacing);
+}
+
+.ab-logo a {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--ab-primary);
+  text-decoration: none;
+}
+
+.ab-workspace-selector {
+  margin-left: auto;
+}
+
+.ab-primary-menu,
+.ab-secondary-menu {
+  display: flex;
+  gap: calc(var(--ab-spacing) / 2);
+}
+
+.ab-breadcrumb {
+  background: var(--ab-bg);
+  padding: calc(var(--ab-spacing) / 2) var(--ab-spacing);
+  border-bottom: 1px solid var(--ab-border);
+}
+
+.ab-main {
+  flex: 1;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  gap: var(--ab-spacing);
+  padding: var(--ab-spacing);
+}
+
+.ab-sidebar {
+  width: 250px;
+  flex-shrink: 0;
+}
+
+.ab-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.ab-footer {
+  background: var(--ab-surface);
+  border-top: 1px solid var(--ab-border);
+  padding: var(--ab-spacing);
+  text-align: center;
+}
+
+/* Componentes reutilizáveis */
+.ab-card {
+  background: var(--ab-bg);
+  border: 1px solid var(--ab-border);
+  border-radius: 8px;
+  padding: var(--ab-spacing);
+  margin-bottom: var(--ab-spacing);
+}
+
+.ab-button {
+  background: var(--ab-primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: calc(var(--ab-spacing) / 2) var(--ab-spacing);
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.ab-button:hover {
+  opacity: 0.9;
+}
+
+.ab-button--secondary {
+  background: var(--ab-secondary);
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .ab-header__inner {
+    flex-wrap: wrap;
+  }
+  
+  .ab-main {
+    flex-direction: column;
+  }
+  
+  .ab-sidebar {
+    width: 100%;
+  }
+}

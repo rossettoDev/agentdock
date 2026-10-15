@@ -1,0 +1,13 @@
+parameters:
+  level: 2
+  paths:
+    - web/modules/custom
+    - web/themes/custom
+  excludePaths:
+    - web/modules/custom/*/tests
+  scanDirectories:
+    - web/core
+    - web/modules/contrib
+  bootstrapFiles:
+    - phpstan-bootstrap.php
+  ignoreErrors:

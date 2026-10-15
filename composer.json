@@ -100,5 +100,18 @@
                 "      composer remove drupal/core-project-message"
             ]
         }
+    },
+    "require-dev": {
+        "behat/mink": "^1.11",
+        "drupal/coder": "^9.0",
+        "friends-of-behat/mink-browserkit-driver": "^1.6",
+        "mglaman/phpstan-drupal": "^2.2",
+        "mikey179/vfsstream": "^1.6",
+        "phpspec/prophecy-phpunit": "^2",
+        "phpstan/phpstan": "^2.3",
+        "phpunit/phpunit": "^11",
+        "symfony/browser-kit": "^7.0",
+        "symfony/css-selector": "^7.0",
+        "symfony/dom-crawler": "^7.0"
     }
 }

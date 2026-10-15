@@ -1,0 +1,6 @@
+global:
+  css:
+    theme:
+      css/agent-board.css: {}
+  js:
+    js/agent-board.js: {}

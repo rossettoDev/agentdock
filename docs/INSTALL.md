@@ -246,6 +246,38 @@ lando ssh                  # Shell interativo
 lando ssh -c "ls -la"      # Comando único
 ```
 
+### Testes e Qualidade
+
+```bash
+# Rodar todos os testes (unit, kernel, functional)
+lando test
+
+# Rodar apenas testes unitários
+lando test-unit
+
+# Rodar apenas testes kernel
+lando test-kernel
+
+# Rodar apenas testes functional
+lando test-functional
+
+# Verificar padrões de código
+lando phpcs
+
+# Corrigir padrões automaticamente
+lando phpcbf
+
+# Análise estática
+lando phpstan
+```
+
+**Testes implementados:**
+- **Unit Tests** (3 testes): Assertions básicas e estrutura de teste
+- **Kernel Tests** (3 testes): Instalação de módulos, conexão PostgreSQL, operações de entidade
+- **Functional Tests** (4 testes): Shell visual, instalação de módulos/tema, layout responsivo
+
+**Total:** 10 testes, 42 assertions validando a estrutura base do M0.
+
 ### Composer
 
 ```bash

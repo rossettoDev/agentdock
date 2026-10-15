@@ -7,3 +7,60 @@ config:
   webroot: web
   database: postgres:16
   drush: ^13
+
+tooling:
+  test:
+    service: appserver
+    description: 'Run PHPUnit tests'
+    cmd:
+      - mkdir -p web/sites/simpletest/browser_output
+      - chmod 777 web/sites/simpletest/browser_output
+      - php vendor/bin/phpunit
+    env:
+      SIMPLETEST_DB: 'pgsql://postgres:@database:5432/drupal11'
+      SIMPLETEST_BASE_URL: 'http://appserver'
+      BROWSERTEST_OUTPUT_DIRECTORY: 'web/sites/simpletest/browser_output'
+  
+  test-unit:
+    service: appserver
+    description: 'Run PHPUnit unit tests only'
+    cmd: php vendor/bin/phpunit --testsuite=unit
+  
+  test-kernel:
+    service: appserver
+    description: 'Run PHPUnit kernel tests only'
+    cmd:
+      - mkdir -p web/sites/simpletest/browser_output
+      - chmod 777 web/sites/simpletest/browser_output
+      - php vendor/bin/phpunit --testsuite=kernel
+    env:
+      SIMPLETEST_DB: 'pgsql://postgres:@database:5432/drupal11'
+      SIMPLETEST_BASE_URL: 'http://appserver'
+      BROWSERTEST_OUTPUT_DIRECTORY: 'web/sites/simpletest/browser_output'
+  
+  test-functional:
+    service: appserver
+    description: 'Run PHPUnit functional tests only'
+    cmd:
+      - mkdir -p web/sites/simpletest/browser_output
+      - chmod 777 web/sites/simpletest/browser_output
+      - php vendor/bin/phpunit --testsuite=functional
+    env:
+      SIMPLETEST_DB: 'pgsql://postgres:@database:5432/drupal11'
+      SIMPLETEST_BASE_URL: 'http://appserver'
+      BROWSERTEST_OUTPUT_DIRECTORY: 'web/sites/simpletest/browser_output'
+  
+  phpcs:
+    service: appserver
+    description: 'Run PHPCS code sniffer'
+    cmd: php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,module,inc,install,test,profile,theme,css,info,txt,md,yml web/modules/custom web/themes/custom
+  
+  phpcbf:
+    service: appserver
+    description: 'Run PHPCS code beautifier and fixer'
+    cmd: php vendor/bin/phpcbf --standard=Drupal,DrupalPractice --extensions=php,module,inc,install,test,profile,theme,css,info,txt,md,yml web/modules/custom web/themes/custom
+  
+  phpstan:
+    service: appserver
+    description: 'Run PHPStan static analysis'
+    cmd: php vendor/bin/phpstan analyse

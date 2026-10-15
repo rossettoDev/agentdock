@@ -1,0 +1,10 @@
+name: 'AgentDock UI'
+type: module
+description: 'Controllers, formulários, libraries e behaviors'
+package: 'AgentDock'
+core_version_requirement: ^11
+dependencies:
+  - ab_core
+  - ab_board
+  - ab_agent
+  - ab_communication

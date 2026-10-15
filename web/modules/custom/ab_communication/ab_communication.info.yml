@@ -1,0 +1,7 @@
+name: 'AgentDock Communication'
+type: module
+description: 'Threads, mensagens, menções e pedidos de informação'
+package: 'AgentDock'
+core_version_requirement: ^11
+dependencies:
+  - ab_agent

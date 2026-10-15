@@ -14,7 +14,7 @@
         <ini name="error_reporting" value="32767"/>
         <ini name="memory_limit" value="-1"/>
         <env name="SIMPLETEST_BASE_URL" value="http://appserver"/>
-        <env name="SIMPLETEST_DB" value="pgsql://postgres@database/drupal11"/>
+        <env name="SIMPLETEST_DB" value="pgsql://postgres:@database:5432/drupal11"/>
         <env name="BROWSERTEST_OUTPUT_DIRECTORY" value="web/sites/simpletest/browser_output"/>
         <env name="BROWSERTEST_OUTPUT_BASE_URL" value=""/>
         <env name="MINK_DRIVER_CLASS" value=""/>

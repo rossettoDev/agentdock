@@ -12,7 +12,14 @@ tooling:
   test:
     service: appserver
     description: 'Run PHPUnit tests'
-    cmd: php vendor/bin/phpunit
+    cmd:
+      - mkdir -p web/sites/simpletest/browser_output
+      - chmod 777 web/sites/simpletest/browser_output
+      - php vendor/bin/phpunit
+    env:
+      SIMPLETEST_DB: 'pgsql://postgres:@database:5432/drupal11'
+      SIMPLETEST_BASE_URL: 'http://appserver'
+      BROWSERTEST_OUTPUT_DIRECTORY: 'web/sites/simpletest/browser_output'
   
   test-unit:
     service: appserver
@@ -22,12 +29,26 @@ tooling:
   test-kernel:
     service: appserver
     description: 'Run PHPUnit kernel tests only'
-    cmd: php vendor/bin/phpunit --testsuite=kernel
+    cmd:
+      - mkdir -p web/sites/simpletest/browser_output
+      - chmod 777 web/sites/simpletest/browser_output
+      - php vendor/bin/phpunit --testsuite=kernel
+    env:
+      SIMPLETEST_DB: 'pgsql://postgres:@database:5432/drupal11'
+      SIMPLETEST_BASE_URL: 'http://appserver'
+      BROWSERTEST_OUTPUT_DIRECTORY: 'web/sites/simpletest/browser_output'
   
   test-functional:
     service: appserver
     description: 'Run PHPUnit functional tests only'
-    cmd: php vendor/bin/phpunit --testsuite=functional
+    cmd:
+      - mkdir -p web/sites/simpletest/browser_output
+      - chmod 777 web/sites/simpletest/browser_output
+      - php vendor/bin/phpunit --testsuite=functional
+    env:
+      SIMPLETEST_DB: 'pgsql://postgres:@database:5432/drupal11'
+      SIMPLETEST_BASE_URL: 'http://appserver'
+      BROWSERTEST_OUTPUT_DIRECTORY: 'web/sites/simpletest/browser_output'
   
   phpcs:
     service: appserver

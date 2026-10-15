@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-15  
-**Marco atual:** M1 — US-05 concluída; US-06 segue todo. US-07 permanece done.
+**Marco atual:** M1 — US-06/T01 concluída; US-06/T02 segue todo. US-07 permanece done.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -876,7 +876,52 @@ PHPStan: exit 0
 
 **Bloqueios:** nenhum nesta task. Não há tela.
 
-**Próxima ação:** US-06/T01.
+**Próxima ação:** —
+
+---
+
+## US-06 — Gerenciar workspace pela interface
+
+**Status:** in_progress  
+**Dependências:** US-05 ✅  
+**Objetivo:** Administrar o workspace pela interface, sem abrir o escopo por um parâmetro de URL.
+
+#### US-06/T01 — Criar listagem e formulário de workspace
+
+**Status:** done  
+**Entrega:** A rota `/workspaces` lista só os workspaces acessíveis. O formulário cria um workspace comum e a membership owner do usuário autenticado. A troca de contexto é um POST. O UUID escolhido fica na sessão.
+
+**Contrato:**
+- `WorkspaceCreator` grava o workspace e a membership owner na mesma transação. O owner é a conta recebida pelo serviço, não um campo do formulário
+- `WorkspaceContext` lê e grava a sessão. Não consulta a query string nem o caminho da URL
+- abrir `/workspaces/{uuid}` de um workspace visível não muda a seleção. UUID fora do escopo responde 404, sem revelar o nome
+- `?workspace=` na listagem não inclui o workspace alheio nas opções e não troca o workspace atual
+- o cache da listagem varia por `user`, `ab_memberships` e `ab_workspace`
+- gestão de membros, último owner e revogação continuam na US-06/T02 e US-06/T03
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit web/modules/custom/ab_core/tests web/modules/custom/ab_ui/tests
+OK (58 tests, 588 assertions)
+```
+
+`WorkspaceCreatorKernelTest` cobre a membership owner e a rejeição de fuso inválido. `WorkspaceContextKernelTest` cobre a query string e o UUID alheio. `WorkspaceUiTest` cobre o anônimo, a criação, a troca de contexto, a query string e o 404. As deprecações do PHPUnit são o aviso de metadata `@group`.
+
+A tela local foi exercida com duas contas: criar o workspace, ver o nome no contexto atual, abrir o UUID alheio na query e no caminho, e confirmar que a outra conta não vê esse workspace.
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice \
+    --extensions=php,yml web/modules/custom/ab_core web/modules/custom/ab_ui
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse
+PHPStan: exit 0
+```
+
+**Bloqueios:** nenhum nesta task.
+
+**Próxima ação:** US-06/T02.
 
 ---
 
@@ -1001,14 +1046,14 @@ PHPStan: exit 0
 
 - **Total de tasks:** 83 (conforme backlog)
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
-- **M1:** US-04 done; US-05 done; US-06 segue todo
+- **M1:** US-04 done; US-05 done; US-06 in_progress (T01 done)
 - **M2:** US-07 done; US-08 em diante seguem todo e US-08 depende de US-06
 
 ---
 
 ## Próximos Passos
 
-1. US-06/T01 — listagem e formulário de workspace. US-08 espera US-06
+1. US-06/T02 — membros, papéis e transferência de ownership. US-08 espera US-06
 2. US-06 continua a dependência de interface das próximas mutações de board
 
 ---

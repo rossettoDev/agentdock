@@ -1,0 +1,24 @@
+ab_ui.workspaces:
+  path: '/workspaces'
+  defaults:
+    _controller: '\Drupal\ab_ui\Controller\WorkspaceController::listing'
+    _title: 'Meus workspaces'
+  requirements:
+    _user_is_logged_in: 'TRUE'
+
+ab_ui.workspace_add:
+  path: '/workspaces/add'
+  defaults:
+    _form: '\Drupal\ab_ui\Form\WorkspaceCreateForm'
+    _title: 'Criar workspace'
+  requirements:
+    _user_is_logged_in: 'TRUE'
+
+ab_ui.workspace_view:
+  path: '/workspaces/{uuid}'
+  defaults:
+    _controller: '\Drupal\ab_ui\Controller\WorkspaceController::view'
+    _title: 'Workspace'
+  requirements:
+    _user_is_logged_in: 'TRUE'
+    uuid: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'

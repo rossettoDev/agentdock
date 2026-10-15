@@ -179,11 +179,11 @@ Como owner, quero que meus dados fiquem isolados.
 
 Como owner, quero administrar colaboradores existentes.
 
-**Dependências:** US-05. **Status:** todo.
+**Dependências:** US-05. **Status:** in_progress.
 
 ### US-06/T01 — Criar listagem e formulário de workspace
 
-- [ ] **Entrega:** Listar apenas acessíveis, criar workspace e trocar contexto.
+- [x] **Entrega:** Listar apenas acessíveis, criar workspace e trocar contexto.
 - **Aceite:** Workspace selecionado não concede acesso por parâmetro de URL.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

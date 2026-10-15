@@ -213,7 +213,7 @@ Como sistema, quero registrar alterações sem perder consistência.
 
 ### US-07/T02 — Implementar gravação dentro da transação
 
-- [ ] **Entrega:** Reservar sequência por lock de workspace, gravar evento e outbox na transação do serviço chamador; padronizar ordem de locks.
+- [x] **Entrega:** Reservar sequência por lock de workspace, gravar evento e outbox na transação do serviço chamador; padronizar ordem de locks.
 - **Aceite:** Rollback remove alteração/evento/outbox; commits concorrentes preservam ordem.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

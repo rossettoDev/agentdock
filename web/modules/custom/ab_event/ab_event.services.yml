@@ -1,0 +1,7 @@
+services:
+  Drupal\ab_event\EventStoreInterface:
+    class: Drupal\ab_event\EventStore
+    arguments:
+      - '@database'
+      - '@uuid'
+      - '@datetime.time'

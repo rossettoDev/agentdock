@@ -1,0 +1,22 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for AgentDock boards.
+ */
+
+use Drupal\ab_board\BoardSchemaInstaller;
+
+/**
+ * Installs the board entity schema.
+ */
+function ab_board_install(): void {
+  BoardSchemaInstaller::install();
+}
+
+/**
+ * Installs the board entity schema on sites that already had the module.
+ */
+function ab_board_update_11001(): string {
+  return BoardSchemaInstaller::install();
+}

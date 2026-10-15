@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\ab_core\Plugin\Validation\Constraint;
 
 use Drupal\ab_core\Authorization\WorkspaceBoundary;
-use Drupal\ab_core\Entity\Membership;
 use Drupal\ab_core\Entity\Workspace;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -15,7 +14,7 @@ use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\ConstraintValidator;
 
 /**
- * Validates that membership references stay inside the workspace.
+ * Validates that entity references stay inside the workspace.
  */
 final class AbSameWorkspaceConstraintValidator extends ConstraintValidator implements ContainerInjectionInterface {
 
@@ -38,7 +37,8 @@ final class AbSameWorkspaceConstraintValidator extends ConstraintValidator imple
    * {@inheritdoc}
    */
   public function validate(mixed $value, Constraint $constraint): void {
-    if (!$constraint instanceof AbSameWorkspaceConstraint || !$value instanceof Membership) {
+    $is_scoped = $constraint instanceof AbSameWorkspaceConstraint && $value instanceof ContentEntityInterface && $value->hasField('workspace');
+    if (!$is_scoped) {
       return;
     }
     $workspace = $this->loadWorkspace($value->get('workspace')->getString());
@@ -49,7 +49,12 @@ final class AbSameWorkspaceConstraintValidator extends ConstraintValidator imple
       if ($definition->getType() !== 'entity_reference' || $name === 'user' || $name === 'workspace') {
         continue;
       }
-      $target = $this->entityTypeManager->getStorage($definition->getSetting('target_type'))->load($value->get($name)->getString());
+      $target_id = $value->get($name)->getString();
+      if ($target_id === '') {
+        continue;
+      }
+      $storage = $this->entityTypeManager->getStorage($definition->getSetting('target_type'));
+      $target = $storage->load($target_id);
       if ($target instanceof ContentEntityInterface && $this->boundary->isCrossWorkspaceReference($workspace, $target)) {
         $this->context->addViolation($constraint->message);
       }

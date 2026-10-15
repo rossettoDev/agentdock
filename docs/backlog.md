@@ -227,11 +227,11 @@ Como sistema, quero registrar alterações sem perder consistência.
 
 Como membro autorizado, quero organizar projetos em boards.
 
-**Dependências:** US-06, US-07. **Status:** todo.
+**Dependências:** US-06, US-07. **Status:** in_progress.
 
 ### US-08/T01 — Criar entidade e serviço de board
 
-- [ ] **Entrega:** Workspace obrigatório, UUID, nome, descrição, arquivamento e eventos.
+- [x] **Entrega:** Workspace obrigatório, UUID, nome, descrição, arquivamento e eventos.
 - **Aceite:** Referência cruzada rejeitada; arquivamento preserva dados.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

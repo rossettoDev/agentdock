@@ -4,4 +4,5 @@ description: 'Board, task, dependências, ordenação e transições'
 package: 'AgentDock'
 core_version_requirement: ^11
 dependencies:
-  - ab_core
+  - ab_core:ab_core
+  - ab_event:ab_event

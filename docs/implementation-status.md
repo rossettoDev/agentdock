@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-15  
-**Marco atual:** M1 — US-06 concluída. US-08 segue todo. US-07 permanece done.
+**Marco atual:** M2 — US-08/T01 concluída; US-08/T02 segue todo. US-07 permanece done.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -1113,6 +1113,52 @@ PHPStan: exit 0
 
 **Próxima ação:** —
 
+## US-08 — Gerenciar boards
+
+**Status:** in_progress  
+**Dependências:** US-06 done, US-07 done.  
+**Objetivo:** Organizar projetos em boards do workspace, sem apagar dados ao arquivar.
+
+#### US-08/T01 — Criar entidade e serviço de board
+
+**Status:** done  
+**Entrega:** O board guarda workspace, UUID, nome, descrição e o marcador de arquivamento. Criar e arquivar gravam evento na mesma transação. Arquivar não apaga a linha. Apontar o board para outro workspace é recusado.
+
+**Contrato:**
+- `ab_board`: `workspace` obrigatório, `uuid`, `name`, `description`, `archived` (default falso), `created` e `changed`
+- `BoardManager` é o caminho de escrita. Exige `board.manage`. Quem não lê o workspace recebe recurso inexistente. Quem lê e não administra recebe operação negada
+- a transação trava `ab_workspace` e, no arquivamento, `ab_board`, e só então chama `EventStore::record()`. Tipos: `board.created` e `board.archived`
+- arquivar de novo não grava outro evento. Nome, descrição, UUID e workspace permanecem
+- mudar `workspace` numa linha já gravada lança erro e a linha armazenada não muda
+- falha depois do evento desfaz o board, o evento e a outbox
+- listagem e formulários continuam na US-08/T02
+
+**Evidências:**
+```bash
+$ lando drush updb -y
+> [notice] Installed the board entity schema.
+ab_board schema: 11001
+
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit web/modules/custom/ab_board/tests web/modules/custom/ab_core/tests
+OK (61 tests, 659 assertions)
+```
+
+`BoardManagerKernelTest` cobre o arquivamento com os dois eventos, a recusa de trocar o workspace, o rollback e o leitor sem `board.manage`. As deprecações do PHPUnit são o aviso de metadata `@group`.
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice \
+    --extensions=php,yml,install web/modules/custom/ab_core web/modules/custom/ab_board
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse
+PHPStan: exit 0
+```
+
+**Bloqueios:** nenhum nesta task.
+
+**Próxima ação:** US-08/T02.
+
 ---
 
 ## Estatísticas
@@ -1120,14 +1166,14 @@ PHPStan: exit 0
 - **Total de tasks:** 83 (conforme backlog)
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
-- **M2:** US-07 done; US-08 em diante seguem todo
+- **M2:** US-07 done; US-08 in_progress (T01 done)
 
 ---
 
 ## Próximos Passos
 
-1. US-08/T01 — entidade e serviço de board, com workspace obrigatório e eventos
-2. US-08/T02 — listagem e formulários no escopo do workspace
+1. US-08/T02 — listagem e formulários: owner e admin gerenciam boards, os demais leem
+2. US-09 espera a US-08
 
 ---
 

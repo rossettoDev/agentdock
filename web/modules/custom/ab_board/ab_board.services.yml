@@ -1,0 +1,9 @@
+services:
+  Drupal\ab_board\BoardManager:
+    arguments:
+      - '@database'
+      - '@entity_type.manager'
+      - '@current_user'
+      - '@Drupal\ab_core\Authorization\MembershipScope'
+      - '@Drupal\ab_core\Authorization\HumanActorContextFactory'
+      - '@Drupal\ab_event\EventStoreInterface'

@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-15  
-**Marco atual:** M2 — US-07/T01 concluída; M1 (US-04 a US-06) segue todo
+**Marco atual:** M2 — US-07/T02 concluída; M1 (US-04 a US-06) segue todo
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -676,7 +676,36 @@ PHPStan: exit 0
 
 **Bloqueios:** nenhum para a T01. US-07/T02 em diante continua dependente, na história, da autorização da US-05, que não foi implementada.
 
-**Próxima ação:** US-07/T02 — gravação de evento e outbox na mesma transação.
+**Próxima ação:** —
+
+---
+
+#### US-07/T02 — Implementar gravação dentro da transação
+
+**Status:** done  
+**Entrega:** `EventStore::record()` reserva a sequência com `SELECT FOR UPDATE` em `ab_workspace_sequence`, grava `ab_event` e `ab_outbox` e não faz commit. A ordem de locks está em `docs/adr/002-ordem-de-locks-de-eventos.md`.
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit web/modules/custom/ab_event/tests
+OK (9 tests, 143 assertions) — repetido 3 vezes
+```
+
+O teste de kernel cobre:
+- recusa sem transação do chamador
+- commit preserva alteração, evento, outbox e sequências 1 e 2
+- rollback remove a alteração, o evento e a outbox, e devolve o contador
+- outro processo fica bloqueado no contador e, depois do commit, grava a sequência 2
+
+```bash
+$ lando php vendor/bin/phpstan analyse
+PHPStan: exit 0
+```
+
+**Bloqueios:** a história ainda declara dependência da US-05, que segue todo. A T02 não aplica autorização.
+
+**Próxima ação:** US-07/T03.
 
 ---
 
@@ -685,13 +714,13 @@ PHPStan: exit 0
 - **Total de tasks:** 83 (conforme backlog)
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** todo
-- **M2:** US-07/T01 done; demais tasks do marco seguem todo
+- **M2:** US-07/T01 e US-07/T02 done; demais tasks do marco seguem todo
 
 ---
 
 ## Próximos Passos
 
-1. US-07/T02 — reservar sequência por workspace e gravar evento/outbox na transação do chamador
+1. US-07/T03 — conexões independentes para ordenação e ausência de eventos não confirmados
 2. M1 (US-04 a US-06) continua pendente e é dependência declarada de US-07 para autorização
 
 ---

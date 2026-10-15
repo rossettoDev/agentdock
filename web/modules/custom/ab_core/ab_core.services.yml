@@ -4,3 +4,9 @@ services:
     arguments:
       - '@database'
       - '@entity_type.manager'
+  Drupal\ab_core\Authorization\WorkspaceRolePolicy: ~
+  Drupal\ab_core\Authorization\HumanActorContextFactory:
+    arguments:
+      - '@current_user'
+      - '@entity_type.manager'
+      - '@Drupal\ab_core\Authorization\WorkspaceRolePolicy'

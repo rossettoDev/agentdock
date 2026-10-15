@@ -141,7 +141,7 @@ Como humano, quero uma área própria de trabalho.
 
 ### US-04/T02 — Criar entidade membership
 
-- [ ] **Entrega:** Associação usuário/workspace com role e status; unicidade no banco.
+- [x] **Entrega:** Associação usuário/workspace com role e status; unicidade no banco.
 - **Aceite:** Mesmo usuário não tem duas associações no mesmo workspace.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

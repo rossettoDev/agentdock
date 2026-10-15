@@ -5,6 +5,7 @@
  * Install, update and uninstall functions for AgentDock core.
  */
 
+use Drupal\ab_core\MembershipSchemaInstaller;
 use Drupal\ab_core\WorkspaceSchemaInstaller;
 
 /**
@@ -12,4 +13,11 @@ use Drupal\ab_core\WorkspaceSchemaInstaller;
  */
 function ab_core_update_11001(): string {
   return WorkspaceSchemaInstaller::install();
+}
+
+/**
+ * Installs the membership entity schema.
+ */
+function ab_core_update_11002(): string {
+  return MembershipSchemaInstaller::install();
 }

@@ -74,7 +74,7 @@ Fontes:
 |------------|--------|---------------|
 | Drupal Core | 11.x (estável mais recente) | Versão alvo do projeto conforme arquitetura |
 | PHP | 8.3 | Requisito mínimo do Drupal 11; amplamente suportado |
-| PostgreSQL | 17 | Versão recente, compatível com requisito mínimo 16+ |
+| PostgreSQL | 16 | Plugin Lando drupal11 não suporta versão 17; 16 atende requisito mínimo Drupal 11 |
 | Drush | ^13 | Versão recomendada e suportada para Drupal 11 completo |
 | Composer | 2.7.0+ | Requisito de segurança do Drupal 11 |
 
@@ -126,14 +126,14 @@ config:
   composer_version: '2-latest'
   via: apache:2.4
   webroot: web
-  database: postgres:17
+  database: postgres:16
   drush: ^13
 ```
 
 **Justificativa:**
 - Recipe drupal11: suporte nativo a Drupal 11
 - PHP 8.3: requisito mínimo, estável, amplamente testado
-- PostgreSQL 17: versão recente (> requisito mínimo 16)
+- PostgreSQL 16: plugin Lando drupal11 não suporta versão 17; 16 atende requisito mínimo Drupal 11 (16+)
 - Apache 2.4: servidor padrão, bem documentado
 
 ### 5. Configuração de Banco de Dados
@@ -155,8 +155,8 @@ config:
 - Host: `database` (nome do serviço)
 - Port: `5432`
 - Database: `drupal11`
-- Username: `drupal11`
-- Password: `drupal11`
+- Username: `postgres`
+- Password: `` (vazio)
 
 ### 6. Ambiente Alvo do Desenvolvedor
 
@@ -229,6 +229,7 @@ lando psql -c "SELECT * FROM pg_extension WHERE extname = 'pg_trgm';"
 - PHP 8.3 pode exigir atualizações de módulos contrib
 - WSL2 adiciona complexidade no setup inicial
 - Lando requer ajustes para funcionar bem com Docker Engine
+- Plugin Lando drupal11 não suporta PostgreSQL 17 (limitação temporária)
 
 ### Neutras
 

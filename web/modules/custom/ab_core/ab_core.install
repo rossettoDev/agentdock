@@ -1,0 +1,15 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for AgentDock core.
+ */
+
+use Drupal\ab_core\WorkspaceSchemaInstaller;
+
+/**
+ * Installs the workspace entity schema.
+ */
+function ab_core_update_11001(): string {
+  return WorkspaceSchemaInstaller::install();
+}

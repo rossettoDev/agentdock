@@ -131,11 +131,11 @@ Como desenvolvedor, quero validar cada incremento.
 
 Como humano, quero uma área própria de trabalho.
 
-**Dependências:** US-02, US-03. **Status:** todo.
+**Dependências:** US-02, US-03. **Status:** in_progress.
 
 ### US-04/T01 — Criar entidade workspace
 
-- [ ] **Entrega:** Base fields UUID, nome, owner, timezone, status e timestamps; schema e constraints.
+- [x] **Entrega:** Base fields UUID, nome, owner, timezone, status e timestamps; schema e constraints.
 - **Aceite:** Timezone inválido e owner ausente são rejeitados.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

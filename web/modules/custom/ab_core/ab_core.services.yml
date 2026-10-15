@@ -18,11 +18,21 @@ services:
     arguments:
       - '@current_user'
       - '@Drupal\ab_core\Authorization\MembershipScope'
+  Drupal\ab_core\UuidLookup:
+    arguments:
+      - '@entity_type.manager'
   Drupal\ab_core\WorkspaceRepository:
     arguments:
       - '@current_user'
       - '@entity_type.manager'
       - '@Drupal\ab_core\Authorization\MembershipScope'
+      - '@Drupal\ab_core\UuidLookup'
+  Drupal\ab_core\MembershipRepository:
+    arguments:
+      - '@current_user'
+      - '@entity_type.manager'
+      - '@Drupal\ab_core\Authorization\MembershipScope'
+      - '@Drupal\ab_core\UuidLookup'
   cache_context.ab_memberships:
     class: Drupal\ab_core\Cache\MembershipsCacheContext
     arguments:

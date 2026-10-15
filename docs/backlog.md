@@ -155,7 +155,7 @@ Como humano, quero uma área própria de trabalho.
 
 Como owner, quero que meus dados fiquem isolados.
 
-**Dependências:** US-04. **Status:** in_progress.
+**Dependências:** US-04. **Status:** done.
 
 ### US-05/T01 — Implementar ActorContext humano e policy
 
@@ -171,7 +171,7 @@ Como owner, quero que meus dados fiquem isolados.
 
 ### US-05/T03 — Testar isolamento básico
 
-- [ ] **Entrega:** Fixtures de dois workspaces e acesso por UUID conhecido.
+- [x] **Entrega:** Fixtures de dois workspaces e acesso por UUID conhecido.
 - **Aceite:** Leitura/escrita cruzada falham; acesso autorizado continua funcionando.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

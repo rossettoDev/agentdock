@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-15  
-**Marco atual:** M1 — US-05/T02 concluída; US-05/T03 segue todo. US-07 permanece done.
+**Marco atual:** M1 — US-05 concluída; US-06 segue todo. US-07 permanece done.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -767,7 +767,7 @@ PHPStan: exit 0
 
 ## US-05 — Aplicar autorização por workspace
 
-**Status:** in_progress  
+**Status:** done  
 **Dependências:** US-04 ✅  
 **Objetivo:** Isolar os dados pelo workspace.
 
@@ -820,7 +820,7 @@ PHPStan: exit 0
 - ver uma membership exige `read` no workspace dela. Alterar ou criar exige `membership.manage`. Member não administra membros, nem os de outro workspace
 - o render da listagem varia por `user` e `ab_memberships` e carrega a tag `ab_membership_list:{uid}`, invalidada ao gravar ou apagar a membership
 - validar a referência a um workspace confirma que ele existe. O autocomplete continua no escopo. `WorkspaceBoundary` marca como cruzada uma entidade cujo workspace é outro
-- a leitura por UUID conhecido continua na US-05/T03
+- a leitura por UUID conhecido fica na US-05/T03
 
 **Evidências:**
 ```bash
@@ -842,7 +842,41 @@ PHPStan: exit 0
 
 **Bloqueios:** nenhum nesta task. Não há tela.
 
-**Próxima ação:** US-05/T03.
+**Próxima ação:** —
+
+#### US-05/T03 — Testar isolamento básico
+
+**Status:** done  
+**Entrega:** Dois workspaces com donos distintos. Leitura e escrita usam o UUID público. Quem conhece o UUID do outro workspace não lê nem altera o registro. O acesso de quem pertence ao workspace continua funcionando.
+
+**Contrato:**
+- `WorkspaceRepository::loadAccessibleByUuid()` devolve o workspace só quando o usuário corrente tem `read`. UUID desconhecido ou fora do escopo devolve `NULL`, sem distinguir os dois casos
+- `renameAccessibleByUuid()` exige `workspace.manage`. Fora do escopo lança `ScopedResourceNotFoundException` e não grava. Quem vê o workspace sem essa permissão recebe `ScopedOperationDeniedException` e o nome permanece
+- `MembershipRepository` aplica a mesma regra ao UUID da membership. Alterar o papel exige `membership.manage`
+- um valor que não é UUID minúsculo é rejeitado antes da consulta
+- não há rota nem tela. A proteção do último owner continua na US-06
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit web/modules/custom/ab_core/tests
+OK (49 tests, 480 assertions)
+```
+
+`WorkspaceUuidIsolationKernelTest` cobre o UUID alheio, o UUID do próprio workspace para owner e viewer, o UUID ausente e o valor malformado. As deprecações do PHPUnit são o aviso de metadata `@group`.
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice \
+    --extensions=php,yml web/modules/custom/ab_core
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse
+PHPStan: exit 0
+```
+
+**Bloqueios:** nenhum nesta task. Não há tela.
+
+**Próxima ação:** US-06/T01.
 
 ---
 
@@ -851,7 +885,7 @@ PHPStan: exit 0
 ### US-07 — Criar fundação transacional de eventos
 
 **Status:** done  
-**Dependências:** US-05 ainda todo. As tasks desta história não aplicam autorização.  
+**Dependências:** US-05 done. As tasks desta história não aplicam autorização.  
 **Objetivo:** Registrar alterações sem perder consistência.
 
 #### US-07/T01 — Criar schema de eventos e outbox
@@ -967,14 +1001,14 @@ PHPStan: exit 0
 
 - **Total de tasks:** 83 (conforme backlog)
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
-- **M1:** US-04 done; US-05 in_progress (T01 e T02 done); US-06 segue todo
+- **M1:** US-04 done; US-05 done; US-06 segue todo
 - **M2:** US-07 done; US-08 em diante seguem todo e US-08 depende de US-06
 
 ---
 
 ## Próximos Passos
 
-1. US-05/T03 — isolamento por UUID conhecido. US-08 espera US-06
+1. US-06/T01 — listagem e formulário de workspace. US-08 espera US-06
 2. US-06 continua a dependência de interface das próximas mutações de board
 
 ---

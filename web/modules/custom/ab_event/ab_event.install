@@ -1,0 +1,168 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for AgentDock events.
+ */
+
+use Drupal\ab_event\EventSchemaInstaller;
+
+/**
+ * Implements hook_schema().
+ *
+ * Tables are an internal contract. Identifiers are opaque strings so this
+ * module does not reference task, agent, board or workspace entity classes.
+ */
+function ab_event_schema(): array {
+  $schema = [];
+  $schema['ab_workspace_sequence'] = [
+    'description' => 'Per-workspace event sequence protected by a row lock.',
+    'fields' => [
+      'workspace_id' => [
+        'description' => 'Workspace UUID that owns the counter.',
+        'type' => 'varchar_ascii',
+        'length' => 36,
+        'not null' => TRUE,
+      ],
+      'sequence' => [
+        'description' => 'Last committed sequence value for the workspace.',
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+    ],
+    'primary key' => ['workspace_id'],
+  ];
+
+  $schema['ab_event'] = [
+    'description' => 'Durable workspace event store.',
+    'fields' => [
+      'event_id' => [
+        'description' => 'Public event UUID.',
+        'type' => 'varchar_ascii',
+        'length' => 36,
+        'not null' => TRUE,
+      ],
+      'workspace_id' => [
+        'description' => 'Workspace UUID that scopes the event.',
+        'type' => 'varchar_ascii',
+        'length' => 36,
+        'not null' => TRUE,
+      ],
+      'sequence' => [
+        'description' => 'Monotonic sequence within the workspace.',
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ],
+      'type' => [
+        'description' => 'Event type, such as task.created.',
+        'type' => 'varchar_ascii',
+        'length' => 64,
+        'not null' => TRUE,
+      ],
+      'resource_id' => [
+        'description' => 'UUID of the resource the event refers to.',
+        'type' => 'varchar_ascii',
+        'length' => 36,
+        'not null' => TRUE,
+      ],
+      'actor_type' => [
+        'description' => 'Actor kind: human, agent or system.',
+        'type' => 'varchar_ascii',
+        'length' => 16,
+        'not null' => TRUE,
+      ],
+      'actor_id' => [
+        'description' => 'Opaque actor identifier. Not an entity reference.',
+        'type' => 'varchar_ascii',
+        'length' => 128,
+        'not null' => TRUE,
+      ],
+      'created' => [
+        'description' => 'Event timestamp as UTC unix time.',
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ],
+      'payload' => [
+        'description' => 'Minimal JSON payload. Secrets are not allowed.',
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => TRUE,
+      ],
+    ],
+    'primary key' => ['event_id'],
+    'unique keys' => [
+      'workspace_sequence' => ['workspace_id', 'sequence'],
+    ],
+  ];
+
+  $schema['ab_outbox'] = [
+    'description' => 'Events waiting to be published after commit.',
+    'fields' => [
+      'event_id' => [
+        'description' => 'Event UUID stored in ab_event.',
+        'type' => 'varchar_ascii',
+        'length' => 36,
+        'not null' => TRUE,
+      ],
+      'destination' => [
+        'description' => 'Opaque delivery destination.',
+        'type' => 'varchar_ascii',
+        'length' => 64,
+        'not null' => TRUE,
+      ],
+      'attempts' => [
+        'description' => 'Delivery attempts already made.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+      'available_at' => [
+        'description' => 'UTC unix time when delivery may start.',
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ],
+      'processed_at' => [
+        'description' => 'UTC unix time when delivery finished.',
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'not null' => FALSE,
+      ],
+      'last_error' => [
+        'description' => 'Last delivery error, without secrets.',
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => FALSE,
+      ],
+    ],
+    'primary key' => ['event_id', 'destination'],
+    'indexes' => [
+      'processed_available' => ['processed_at', 'available_at'],
+    ],
+    'foreign keys' => [
+      'event' => [
+        'table' => 'ab_event',
+        'columns' => ['event_id' => 'event_id'],
+      ],
+    ],
+  ];
+
+  return $schema;
+}
+
+/**
+ * Creates event store, workspace sequence and outbox tables.
+ */
+function ab_event_update_11001(): string {
+  return EventSchemaInstaller::installMissing();
+}

@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-15  
-**Marco atual:** M1 — US-04/T01 concluída; US-04/T02 segue todo. US-07 permanece done.
+**Marco atual:** M1 — US-04/T02 concluída; US-04/T03 segue todo. US-07 permanece done.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -664,9 +664,56 @@ $ lando php vendor/bin/phpstan analyse
 PHPStan: exit 0
 ```
 
-**Bloqueios:** nenhum nesta task. Autorização continua na US-05. Membership é a US-04/T02.
+**Bloqueios:** nenhum nesta task. Autorização continua na US-05.
 
-**Próxima ação:** US-04/T02.
+**Próxima ação:** —
+
+#### US-04/T02 — Criar entidade membership
+
+**Status:** done  
+**Entrega:** Entidade `ab_membership` liga um usuário a um workspace, com papel e status. A unicidade `(workspace, user)` está no PostgreSQL.
+
+**Contrato:**
+- `workspace` e `user`: referências obrigatórias. As chaves de entidade deixam as colunas `NOT NULL`. Uid 0 é recusado
+- `role`: `owner`, `admin`, `member`, `viewer`. O papel `agent` não entra nesta associação; agente continua uma entidade própria
+- `status`: `active` (default) e `revoked`. Uma associação revogada continua ocupando o par workspace/usuário; reativar é atualizar a mesma linha
+- `save()` recusa a segunda associação do mesmo usuário no mesmo workspace
+- índice único real: `ab_membership__workspace_user__key (workspace, "user")`
+
+**Evidências:**
+```bash
+$ lando drush updatedb -y
+> [notice] Update started: ab_core_update_11002
+> [notice] Installed the membership entity schema.
+> [notice] Update completed: ab_core_update_11002
+
+$ lando drush ev "echo \Drupal::keyValue('system.schema')->get('ab_core');"
+11002
+
+$ lando drush sql:query "SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'ab_membership' AND indexname = 'ab_membership__workspace_user__key'"
+ab_membership__workspace_user__key  UNIQUE (workspace, "user")
+```
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit web/modules/custom/ab_core/tests
+OK (18 tests, 148 assertions)
+```
+
+`MembershipEntityKernelTest` cobre a associação válida, a duplicata recusada, o mesmo usuário em outro workspace, outro usuário no mesmo workspace, uid 0, a chave única e o update idempotente. As deprecações do PHPUnit são o aviso de metadata `@group`.
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice \
+    --extensions=php,install,yml web/modules/custom/ab_core
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse
+PHPStan: exit 0
+```
+
+**Bloqueios:** nenhum nesta task. Não há tela nem autorização.
+
+**Próxima ação:** US-04/T03.
 
 ---
 
@@ -791,14 +838,14 @@ PHPStan: exit 0
 
 - **Total de tasks:** 83 (conforme backlog)
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
-- **M1:** US-04 in_progress (T01 done); US-05 e US-06 seguem todo
+- **M1:** US-04 in_progress (T01 e T02 done); US-05 e US-06 seguem todo
 - **M2:** US-07 done; US-08 em diante seguem todo e US-08 depende de US-06
 
 ---
 
 ## Próximos Passos
 
-1. US-04/T02 — persistir membership. US-08 espera US-06
+1. US-04/T03 — provisionar workspace pessoal. US-08 espera US-06
 2. M1 (US-04 a US-06) continua a dependência de autorização das próximas mutações
 
 ---

@@ -1,0 +1,15 @@
+{#
+/**
+ * @file
+ * Lists members the current user can read.
+ */
+#}
+{% if items %}
+  <ul class="ab-member-items">
+    {% for item in items %}
+      <li class="ab-card">{{ item }}</li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p>{{ 'Nenhum membro.'|t }}</p>
+{% endif %}

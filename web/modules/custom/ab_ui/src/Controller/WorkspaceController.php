@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\ab_ui\Controller;
 
+use Drupal\ab_core\Authorization\MembershipScope;
+use Drupal\ab_core\Authorization\WorkspacePermission;
 use Drupal\ab_core\Entity\Workspace;
+use Drupal\ab_core\MembershipManager;
 use Drupal\ab_core\WorkspaceRepository;
+use Drupal\ab_ui\Form\MembershipManageForm;
 use Drupal\ab_ui\Form\WorkspaceSelectForm;
 use Drupal\ab_ui\WorkspaceContext;
 use Drupal\Core\Cache\CacheableMetadata;
@@ -28,6 +32,8 @@ final class WorkspaceController implements ContainerInjectionInterface {
   public function __construct(
     private readonly WorkspaceRepository $workspaces,
     private readonly WorkspaceContext $context,
+    private readonly MembershipManager $memberships,
+    private readonly MembershipScope $scope,
     private readonly FormBuilderInterface $formBuilder,
     private readonly AccountInterface $currentUser,
   ) {}
@@ -45,6 +51,9 @@ final class WorkspaceController implements ContainerInjectionInterface {
       $items[] = [
         'label' => (string) $workspace->label(),
         'current' => $current instanceof Workspace && $current->uuid() === $workspace->uuid(),
+        'members_url' => Url::fromRoute('ab_ui.workspace_members', [
+          'uuid' => $workspace->uuid(),
+        ])->toString(),
       ];
     }
     $form = $items === [] ? NULL : $this->formBuilder->getForm(WorkspaceSelectForm::class);
@@ -71,9 +80,13 @@ final class WorkspaceController implements ContainerInjectionInterface {
     $workspace = $this->loadVisible($uuid);
     return [
       '#type' => 'inline_template',
-      '#template' => '<p class="ab-workspace-view">{{ label }}</p><p><a href="{{ back }}">{{ back_label }}</a></p>',
+      '#template' => '<p class="ab-workspace-view">{{ label }}</p><p><a href="{{ members }}">{{ members_label }}</a></p><p><a href="{{ back }}">{{ back_label }}</a></p>',
       '#context' => [
         'label' => (string) $workspace->label(),
+        'members' => Url::fromRoute('ab_ui.workspace_members', [
+          'uuid' => $workspace->uuid(),
+        ])->toString(),
+        'members_label' => $this->t('Membros'),
         'back' => Url::fromRoute('ab_ui.workspaces')->toString(),
         'back_label' => $this->t('Meus workspaces'),
       ],
@@ -82,6 +95,52 @@ final class WorkspaceController implements ContainerInjectionInterface {
         'tags' => ['ab_membership_list:' . $this->currentUser->id()],
       ],
     ];
+  }
+
+  /**
+   * Lists members without changing the selected workspace.
+   *
+   * @return array<string, mixed>
+   *   A render array.
+   */
+  public function members(string $uuid): array {
+    $workspace = $this->loadVisible($uuid);
+    $can_manage = $this->scope->allows(
+      $this->currentUser,
+      $workspace,
+      WorkspacePermission::MANAGE_MEMBERS,
+    );
+    if ($can_manage) {
+      return $this->formBuilder->getForm(MembershipManageForm::class, $workspace->uuid());
+    }
+    $items = [];
+    foreach ($this->memberships->listMembers($workspace) as $member) {
+      $items[] = $member['name'] . ' (' . $this->roleLabel($member['role']) . ')';
+    }
+    return [
+      '#theme' => 'ab_ui_member_list',
+      '#items' => $items,
+      '#cache' => [
+        'contexts' => ['user', 'ab_memberships'],
+        'tags' => [
+          'ab_membership_list:' . $this->currentUser->id(),
+          'ab_workspace_members:' . $workspace->id(),
+        ],
+      ],
+    ];
+  }
+
+  /**
+   * Returns the visible label of a stored role.
+   */
+  private function roleLabel(string $role): string {
+    return (string) match ($role) {
+      'owner' => $this->t('Owner'),
+      'admin' => $this->t('Admin'),
+      'member' => $this->t('Membro'),
+      'viewer' => $this->t('Leitor'),
+      default => $role,
+    };
   }
 
   /**

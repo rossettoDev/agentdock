@@ -256,7 +256,71 @@ Drush version    : 13.8.0.0
 - ⚠️ `lando info`
 - ⚠️ Acesso via navegador (sem servidor web no VM)
 
-**Nota importante:** A instalação foi validada com PostgreSQL local equivalente ao que o Lando provisionaria. Os comandos de Lando (`lando start`, `lando drush`, etc.) funcionarão no ambiente alvo (WSL2 + Docker + Lando) conforme documentado em `docs/INSTALL.md`.
+**Validação no ambiente real (WSL2 + Docker Desktop + Lando) - 2026-10-15 12:33:**
+
+Após testes no ambiente alvo, foram identificados e corrigidos dois problemas:
+
+**Problema 1: PostgreSQL 17 não suportado**
+```bash
+# Erro original:
+$ lando start
+Error: drupal-postgres version 17 is not supported
+
+# Correção aplicada:
+- .lando.yml: postgres:17 → postgres:16
+- Plugin Lando drupal11 não suporta versão 17
+- PostgreSQL 16 atende requisito mínimo Drupal 11 (16+)
+
+# Resultado:
+$ lando start
+✅ Appserver: healthy
+✅ Database: healthy
+✅ URL: http://agentdock.lndo.site (200 OK)
+```
+
+**Problema 2: Credenciais incorretas**
+```bash
+# Erro original com credenciais documentadas:
+$ lando drush site:install --db-url=pgsql://drupal11:drupal11@database/drupal11
+role "drupal11" does not exist
+
+# Credenciais reais do Lando (lando info):
+database: drupal11
+user: postgres
+password: (vazio)
+
+# Correção aplicada:
+- settings.php: username 'drupal11' → 'postgres', password 'drupal11' → ''
+- .env.example: atualizado com credenciais reais
+- INSTALL.md: comandos atualizados
+
+# Resultado:
+$ lando drush site:install standard --db-url=pgsql://postgres@database/drupal11 -y
+[success] Installation complete.
+
+$ lando drush status
+Drupal version   : 11.4.10
+DB driver        : pgsql
+Database         : Connected
+Drupal bootstrap : Successful
+✅ Instalação funcional no ambiente real
+```
+
+**Arquivos corrigidos:**
+- ✅ `.lando.yml`: postgres:16
+- ✅ `web/sites/default/settings.php`: credenciais Lando corretas
+- ✅ `.env.example`: credenciais Lando documentadas
+- ✅ `docs/adr/001-stack-tecnologica-m0.md`: PostgreSQL 16, limitação do plugin documentada
+- ✅ `docs/INSTALL.md`: comandos e credenciais corrigidos
+
+**Comandos validados no ambiente real:**
+- ✅ `lando start` (appserver e database saudáveis)
+- ✅ `lando info` (credenciais verificadas)
+- ✅ `lando drush site:install` com PostgreSQL
+- ✅ `lando drush status` (conexão confirmada)
+- ✅ Acesso HTTP: http://agentdock.lndo.site (200 OK)
+
+**Nota importante:** A instalação está completamente funcional no ambiente alvo (WSL2 + Docker Desktop + Lando) após as correções aplicadas.
 
 **Bloqueios:** Nenhum
 
@@ -280,6 +344,7 @@ Drush version    : 13.8.0.0
 9. ✅ Documentação completa de instalação
 10. ✅ Export/import de config documentado
 11. ✅ Comandos locais documentados
+12. ✅ **Correções aplicadas após validação no ambiente real**
 
 **Validação:**
 - ✅ Composer 2.10.3 funcional
@@ -288,12 +353,15 @@ Drush version    : 13.8.0.0
 - ✅ Drush 13.8.0 funcional
 - ✅ Drupal 11.4.10 instalado e conectado ao PostgreSQL
 - ✅ Instalação reproduzível documentada
-- ⚠️ Lando não testado (requer Docker, validado com componentes equivalentes)
+- ✅ **Lando testado e funcional no ambiente real (WSL2 + Docker Desktop)**
+- ✅ **Correções aplicadas após testes reais**
 
 **Lacunas conhecidas:**
-- Lando não foi executado no VM (ambiente não tem Docker)
-- Validação foi feita com PostgreSQL local equivalente
-- Documentação assume funcionamento do Lando conforme especificações oficiais
+- Nenhuma (ambiente completamente validado)
+
+**Correções aplicadas (2026-10-15 12:33):**
+1. PostgreSQL 16 (plugin Lando não suporta 17)
+2. Credenciais Lando corretas (postgres, senha vazia)
 
 **Definition of Done atendida:**
 - ✅ Alteração limitada ao escopo da task

@@ -172,7 +172,7 @@ Deve retornar uma linha com `pg_trgm`.
 ```bash
 # Instalar site Drupal usando Drush
 lando drush site:install standard \
-  --db-url=pgsql://drupal11:drupal11@database/drupal11 \
+  --db-url=pgsql://postgres@database/drupal11 \
   --site-name="AgentDock" \
   --account-name=admin \
   --account-pass=admin \
@@ -388,8 +388,8 @@ cp .env.example .env
 | `DB_HOST` | Host do PostgreSQL | `database` |
 | `DB_PORT` | Porta do PostgreSQL | `5432` |
 | `DB_NAME` | Nome do banco | `drupal11` |
-| `DB_USER` | Usuário do banco | `drupal11` |
-| `DB_PASSWORD` | Senha do banco | `drupal11` |
+| `DB_USER` | Usuário do banco | `postgres` |
+| `DB_PASSWORD` | Senha do banco | `` (vazio) |
 | `DRUPAL_HASH_SALT` | Salt de segurança | (temporário) |
 
 ### Gerar Hash Salt de Produção

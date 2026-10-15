@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-15  
-**Marco atual:** M1 — US-05/T01 concluída; US-05/T02 segue todo. US-07 permanece done.
+**Marco atual:** M1 — US-05/T02 concluída; US-05/T03 segue todo. US-07 permanece done.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -806,7 +806,43 @@ PHPStan: exit 0
 
 **Bloqueios:** nenhum nesta task. Não há tela nem filtro de listagem.
 
-**Próxima ação:** US-05/T02.
+**Próxima ação:** —
+
+#### US-05/T02 — Aplicar escopo a consultas e cache
+
+**Status:** done  
+**Entrega:** Listagens, contagens e o cache de workspaces ficam no escopo das memberships ativas. O access handler usa a mesma regra. Referência cruzada de workspace é rejeitada.
+
+**Contrato:**
+- `WorkspaceRepository` lista e conta só workspaces com membership ativa do usuário corrente
+- a consulta com `accessCheck(TRUE)` em `ab_workspace` e `ab_membership` recebe o mesmo recorte. `accessCheck(FALSE)` continua sem esse recorte e não é a API de listagem
+- ver o workspace exige `read`. Atualizar ou apagar exige `workspace.manage`. Viewer vê e não altera
+- ver uma membership exige `read` no workspace dela. Alterar ou criar exige `membership.manage`. Member não administra membros, nem os de outro workspace
+- o render da listagem varia por `user` e `ab_memberships` e carrega a tag `ab_membership_list:{uid}`, invalidada ao gravar ou apagar a membership
+- validar a referência a um workspace confirma que ele existe. O autocomplete continua no escopo. `WorkspaceBoundary` marca como cruzada uma entidade cujo workspace é outro
+- a leitura por UUID conhecido continua na US-05/T03
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit web/modules/custom/ab_core/tests
+OK (45 tests, 404 assertions)
+```
+
+`WorkspaceScopeKernelTest` cobre listagem, contagem, consulta com access check, o render cacheado de dois usuários, o access handler e a referência cruzada.
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice \
+    --extensions=php,yml web/modules/custom/ab_core
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse
+PHPStan: exit 0
+```
+
+**Bloqueios:** nenhum nesta task. Não há tela.
+
+**Próxima ação:** US-05/T03.
 
 ---
 
@@ -931,14 +967,14 @@ PHPStan: exit 0
 
 - **Total de tasks:** 83 (conforme backlog)
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
-- **M1:** US-04 done; US-05 in_progress (T01 done); US-06 segue todo
+- **M1:** US-04 done; US-05 in_progress (T01 e T02 done); US-06 segue todo
 - **M2:** US-07 done; US-08 em diante seguem todo e US-08 depende de US-06
 
 ---
 
 ## Próximos Passos
 
-1. US-05/T02 — aplicar escopo a consultas e cache. US-08 espera US-06
+1. US-05/T03 — isolamento por UUID conhecido. US-08 espera US-06
 2. US-06 continua a dependência de interface das próximas mutações de board
 
 ---

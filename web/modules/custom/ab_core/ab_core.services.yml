@@ -5,8 +5,28 @@ services:
       - '@database'
       - '@entity_type.manager'
   Drupal\ab_core\Authorization\WorkspaceRolePolicy: ~
+  Drupal\ab_core\Authorization\MembershipScope:
+    arguments:
+      - '@entity_type.manager'
+      - '@Drupal\ab_core\Authorization\WorkspaceRolePolicy'
+  Drupal\ab_core\Authorization\WorkspaceBoundary: ~
+  Drupal\ab_core\Authorization\WorkspaceQueryScope:
+    arguments:
+      - '@Drupal\ab_core\Authorization\MembershipScope'
+      - '@current_user'
   Drupal\ab_core\Authorization\HumanActorContextFactory:
     arguments:
       - '@current_user'
+      - '@Drupal\ab_core\Authorization\MembershipScope'
+  Drupal\ab_core\WorkspaceRepository:
+    arguments:
+      - '@current_user'
       - '@entity_type.manager'
-      - '@Drupal\ab_core\Authorization\WorkspaceRolePolicy'
+      - '@Drupal\ab_core\Authorization\MembershipScope'
+  cache_context.ab_memberships:
+    class: Drupal\ab_core\Cache\MembershipsCacheContext
+    arguments:
+      - '@current_user'
+      - '@Drupal\ab_core\Authorization\MembershipScope'
+    tags:
+      - { name: cache.context }

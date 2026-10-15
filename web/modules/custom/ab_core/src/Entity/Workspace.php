@@ -31,6 +31,7 @@ use Drupal\user\EntityOwnerTrait;
   ],
   handlers: [
     'storage_schema' => 'Drupal\ab_core\WorkspaceStorageSchema',
+    'access' => 'Drupal\ab_core\Authorization\WorkspaceAccessControlHandler',
   ],
   base_table: 'ab_workspace',
 )]

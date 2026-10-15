@@ -29,10 +29,12 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
   ],
   handlers: [
     'storage_schema' => 'Drupal\ab_core\MembershipStorageSchema',
+    'access' => 'Drupal\ab_core\Authorization\MembershipAccessControlHandler',
   ],
   base_table: 'ab_membership',
   constraints: [
     'AbMembershipUnique' => [],
+    'AbSameWorkspace' => [],
   ],
 )]
 class Membership extends ContentEntityBase {

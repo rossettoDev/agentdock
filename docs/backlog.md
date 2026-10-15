@@ -131,7 +131,7 @@ Como desenvolvedor, quero validar cada incremento.
 
 Como humano, quero uma área própria de trabalho.
 
-**Dependências:** US-02, US-03. **Status:** in_progress.
+**Dependências:** US-02, US-03. **Status:** done.
 
 ### US-04/T01 — Criar entidade workspace
 
@@ -147,7 +147,7 @@ Como humano, quero uma área própria de trabalho.
 
 ### US-04/T03 — Criar workspace pessoal
 
-- [ ] **Entrega:** Serviço idempotente para provisionar workspace e membership owner.
+- [x] **Entrega:** Serviço idempotente para provisionar workspace e membership owner.
 - **Aceite:** Repetição não duplica workspace e falha parcial não deixa associação órfã.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

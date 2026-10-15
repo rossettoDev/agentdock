@@ -1,0 +1,6 @@
+services:
+  Drupal\ab_core\PersonalWorkspaceProvisionerInterface:
+    class: Drupal\ab_core\PersonalWorkspaceProvisioner
+    arguments:
+      - '@database'
+      - '@entity_type.manager'

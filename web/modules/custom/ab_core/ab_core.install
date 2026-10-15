@@ -6,6 +6,7 @@
  */
 
 use Drupal\ab_core\MembershipSchemaInstaller;
+use Drupal\ab_core\PersonalWorkspaceSchema;
 use Drupal\ab_core\WorkspaceSchemaInstaller;
 
 /**
@@ -20,4 +21,11 @@ function ab_core_update_11001(): string {
  */
 function ab_core_update_11002(): string {
   return MembershipSchemaInstaller::install();
+}
+
+/**
+ * Installs the personal workspace field and owner index.
+ */
+function ab_core_update_11003(): string {
+  return PersonalWorkspaceSchema::install();
 }

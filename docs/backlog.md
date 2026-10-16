@@ -279,7 +279,7 @@ Como humano, quero liberar tarefas válidas para execução.
 
 ### US-10/T02 — Implementar dependências sem ciclos
 
-- [ ] **Entrega:** Mesmo board/workspace, par único, detecção de ciclos e bloqueio derivado.
+- [x] **Entrega:** Mesmo board/workspace, par único, detecção de ciclos e bloqueio derivado.
 - **Aceite:** Autodependência e ciclo indireto são rejeitados.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

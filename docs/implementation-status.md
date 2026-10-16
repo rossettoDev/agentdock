@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-16  
-**Marco atual:** M2 — US-10/T01 concluída; US-10/T02 segue todo. US-09 permanece done.
+**Marco atual:** M2 — US-10/T02 concluída; US-10/T03 segue todo. US-09 permanece done.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -1408,7 +1408,63 @@ PHPStan: exit 0
 
 **Bloqueios:** nenhum nesta task.
 
-**Próxima ação:** US-10/T02.
+**Próxima ação:** —
+
+#### US-10/T02 — Dependências sem ciclos
+
+**Status:** done  
+**Entrega:** A dependência é um par único no mesmo board. Autodependência e ciclo são recusados. O bloqueio é calculado: a tarefa fica bloqueada enquanto algum predecessor não está `done`.
+
+**Contrato:**
+- `ab_task_dependency` guarda `workspace`, `board`, `task_id` e `dependency_id`. A chave primária é o par (`task_id`, `dependency_id`)
+- `TaskDependencyManager::add()` e `remove()` exigem `write`. Quem não lê o workspace de qualquer uma das tarefas recebe recurso inexistente. Quem lê e não escreve recebe operação negada
+- as duas tarefas precisam estar no mesmo board e no mesmo workspace. A tarefa não pode depender dela mesma
+- o ciclo é a volta pelos predecessores: se o predecessor já alcança a tarefa, o par é recusado. Um atalho que não fecha o ciclo é gravado
+- `blocked` não é coluna. `isBlocked()` é verdadeiro quando existe predecessor com status diferente de `done`, inclusive `cancelled`. Sem predecessor, é falso
+- a versão esperada é a da tarefa que espera. Versão antiga não grava. Cada inclusão ou remoção incrementa `version` e grava `task.dependency_added` ou `task.dependency_removed`
+- a transação trava `ab_workspace`, depois `ab_board` e as duas tarefas em ordem crescente de id, e só então chama `EventStore::record()`. O payload leva título, status, prioridade, versão e o UUID do predecessor
+- o detalhe mostra "Bloqueada" e a lista de predecessores. O formulário só oferece outras tarefas do mesmo board
+
+**Evidências:**
+```bash
+$ lando drush updb -y
+> [notice] Created the task dependency table.
+ab_board schema: 11003
+
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_board/tests/src/Kernel/TaskDependencyKernelTest.php
+OK (5 tests, 139 assertions)
+```
+
+`TaskDependencyKernelTest` cobre autodependência, board diferente, par repetido, a chave no banco, o ciclo indireto, o atalho, o bloqueio derivado, o rollback e o viewer. As deprecações do PHPUnit são o aviso de metadata `@group`.
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_ui/tests/src/Functional/TaskDependencyUiTest.php \
+    web/modules/custom/ab_ui/tests/src/Functional/TaskScreensUiTest.php
+OK (2 tests, 131 assertions)
+```
+
+No navegador, em `http://agentdock.lndo.site`, grace criou "Preparar o material" no Quadro Casa e a fez depender de "Tema revisado". O detalhe mostrou Backlog e Bloqueada, com o predecessor "Tema revisado — Pronta". A própria tarefa não aparecia na lista. O cabeçalho continuou "Meus workspaces".
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice \
+    --extensions=php,yml,install \
+    web/modules/custom/ab_board/ab_board.install \
+    web/modules/custom/ab_board/src/TaskDependencyManager.php \
+    web/modules/custom/ab_ui/src/Form/TaskDependencyForm.php \
+    web/modules/custom/ab_ui/src/Controller/TaskController.php
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse
+PHPStan: exit 0
+```
+
+**Bloqueios:** nenhum nesta task.
+
+**Próxima ação:** US-10/T03.
 
 ---
 
@@ -1417,13 +1473,13 @@ PHPStan: exit 0
 - **Total de tasks:** 83 (conforme backlog)
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
-- **M2:** US-07 done; US-08 done; US-09 done; US-10 in_progress (T01 done)
+- **M2:** US-07 done; US-08 done; US-09 done; US-10 in_progress (T01 e T02 done)
 
 ---
 
 ## Próximos Passos
 
-1. US-10/T02 — dependências no mesmo board, sem ciclo
+1. US-10/T03 — versão esperada nos serviços e nos formulários
 
 ---
 

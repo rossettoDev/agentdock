@@ -7,6 +7,9 @@
 <div class="ab-task-view">
   <p class="ab-task-title">{{ label }}</p>
   <p class="ab-task-status">{{ status }}</p>
+  {% if blocked %}
+    <p class="ab-task-blocked">{{ 'Bloqueada'|t }}</p>
+  {% endif %}
   <p class="ab-task-priority">{{ priority }}</p>
   {% if owner %}
     <p class="ab-task-owner">{{ 'Responsável: @name'|t({'@name': owner}) }}</p>
@@ -27,6 +30,17 @@
   {% endif %}
   {% if transition_form %}
     {{ transition_form }}
+  {% endif %}
+  {% if dependencies %}
+    <h2>{{ 'Dependências'|t }}</h2>
+    <ul class="ab-task-dependencies">
+      {% for item in dependencies %}
+        <li>{{ item.label }} — {{ item.status }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  {% if dependency_form %}
+    {{ dependency_form }}
   {% endif %}
   <p><a href="{{ back_url }}">{{ 'Tarefas'|t }}</a></p>
 </div>

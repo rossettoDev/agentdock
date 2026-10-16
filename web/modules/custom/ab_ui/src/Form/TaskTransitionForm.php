@@ -19,6 +19,7 @@ use Drupal\Core\Form\FormStateInterface;
  *
  * The buttons come from the policy. The in_progress, in_review and done
  * statuses are not choices, so the screen cannot imitate an execution.
+ * The hidden version is the one rendered for this editor.
  */
 final class TaskTransitionForm extends FormBase {
 
@@ -56,7 +57,7 @@ final class TaskTransitionForm extends FormBase {
     ];
     $form['version'] = [
       '#type' => 'hidden',
-      '#value' => (int) $task->get('version')->getString(),
+      '#default_value' => $task->get('version')->getString(),
     ];
     $form['actions'] = ['#type' => 'actions'];
     foreach ($this->policy->targets($from) as $target) {

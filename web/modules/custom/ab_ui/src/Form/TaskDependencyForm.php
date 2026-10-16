@@ -18,6 +18,8 @@ use Drupal\Core\Form\FormStateInterface;
 
 /**
  * Adds and removes predecessors without leaving the task's board.
+ *
+ * The hidden version is the one rendered for this editor.
  */
 final class TaskDependencyForm extends FormBase {
 
@@ -49,7 +51,7 @@ final class TaskDependencyForm extends FormBase {
     ];
     $form['version'] = [
       '#type' => 'hidden',
-      '#value' => (int) $task->get('version')->getString(),
+      '#default_value' => $task->get('version')->getString(),
     ];
     $options = $this->options($task);
     $predecessors = $this->dependencies->predecessors($task);

@@ -27,6 +27,9 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
     'label' => 'name',
     'workspace' => 'workspace',
   ],
+  handlers: [
+    'access' => 'Drupal\ab_board\Authorization\BoardAccessControlHandler',
+  ],
   base_table: 'ab_board',
   constraints: [
     'AbSameWorkspace' => [],

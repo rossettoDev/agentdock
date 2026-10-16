@@ -44,6 +44,22 @@ final class AbUiHooks {
           'items' => [],
         ],
       ],
+      'ab_ui_board_list' => [
+        'variables' => [
+          'workspace_label' => NULL,
+          'add_url' => '',
+          'items' => [],
+        ],
+      ],
+      'ab_ui_board_view' => [
+        'variables' => [
+          'label' => '',
+          'description' => '',
+          'archived' => FALSE,
+          'back_url' => '',
+          'archive_form' => NULL,
+        ],
+      ],
     ];
   }
 

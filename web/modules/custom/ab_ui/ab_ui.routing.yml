@@ -31,3 +31,28 @@ ab_ui.workspace_members:
   requirements:
     _user_is_logged_in: 'TRUE'
     uuid: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+
+ab_ui.boards:
+  path: '/boards'
+  defaults:
+    _controller: '\Drupal\ab_ui\Controller\BoardController::listing'
+    _title: 'Meus boards'
+  requirements:
+    _user_is_logged_in: 'TRUE'
+
+ab_ui.board_add:
+  path: '/boards/add'
+  defaults:
+    _form: '\Drupal\ab_ui\Form\BoardCreateForm'
+    _title: 'Criar board'
+  requirements:
+    _user_is_logged_in: 'TRUE'
+
+ab_ui.board_view:
+  path: '/boards/{uuid}'
+  defaults:
+    _controller: '\Drupal\ab_ui\Controller\BoardController::view'
+    _title: 'Board'
+  requirements:
+    _user_is_logged_in: 'TRUE'
+    uuid: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'

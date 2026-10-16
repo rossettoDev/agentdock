@@ -1,0 +1,34 @@
+{#
+/**
+ * @file
+ * Lists boards of the workspace selected in the session.
+ */
+#}
+<div class="ab-board-list">
+  {% if workspace_label %}
+    <p class="ab-workspace-current">{{ 'Workspace atual: @name'|t({'@name': workspace_label}) }}</p>
+  {% else %}
+    <p class="ab-workspace-current">{{ 'Nenhum workspace selecionado.'|t }}</p>
+  {% endif %}
+
+  {% if add_url %}
+    <p>
+      <a class="ab-button" href="{{ add_url }}">{{ 'Criar board'|t }}</a>
+    </p>
+  {% endif %}
+
+  {% if items %}
+    <ul class="ab-board-items">
+      {% for item in items %}
+        <li class="ab-card">
+          <a href="{{ item.url }}">{{ item.label }}</a>
+          {% if item.archived %}
+            <span class="ab-board-archived">({{ 'Arquivado'|t }})</span>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% elseif workspace_label %}
+    <p>{{ 'Nenhum board neste workspace.'|t }}</p>
+  {% endif %}
+</div>

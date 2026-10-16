@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-15  
-**Marco atual:** M2 — US-08/T01 concluída; US-08/T02 segue todo. US-07 permanece done.
+**Marco atual:** M2 — US-08 concluída. US-09 segue todo. US-07 permanece done.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -1115,7 +1115,7 @@ PHPStan: exit 0
 
 ## US-08 — Gerenciar boards
 
-**Status:** in_progress  
+**Status:** done  
 **Dependências:** US-06 done, US-07 done.  
 **Objetivo:** Organizar projetos em boards do workspace, sem apagar dados ao arquivar.
 
@@ -1131,7 +1131,7 @@ PHPStan: exit 0
 - arquivar de novo não grava outro evento. Nome, descrição, UUID e workspace permanecem
 - mudar `workspace` numa linha já gravada lança erro e a linha armazenada não muda
 - falha depois do evento desfaz o board, o evento e a outbox
-- listagem e formulários continuam na US-08/T02
+- a listagem e os formulários ficaram na US-08/T02
 
 **Evidências:**
 ```bash
@@ -1157,7 +1157,44 @@ PHPStan: exit 0
 
 **Bloqueios:** nenhum nesta task.
 
-**Próxima ação:** US-08/T02.
+**Próxima ação:** —
+
+#### US-08/T02 — Listagem e formulários de board
+
+**Status:** done  
+**Entrega:** A listagem mostra os boards do workspace escolhido na sessão. Criar e arquivar exigem `board.manage`. Quem não lê o workspace não vê o board, nem pelo UUID. A tela de dashboard do protótipo continua fora do MVP.
+
+**Contrato:**
+- `/boards` lista o workspace da sessão, inclusive arquivados. Sem seleção, a página avisa e não cria board. `?workspace=` na URL não troca a sessão
+- `/boards/add` não tem campo de workspace. Owner e admin criam; viewer e member recebem acesso negado
+- `/boards/{uuid}` abre o board quando a pessoa lê o workspace, sem trocar o workspace da sessão. Fora do escopo, a resposta é 404 e a página não mostra nome nem descrição
+- a consulta com `accessCheck(TRUE)` também fica restrita aos workspaces legíveis. O repositório confirma a leitura antes de devolver a lista
+- criar e arquivar passam por `BoardManager`. O formulário não escolhe o autor
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit web/modules/custom/ab_board/tests web/modules/custom/ab_ui/tests
+OK (16 tests, 359 assertions)
+```
+
+`BoardAccessKernelTest` cobre a matriz e a consulta filtrada. `WorkspaceBoardsUiTest` cobre o anônimo, a query string, o 404 sem vazamento, o viewer sem o botão de criar e o admin criando no workspace da sessão. As deprecações do PHPUnit são o aviso de metadata `@group`.
+
+No navegador, em `http://agentdock.lndo.site`, grace criou "Quadro Casa" em Casa Grace, sem campo de workspace. Ada, em Casa Ada, recebeu 404 nesse UUID, sem o nome na página, e a listagem dela não mostrou o board. Abrir o UUID não trocou o workspace do cabeçalho. Grace arquivou o board e a página manteve nome e descrição, com o texto "Arquivado".
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice \
+    --extensions=php,yml,install web/modules/custom/ab_board web/modules/custom/ab_ui \
+    web/modules/custom/ab_core/src/Authorization/WorkspaceQueryScope.php
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse
+PHPStan: exit 0
+```
+
+**Bloqueios:** nenhum nesta task.
+
+**Próxima ação:** —
 
 ---
 
@@ -1166,14 +1203,13 @@ PHPStan: exit 0
 - **Total de tasks:** 83 (conforme backlog)
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
-- **M2:** US-07 done; US-08 in_progress (T01 done)
+- **M2:** US-07 done; US-08 done
 
 ---
 
 ## Próximos Passos
 
-1. US-08/T02 — listagem e formulários: owner e admin gerenciam boards, os demais leem
-2. US-09 espera a US-08
+1. US-09/T01 — entidade de tarefa no board, com workspace derivado do board
 
 ---
 

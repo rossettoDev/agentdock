@@ -9,3 +9,5 @@ services:
       - '@Drupal\ab_ui\WorkspaceContext'
     tags:
       - { name: cache.context }
+  Drupal\ab_ui\TaskMarkdown:
+    class: Drupal\ab_ui\TaskMarkdown

@@ -1,0 +1,29 @@
+{#
+/**
+ * @file
+ * Shows one task without changing the selected workspace.
+ */
+#}
+<div class="ab-task-view">
+  <p class="ab-task-title">{{ label }}</p>
+  <p class="ab-task-status">{{ status }}</p>
+  <p class="ab-task-priority">{{ priority }}</p>
+  {% if owner %}
+    <p class="ab-task-owner">{{ 'Responsável: @name'|t({'@name': owner}) }}</p>
+  {% endif %}
+  {% if due %}
+    <p class="ab-task-due">{{ 'Prazo: @date'|t({'@date': due}) }}</p>
+  {% endif %}
+  {% if description %}
+    <h2>{{ 'Descrição'|t }}</h2>
+    <div class="ab-task-description">{{ description }}</div>
+  {% endif %}
+  {% if criteria %}
+    <h2>{{ 'Critérios de aceite'|t }}</h2>
+    <div class="ab-task-criteria">{{ criteria }}</div>
+  {% endif %}
+  {% if edit_url %}
+    <p><a href="{{ edit_url }}">{{ 'Editar'|t }}</a></p>
+  {% endif %}
+  <p><a href="{{ back_url }}">{{ 'Tarefas'|t }}</a></p>
+</div>

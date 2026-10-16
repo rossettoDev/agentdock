@@ -365,23 +365,23 @@ Como agente, quero acessar a plataforma com identidade própria.
 
 Como agente, quero reservar uma tarefa sem disputa.
 
-**Dependências:** US-07, US-10, US-13. **Status:** todo.
+**Dependências:** US-07, US-10, US-13. **Status:** done.
 
 ### US-14/T01 — Criar execução e lease
 
-- [ ] **Entrega:** Entidade execution, tabela lease única por task, generation, token hash e campos de referência da task.
+- [x] **Entrega:** Entidade execution, tabela lease única por task, generation, token hash e campos de referência da task.
 - **Aceite:** Uma única reserva por tarefa é garantida no banco.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-14/T02 — Implementar claim transacional
 
-- [ ] **Entrega:** Locks em ordem documentada compatível com contador de eventos; validar estado, dependências, grants, atribuição e concorrência.
+- [x] **Entrega:** Locks em ordem documentada compatível com contador de eventos; validar estado, dependências, grants, atribuição e concorrência.
 - **Aceite:** Claim cria execução, muda tarefa e grava evento/outbox atomicamente.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-14/T03 — Testar disputas reais
 
-- [ ] **Entrega:** Dois processos disputam tarefa e duas tarefas disputam concurrency_limit do mesmo agente.
+- [x] **Entrega:** Dois processos disputam tarefa e duas tarefas disputam concurrency_limit do mesmo agente.
 - **Aceite:** Apenas claims permitidos vencem; nenhum registro parcial.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

@@ -55,6 +55,13 @@ final class WorkspaceQueryScope {
   }
 
   /**
+   * Limits an ab_execution query to visible workspaces.
+   */
+  public function alterExecution(AlterableInterface $query): void {
+    $this->restrict($query, 'base_table.workspace');
+  }
+
+  /**
    * Adds the workspace condition for the query account.
    */
   private function restrict(AlterableInterface $query, string $field): void {

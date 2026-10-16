@@ -4,6 +4,7 @@ description: 'Agentes, tokens, grants, execução e leases'
 package: 'AgentDock'
 core_version_requirement: ^11
 dependencies:
+  - drupal:options
   - ab_core:ab_core
   - ab_board:ab_board
   - ab_event:ab_event

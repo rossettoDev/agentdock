@@ -30,6 +30,14 @@ final class AbAgentScopeHooks {
   }
 
   /**
+   * Limits execution entity queries that opt into access checking.
+   */
+  #[Hook('query_ab_execution_access_alter')]
+  public function queryExecutionAccessAlter(AlterableInterface $query): void {
+    $this->queryScope->alterExecution($query);
+  }
+
+  /**
    * Drops the cached agent list of the affected workspace.
    */
   #[Hook('entity_insert')]

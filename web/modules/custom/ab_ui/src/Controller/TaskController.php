@@ -8,14 +8,17 @@ use Drupal\ab_board\BoardRepository;
 use Drupal\ab_board\Entity\Board;
 use Drupal\ab_board\Entity\Task;
 use Drupal\ab_board\TaskRepository;
+use Drupal\ab_board\TaskTransitionPolicy;
 use Drupal\ab_core\Authorization\MembershipScope;
 use Drupal\ab_core\Authorization\WorkspacePermission;
 use Drupal\ab_core\Entity\Workspace;
+use Drupal\ab_ui\Form\TaskTransitionForm;
 use Drupal\ab_ui\TaskMarkdown;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\DependencyInjection\AutowireTrait;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Form\FormBuilderInterface;
 use Drupal\Core\Http\Exception\CacheableNotFoundHttpException;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
@@ -36,6 +39,7 @@ final class TaskController implements ContainerInjectionInterface {
     private readonly MembershipScope $scope,
     private readonly EntityTypeManagerInterface $entityTypeManager,
     private readonly TaskMarkdown $markdown,
+    private readonly FormBuilderInterface $formBuilder,
     private readonly AccountInterface $currentUser,
   ) {}
 
@@ -81,12 +85,13 @@ final class TaskController implements ContainerInjectionInterface {
     $task = $this->visibleTask($uuid);
     $workspace = $this->workspaceOf($task);
     $can_write = $workspace instanceof Workspace && $this->canWrite($workspace);
+    $targets = (new TaskTransitionPolicy())->targets($task->get('status')->getString());
     $board_id = $task->get('board')->getString();
     $board = $this->entityTypeManager->getStorage('ab_board')->load($board_id);
     $back = $board instanceof Board
       ? Url::fromRoute('ab_ui.board_tasks', ['uuid' => $board->uuid()])->toString()
       : Url::fromRoute('ab_ui.boards')->toString();
-    return [
+    $build = [
       '#theme' => 'ab_ui_task_view',
       '#label' => (string) $task->label(),
       '#status' => $this->statusLabel($task->get('status')->getString()),
@@ -98,9 +103,17 @@ final class TaskController implements ContainerInjectionInterface {
       '#edit_url' => $can_write ? Url::fromRoute('ab_ui.task_edit', [
         'uuid' => $task->uuid(),
       ])->toString() : '',
+      '#transition_form' => NULL,
       '#back_url' => $back,
       '#cache' => $this->cacheMeta($workspace),
     ];
+    if ($can_write && $targets !== []) {
+      $build['#transition_form'] = $this->formBuilder->getForm(
+        TaskTransitionForm::class,
+        $task->uuid(),
+      );
+    }
+    return $build;
   }
 
   /**

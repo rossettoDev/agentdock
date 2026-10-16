@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-16  
-**Marco atual:** M2 — US-09 concluída. US-10 segue todo.
+**Marco atual:** M2 — US-10/T01 concluída; US-10/T02 segue todo. US-09 permanece done.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -1352,18 +1352,78 @@ PHPStan: exit 0
 
 ---
 
+## US-10 — Controlar estados e dependências
+
+**Status:** in_progress  
+**Dependências:** US-09 done.  
+**Objetivo:** Liberar tarefas válidas para execução, sem deixar o humano simular esse ciclo.
+
+#### US-10/T01 — Transições humanas iniciais
+
+**Status:** done  
+**Entrega:** O comando humano libera, cancela e reabre. `in_progress`, `in_review` e `done` ficam fora dele. A tela só oferece os destinos dessa policy.
+
+**Contrato:**
+- `TaskManager::transition()` exige `write`. Quem não lê o workspace recebe recurso inexistente. Quem lê e não escreve recebe operação negada
+- de `backlog` o humano vai para `ready` ou `cancelled`. De `ready`, para `backlog` ou `cancelled`. De `cancelled`, a reabertura volta para `backlog`. De `done`, a reabertura volta para `ready`
+- `in_progress`, `in_review` e `done` são recusados antes da transação. O comando também não sai de `in_progress` nem de `in_review`
+- uma tarefa com `active_execution` não muda de status por esse comando. A execução ativa permanece
+- a versão esperada é obrigatória. Versão antiga não grava. Cada transição válida incrementa `version`
+- a transação trava `ab_workspace`, depois `ab_board` e `ab_task`, e só então chama `EventStore::record()`. Tipo: `task.transitioned`. O payload leva título, status novo, status anterior, prioridade e versão
+- o ator é `human` com o id da conta autenticada
+- o detalhe da tarefa mostra só os botões da policy. Não há campo de status nem botão para em andamento, em revisão ou concluída
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_board/tests/src/Kernel/TaskTransitionKernelTest.php
+OK (5 tests, 133 assertions)
+```
+
+`TaskTransitionKernelTest` cobre liberar, cancelar, reabrir, a recusa de `in_progress`, `in_review` e `done`, o conflito de versão, a execução ativa, o rollback e o viewer. As deprecações do PHPUnit são o aviso de metadata `@group`.
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_ui/tests/src/Functional/TaskTransitionUiTest.php \
+    web/modules/custom/ab_ui/tests/src/Functional/TaskScreensUiTest.php
+OK (2 tests, 137 assertions)
+```
+
+No navegador, em `http://agentdock.lndo.site`, grace abriu "Tema revisado" e viu Liberar e Cancelar, sem botão de em andamento. Liberar gravou `ready`, versão 3, execução vazia, e o evento `task.transitioned` levou `from: backlog`. O cabeçalho continuou "Meus workspaces". Ada recebeu 404 nesse UUID, sem o título na página.
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice \
+    --extensions=php,yml \
+    web/modules/custom/ab_board/src/TaskManager.php \
+    web/modules/custom/ab_board/src/TaskTransitionPolicy.php \
+    web/modules/custom/ab_ui/src/Form/TaskTransitionForm.php \
+    web/modules/custom/ab_ui/src/Controller/TaskController.php
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse
+PHPStan: exit 0
+```
+
+**Bloqueios:** nenhum nesta task.
+
+**Próxima ação:** US-10/T02.
+
+---
+
 ## Estatísticas
 
 - **Total de tasks:** 83 (conforme backlog)
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
-- **M2:** US-07 done; US-08 done; US-09 done
+- **M2:** US-07 done; US-08 done; US-09 done; US-10 in_progress (T01 done)
 
 ---
 
 ## Próximos Passos
 
-1. US-10/T01 — transições humanas iniciais de status, sem simular execução
+1. US-10/T02 — dependências no mesmo board, sem ciclo
 
 ---
 

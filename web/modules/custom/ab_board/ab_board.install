@@ -6,6 +6,7 @@
  */
 
 use Drupal\ab_board\BoardSchemaInstaller;
+use Drupal\ab_board\TaskDependencySchemaInstaller;
 use Drupal\ab_board\TaskSchemaInstaller;
 
 /**
@@ -28,4 +29,58 @@ function ab_board_update_11001(): string {
  */
 function ab_board_update_11002(): string {
   return TaskSchemaInstaller::install();
+}
+
+/**
+ * Implements hook_schema().
+ *
+ * The dependency pair is an internal table. It is not a content entity.
+ */
+function ab_board_schema(): array {
+  $schema['ab_task_dependency'] = [
+    'description' => 'Directed dependency between two tasks of the same board.',
+    'fields' => [
+      'workspace' => [
+        'description' => 'Workspace id copied from the task.',
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ],
+      'board' => [
+        'description' => 'Board id shared by the task and the dependency.',
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ],
+      'task_id' => [
+        'description' => 'Task that waits for the dependency.',
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ],
+      'dependency_id' => [
+        'description' => 'Task that must be done first.',
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ],
+    ],
+    'primary key' => ['task_id', 'dependency_id'],
+    'indexes' => [
+      'board' => ['board'],
+      'dependency_id' => ['dependency_id'],
+    ],
+  ];
+  return $schema;
+}
+
+/**
+ * Installs the task dependency table on sites that already had the module.
+ */
+function ab_board_update_11003(): string {
+  return TaskDependencySchemaInstaller::installMissing();
 }

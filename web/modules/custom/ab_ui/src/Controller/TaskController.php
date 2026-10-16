@@ -7,11 +7,13 @@ namespace Drupal\ab_ui\Controller;
 use Drupal\ab_board\BoardRepository;
 use Drupal\ab_board\Entity\Board;
 use Drupal\ab_board\Entity\Task;
+use Drupal\ab_board\TaskDependencyManager;
 use Drupal\ab_board\TaskRepository;
 use Drupal\ab_board\TaskTransitionPolicy;
 use Drupal\ab_core\Authorization\MembershipScope;
 use Drupal\ab_core\Authorization\WorkspacePermission;
 use Drupal\ab_core\Entity\Workspace;
+use Drupal\ab_ui\Form\TaskDependencyForm;
 use Drupal\ab_ui\Form\TaskTransitionForm;
 use Drupal\ab_ui\TaskMarkdown;
 use Drupal\Core\Cache\CacheableMetadata;
@@ -36,6 +38,7 @@ final class TaskController implements ContainerInjectionInterface {
   public function __construct(
     private readonly BoardRepository $boards,
     private readonly TaskRepository $tasks,
+    private readonly TaskDependencyManager $dependencies,
     private readonly MembershipScope $scope,
     private readonly EntityTypeManagerInterface $entityTypeManager,
     private readonly TaskMarkdown $markdown,
@@ -104,6 +107,9 @@ final class TaskController implements ContainerInjectionInterface {
         'uuid' => $task->uuid(),
       ])->toString() : '',
       '#transition_form' => NULL,
+      '#blocked' => $this->dependencies->isBlocked($task),
+      '#dependencies' => $this->dependencyItems($task),
+      '#dependency_form' => NULL,
       '#back_url' => $back,
       '#cache' => $this->cacheMeta($workspace),
     ];
@@ -113,7 +119,30 @@ final class TaskController implements ContainerInjectionInterface {
         $task->uuid(),
       );
     }
+    if ($can_write) {
+      $build['#dependency_form'] = $this->formBuilder->getForm(
+        TaskDependencyForm::class,
+        $task->uuid(),
+      );
+    }
     return $build;
+  }
+
+  /**
+   * Lists predecessor titles for the task detail.
+   *
+   * @return array<int, array<string, string>>
+   *   Label and status of each predecessor.
+   */
+  private function dependencyItems(Task $task): array {
+    $items = [];
+    foreach ($this->dependencies->predecessors($task) as $predecessor) {
+      $items[] = [
+        'label' => (string) $predecessor->label(),
+        'status' => $this->statusLabel($predecessor->get('status')->getString()),
+      ];
+    }
+    return $items;
   }
 
   /**

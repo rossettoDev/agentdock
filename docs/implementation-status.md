@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
-**Última atualização:** 2026-10-15  
-**Marco atual:** M2 — US-08 concluída. US-09 segue todo. US-07 permanece done.
+**Última atualização:** 2026-10-16  
+**Marco atual:** M2 — US-09/T01 concluída; US-09/T02 segue todo. US-08 permanece done.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -1198,18 +1198,87 @@ PHPStan: exit 0
 
 ---
 
+## US-09 — Cadastrar e editar tarefas
+
+**Status:** in_progress  
+**Dependências:** US-08 done.  
+**Objetivo:** Descrever o trabalho e o resultado esperado dentro de um board.
+
+#### US-09/T01 — Criar entidade tarefa
+
+**Status:** done  
+**Entrega:** A tarefa guarda os campos da arquitetura. O workspace nasce do board e não muda. Agente e execução ficam como inteiros até essas entidades existirem.
+
+**Contrato:**
+- `ab_task`: `workspace`, `board`, `uuid`, `title`, `description`, `acceptance_criteria`, `status`, `priority`, `human_owner`, `assigned_agent`, `due_at`, `position`, `version`, `active_execution`, `created` e `changed`
+- na criação, `workspace` vazio é copiado do board. Um workspace diferente do board é recusado. Depois de gravada, a tarefa não troca de board nem de workspace
+- `status` começa em `backlog`. Valores: `backlog`, `ready`, `in_progress`, `in_review`, `done`, `cancelled`
+- `priority` começa em `normal`. Valores: `low`, `normal`, `high`, `urgent`. Na tela de referência, "Alta" corresponde a `high`
+- `position` começa em 0 e `version` em 1. O incremento de versão fica na US-09/T02
+- `human_owner` referencia `user` e pode ficar vazio. `due_at` também
+- `assigned_agent` e `active_execution` são inteiros anuláveis, não referências. No PostgreSQL o inteiro sem sinal vira `bigint`. `EntityReferenceItem` exige a classe alvo e a instalação falharia enquanto `ab_agent` e `ab_execution` não existem
+- índice `workspace, board, status, position`. `workspace` e `board` são NOT NULL
+- ler exige `read`. Atualizar e apagar exigem `write`. Criar pela entidade fica fechado; o serviço é a US-09/T02
+- a consulta com `accessCheck(TRUE)` fica nos workspaces legíveis
+- a validação da referência ao board confere a existência, sem a consulta com acesso. Essa consulta carregaria memberships dentro da transação de gravação, e o PostgreSQL recusa o savepoint aninhado
+- a tarefa não é revisionável. O histórico editorial continua nos eventos e em `version`
+
+**Plano de update:** quando US-12 tiver `ab_agent` e US-14 tiver `ab_execution`, um `hook_update_N` troca esses dois base fields de `integer` para `entity_reference`. Na tabela compartilhada o nome da coluna não muda (`assigned_agent` e `active_execution`). O update precisa preservar os valores; se o atualizador recriar a coluna, copiar os pares id/valor antes e gravá-los de volta. A foreign key só entra depois, e só para ids que existam na tabela alvo. Esse update não pode rodar antes dos dois tipos de entidade existirem.
+
+**Evidências:**
+```bash
+$ lando drush updb -y
+> [notice] Installed the task entity schema.
+ab_board schema: 11002
+
+$ lando drush sql:query "SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = 'ab_task' AND column_name IN ('workspace','board','assigned_agent','active_execution','version','position') ORDER BY column_name"
+active_execution	bigint	YES
+assigned_agent	bigint	YES
+board	bigint	NO
+position	bigint	YES
+version	bigint	YES
+workspace	bigint	NO
+```
+
+O índice `ab_task__workspace_board_status_position__idx` está no PostgreSQL.
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit web/modules/custom/ab_board/tests \
+    web/modules/custom/ab_ui/tests/src/Functional/WorkspaceMembersUiTest.php
+OK (8 tests, 233 assertions)
+```
+
+`TaskEntityKernelTest` cobre a instalação sem `ab_agent` e `ab_execution`, o workspace copiado do board, a recusa de mover a tarefa e a matriz de acesso. Na suíte de `ab_board`, `ab_ui` e `ab_core` (75 testes), o teste de membros falhou no login e passou na repetição acima. As deprecações do PHPUnit são o aviso de metadata `@group`.
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice \
+    --extensions=php,yml,install web/modules/custom/ab_board \
+    web/modules/custom/ab_core/src/Authorization/WorkspaceQueryScope.php
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse
+PHPStan: exit 0
+```
+
+**Bloqueios:** nenhum nesta task.
+
+**Próxima ação:** US-09/T02.
+
+---
+
 ## Estatísticas
 
 - **Total de tasks:** 83 (conforme backlog)
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
-- **M2:** US-07 done; US-08 done
+- **M2:** US-07 done; US-08 done; US-09 in_progress (T01 done)
 
 ---
 
 ## Próximos Passos
 
-1. US-09/T01 — entidade de tarefa no board, com workspace derivado do board
+1. US-09/T02 — criação e edição por serviço, com autor autenticado e versão
 
 ---
 

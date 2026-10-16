@@ -245,11 +245,11 @@ Como membro autorizado, quero organizar projetos em boards.
 
 Como membro, quero descrever o trabalho e seu resultado esperado.
 
-**Dependências:** US-08. **Status:** todo.
+**Dependências:** US-08. **Status:** in_progress.
 
 ### US-09/T01 — Criar entidade tarefa
 
-- [ ] **Entrega:** Campos da arquitetura, versão, prioridade, prazo, posição e referências; agentes/execuções serão conectados em US-14.
+- [x] **Entrega:** Campos da arquitetura, versão, prioridade, prazo, posição e referências; agentes/execuções serão conectados em US-14.
 - **Aceite:** Schema instala sem exigir classe de entidade ainda inexistente; plano de update documentado.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

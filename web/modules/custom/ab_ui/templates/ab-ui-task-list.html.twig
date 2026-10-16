@@ -7,7 +7,7 @@
  */
 #}
 {% macro card(card) %}
-  <article class="ab-card">
+  <article class="ab-card{% if card.targets %} ab-card--movable{% endif %}"{% if card.targets %} draggable="true" data-uuid="{{ card.uuid }}" data-targets="{{ card.targets|join(' ') }}"{% endif %}>
     <h4><a href="{{ card.url }}">{{ card.label }}</a></h4>
     <p>{{ card.priority }}</p>
     {% if card.due %}
@@ -21,6 +21,12 @@
     {% endif %}
     {% if card.blocked %}
       <p>{{ 'Bloqueada'|t }}</p>
+    {% endif %}
+    {% if card.move_form %}
+      <details class="ab-card__move">
+        <summary>{{ 'Mover'|t }}</summary>
+        {{ card.move_form }}
+      </details>
     {% endif %}
   </article>
 {% endmacro %}
@@ -53,14 +59,16 @@
     {% endif %}
     <div class="ab-kanban">
       {% for column in columns %}
-        <section class="ab-kanban__column">
+        <section class="ab-kanban__column" data-status="{{ column.status }}">
           <h3>
             {{ column.label }}
             <span class="ab-kanban__count">{{ column.cards|length }}</span>
           </h3>
-          {% for card in column.cards %}
-            {{ kanban.card(card) }}
-          {% endfor %}
+          <div class="ab-kanban__cards">
+            {% for card in column.cards %}
+              {{ kanban.card(card) }}
+            {% endfor %}
+          </div>
         </section>
       {% endfor %}
     </div>

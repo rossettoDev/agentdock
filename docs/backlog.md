@@ -303,7 +303,7 @@ Como humano, quero acompanhar o fluxo visual.
 
 ### US-11/T02 — Implementar movimento acessível
 
-- [ ] **Entrega:** Botão/menu por teclado chama serviço de transição; adicionar drag-and-drop sobre a mesma operação.
+- [x] **Entrega:** Botão/menu por teclado chama serviço de transição; adicionar drag-and-drop sobre a mesma operação.
 - **Aceite:** Conflito reverte movimento visual e informa usuário.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-16  
-**Marco atual:** M2 — US-11/T01 concluída; US-11/T02 segue todo. US-10 permanece done.
+**Marco atual:** M2 — US-11/T02 concluída; US-11/T03 segue todo. US-10 permanece done.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -1561,6 +1561,48 @@ No navegador, em `http://agentdock.lndo.site`, grace abriu as tarefas do Quadro 
 
 **Próxima ação:** US-11/T02 — movimento pelo teclado e arraste sobre a mesma transição.
 
+#### US-11/T02 — Movimento acessível
+
+**Status:** done  
+**Entrega:** Cada card que o humano pode mover tem o menu Mover, com os mesmos botões da policy. O arraste solta o card na coluna e envia esse botão. Versão antiga não grava: o quadro volta a mostrar a coluna gravada e avisa o conflito.
+
+**Contrato:**
+- o menu só oferece os destinos de `TaskTransitionPolicy`. `in_progress`, `in_review` e `done` não são botão nem coluna de soltura
+- quem não escreve não vê o menu e o card não é arrastável. Quem não lê o board continua recebendo 404
+- o envio usa a versão renderizada. Conflito não muda status nem versão e o card permanece na coluna gravada
+- sucesso no quadro volta para o quadro. Cancelar abre o filtro de canceladas. O detalhe da tarefa continua na própria tela
+- o arraste não tem outro comando: ele aciona o botão da coluna de destino
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_ui/tests/src/Functional/TaskKanbanMoveUiTest.php \
+    web/modules/custom/ab_ui/tests/src/Functional/TaskTransitionUiTest.php
+OK (2 tests, 105 assertions)
+```
+
+`TaskKanbanMoveUiTest` envia Liberar com a versão atrasada: a mensagem pede para recarregar, o título fica em Backlog e o status não muda. O envio seguinte grava `ready` e o card aparece em Pronta. Cancelar e reabrir pelo quadro também passam pelo mesmo comando. Uma tarefa `in_progress` não é arrastável. O viewer não vê Mover. As deprecações do PHPUnit são o aviso de metadata `@group`.
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice \
+    --extensions=php,yml \
+    web/modules/custom/ab_ui/src/Form/TaskTransitionForm.php \
+    web/modules/custom/ab_ui/src/Controller/TaskController.php \
+    web/modules/custom/ab_ui/ab_ui.libraries.yml \
+    web/modules/custom/ab_ui/tests/src/Functional/TaskKanbanMoveUiTest.php
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse
+PHPStan: exit 0
+```
+
+No navegador, em `http://agentdock.lndo.site`, grace viu Mover em "Preparar o material" (Liberar e Cancelar) e em "Tema revisado" (Devolver ao backlog e Cancelar). O primeiro card aceita soltar em `ready` e `cancelled`; o segundo, em `backlog` e `cancelled`. O cabeçalho continuou "Casa Grace".
+
+**Bloqueios:** nenhum nesta task.
+
+**Próxima ação:** US-11/T03 — ordenação por intervalos e filtro Hoje.
+
 ---
 
 ## Estatísticas
@@ -1568,13 +1610,13 @@ No navegador, em `http://agentdock.lndo.site`, grace abriu as tarefas do Quadro 
 - **Total de tasks:** 83 (conforme backlog)
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
-- **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 in_progress (T01 done)
+- **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 in_progress (T01 e T02 done)
 
 ---
 
 ## Próximos Passos
 
-1. US-11/T02 — movimento acessível do card, pela mesma transição do teclado e do arraste
+1. US-11/T03 — ordenação por intervalos e filtro Hoje, sem mover tarefa na virada do dia
 
 ---
 

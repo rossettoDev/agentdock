@@ -98,8 +98,10 @@ class TaskKanbanUiTest extends BrowserTestBase {
     $this->assertSession()->pageTextNotContains('Fora do quadro');
     $this->assertSession()->pageTextNotContains('Tarefa de fora');
     $this->assertSession()->pageTextNotContains('Nova tarefa');
-    $this->assertSession()->responseNotContains('draggable');
-    $this->assertSession()->buttonNotExists('Liberar');
+    $this->assertSession()->buttonExists('Liberar');
+    $this->assertSession()->buttonNotExists('Em andamento');
+    $this->assertSession()->elementExists('xpath', $this->column('Backlog') . '//article[@draggable="true"]');
+    $this->assertSession()->elementNotExists('xpath', $this->column('Em andamento') . '//article[@draggable="true"]');
     $this->assertSession()->elementTextContains(
       'xpath',
       $this->column('Backlog'),
@@ -207,6 +209,8 @@ class TaskKanbanUiTest extends BrowserTestBase {
     $this->assertSession()->pageTextNotContains('Tarefa de fora');
     $this->assertSession()->pageTextNotContains('Fora do quadro');
     $this->assertSession()->linkNotExists('Criar tarefa');
+    $this->assertSession()->buttonNotExists('Liberar');
+    $this->assertSession()->elementNotExists('xpath', '//article[@draggable="true"]');
     $this->drupalGet('tasks/' . $backlog->uuid());
     $this->assertSession()->statusCodeEquals(200);
     $this->drupalGet('workspaces');

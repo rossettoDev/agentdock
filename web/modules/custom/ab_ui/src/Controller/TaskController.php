@@ -74,6 +74,7 @@ final class TaskController implements ContainerInjectionInterface {
     $columns = [];
     foreach (self::COLUMN_STATUSES as $status) {
       $columns[$status] = [
+        'status' => $status,
         'label' => $this->statusLabel($status),
         'cards' => [],
       ];
@@ -81,7 +82,7 @@ final class TaskController implements ContainerInjectionInterface {
     $cancelled = [];
     $tasks = $this->tasks->accessibleTasks($board);
     foreach ($tasks as $task) {
-      $card = $this->card($workspace, $task);
+      $card = $this->card($workspace, $task, $can_write);
       $status = $task->get('status')->getString();
       if ($status === 'cancelled') {
         $cancelled[] = $card;
@@ -109,6 +110,9 @@ final class TaskController implements ContainerInjectionInterface {
         'uuid' => $board->uuid(),
       ])->toString(),
       '#empty' => $tasks === [],
+      '#attached' => [
+        'library' => ['ab_ui/kanban'],
+      ],
       '#cache' => $cache,
     ];
   }
@@ -223,12 +227,19 @@ final class TaskController implements ContainerInjectionInterface {
    * that an agent is assigned. Waiting on input waits for that entity.
    *
    * @return array<string, mixed>
-   *   Title, link, priority, due date, owner and blocked flag.
+   *   Title, link, priority, due date, owner, blocked flag and move form.
    */
-  private function card(Workspace $workspace, Task $task): array {
+  private function card(Workspace $workspace, Task $task, bool $can_write): array {
     $agent = $task->get('assigned_agent')->getString();
+    $status = $task->get('status')->getString();
+    $targets = (new TaskTransitionPolicy())->targets($status);
+    $move_form = [];
+    if ($can_write && $targets !== []) {
+      $move_form = $this->formBuilder->getForm(TaskTransitionForm::class, $task->uuid(), 'board');
+    }
     return [
       'label' => (string) $task->label(),
+      'uuid' => $task->uuid(),
       'url' => Url::fromRoute('ab_ui.task_view', [
         'uuid' => $task->uuid(),
       ])->toString(),
@@ -237,6 +248,8 @@ final class TaskController implements ContainerInjectionInterface {
       'owner' => $this->ownerName($task),
       'blocked' => $this->dependencies->isBlocked($task),
       'agent' => $agent !== '' && $agent !== '0',
+      'targets' => $can_write ? $targets : [],
+      'move_form' => $move_form,
     ];
   }
 

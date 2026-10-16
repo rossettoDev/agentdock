@@ -1,9 +1,39 @@
 {#
 /**
  * @file
- * Lists tasks of one board.
+ * Shows one board as fixed status columns.
+ *
+ * Cancelled tasks stay behind the filter. They are not a column.
  */
 #}
+{% macro card(card) %}
+  <article class="ab-card{% if card.targets or card.reorder_form %} ab-card--movable{% endif %}" data-uuid="{{ card.uuid }}"{% if card.targets or card.reorder_form %} draggable="true"{% endif %}{% if card.targets %} data-targets="{{ card.targets|join(' ') }}"{% endif %}>
+    <h4><a href="{{ card.url }}">{{ card.label }}</a></h4>
+    <p>{{ card.priority }}</p>
+    {% if card.due %}
+      <p>{{ 'Prazo:'|t }} {{ card.due }}</p>
+    {% endif %}
+    {% if card.owner %}
+      <p>{{ 'Responsável:'|t }} {{ card.owner }}</p>
+    {% endif %}
+    {% if card.agent %}
+      <p>{{ 'Agente atribuído'|t }}</p>
+    {% endif %}
+    {% if card.blocked %}
+      <p>{{ 'Bloqueada'|t }}</p>
+    {% endif %}
+    {% if card.move_form %}
+      <details class="ab-card__move">
+        <summary>{{ 'Mover'|t }}</summary>
+        {{ card.move_form }}
+      </details>
+    {% endif %}
+    {% if card.reorder_form %}
+      {{ card.reorder_form }}
+    {% endif %}
+  </article>
+{% endmacro %}
+{% import _self as kanban %}
 <div class="ab-task-list">
   {% if board_label %}
     <p class="ab-task-board">{{ board_label }}</p>
@@ -13,19 +43,45 @@
       <a class="ab-button" href="{{ add_url }}">{{ 'Criar tarefa'|t }}</a>
     </p>
   {% endif %}
-  {% if items %}
-    <ul class="ab-task-items">
-      {% for item in items %}
-        <li class="ab-card">
-          <a href="{{ item.url }}">{{ item.label }}</a>
-          <span class="ab-task-priority">{{ item.priority }}</span>
-          {% if item.due %}
-            <span class="ab-task-due">{{ item.due }}</span>
-          {% endif %}
-        </li>
-      {% endfor %}
-    </ul>
+  {% if cancelled_only or today_only %}
+    <p><a href="{{ board_url }}">{{ 'Voltar ao quadro'|t }}</a></p>
   {% else %}
-    <p>{{ 'Nenhuma tarefa neste board.'|t }}</p>
+    <p>
+      <a href="{{ cancelled_url }}">{{ 'Canceladas'|t }}</a>
+      <a href="{{ today_url }}">{{ 'Hoje'|t }}</a>
+    </p>
+  {% endif %}
+  {% if cancelled_only %}
+    <section class="ab-kanban-cancelled">
+      <h3>{{ 'Canceladas'|t }}</h3>
+      {% if cancelled is empty %}
+        <p>{{ 'Nenhuma tarefa cancelada.'|t }}</p>
+      {% else %}
+        {% for card in cancelled %}
+          {{ kanban.card(card) }}
+        {% endfor %}
+      {% endif %}
+    </section>
+  {% else %}
+    {% if today_empty %}
+      <p>{{ 'Nenhuma tarefa para hoje.'|t }}</p>
+    {% elseif empty %}
+      <p>{{ 'Nenhuma tarefa neste board.'|t }}</p>
+    {% endif %}
+    <div class="ab-kanban">
+      {% for column in columns %}
+        <section class="ab-kanban__column" data-status="{{ column.status }}">
+          <h3>
+            {{ column.label }}
+            <span class="ab-kanban__count">{{ column.cards|length }}</span>
+          </h3>
+          <div class="ab-kanban__cards">
+            {% for card in column.cards %}
+              {{ kanban.card(card) }}
+            {% endfor %}
+          </div>
+        </section>
+      {% endfor %}
+    </div>
   {% endif %}
 </div>

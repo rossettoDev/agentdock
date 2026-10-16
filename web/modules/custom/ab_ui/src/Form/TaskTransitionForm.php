@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\ab_ui\Form;
 
+use Drupal\ab_board\Entity\Board;
+use Drupal\ab_board\Entity\Task;
 use Drupal\ab_board\TaskManager;
 use Drupal\ab_board\TaskRepository;
 use Drupal\ab_board\TaskTransitionPolicy;
@@ -11,6 +13,7 @@ use Drupal\ab_board\TaskTransitionRejectedException;
 use Drupal\ab_board\TaskVersionConflictException;
 use Drupal\ab_core\Authorization\ScopedOperationDeniedException;
 use Drupal\ab_core\Authorization\ScopedResourceNotFoundException;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 
@@ -31,6 +34,7 @@ final class TaskTransitionForm extends FormBase {
   public function __construct(
     private readonly TaskManager $tasks,
     private readonly TaskRepository $repository,
+    private readonly EntityTypeManagerInterface $entityTypeManager,
   ) {
     $this->policy = new TaskTransitionPolicy();
   }
@@ -45,16 +49,28 @@ final class TaskTransitionForm extends FormBase {
   /**
    * {@inheritdoc}
    */
-  public function buildForm(array $form, FormStateInterface $form_state, string $task_uuid = '') {
+  public function buildForm(
+    array $form,
+    FormStateInterface $form_state,
+    string $task_uuid = '',
+    string $return_to = '',
+  ) {
     $task = $this->repository->loadAccessibleByUuid($task_uuid);
     if ($task === NULL) {
       return $form;
     }
     $from = $task->get('status')->getString();
+    $form['#id'] = 'ab-ui-task-transition-' . $task_uuid;
     $form['task_uuid'] = [
       '#type' => 'hidden',
       '#value' => $task_uuid,
     ];
+    if ($return_to === 'board') {
+      $form['return_to'] = [
+        '#type' => 'hidden',
+        '#value' => 'board',
+      ];
+    }
     $form['version'] = [
       '#type' => 'hidden',
       '#default_value' => $task->get('version')->getString(),
@@ -113,7 +129,30 @@ final class TaskTransitionForm extends FormBase {
       return;
     }
     $this->messenger()->addStatus($this->successMessage($from, $target));
+    if ($form_state->getValue('return_to') === 'board') {
+      $this->redirectToBoard($form_state, $task);
+      return;
+    }
     $form_state->setRedirect('ab_ui.task_view', ['uuid' => $task->uuid()]);
+  }
+
+  /**
+   * Sends the editor back to the board that owns the task.
+   */
+  private function redirectToBoard(FormStateInterface $form_state, Task $task): void {
+    $board_id = $task->get('board')->getString();
+    $board = $this->entityTypeManager->getStorage('ab_board')->load($board_id);
+    if (!$board instanceof Board) {
+      $form_state->setRedirect('ab_ui.task_view', ['uuid' => $task->uuid()]);
+      return;
+    }
+    $options = [];
+    if ($task->get('status')->getString() === 'cancelled') {
+      $options['query'] = ['cancelled' => '1'];
+    }
+    $form_state->setRedirect('ab_ui.board_tasks', [
+      'uuid' => $board->uuid(),
+    ], $options);
   }
 
   /**

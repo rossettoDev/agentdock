@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-16  
-**Marco atual:** M2 — US-10 concluída. US-11 segue todo.
+**Marco atual:** M2 — US-11 concluída. US-12 segue todo.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -1506,18 +1506,168 @@ PHPStan: exit 0
 
 ---
 
+## US-11 — Exibir e operar Kanban
+
+**Status:** done  
+**Dependências:** US-10 done.  
+**Objetivo:** Mostrar o fluxo fixo do board, com o card na coluna do status gravado.
+
+#### US-11/T01 — Colunas e cards
+
+**Status:** done  
+**Entrega:** A lista do board virou o quadro. As colunas são Backlog, Pronta, Em andamento, Em revisão e Concluída. Cancelada não é coluna: fica atrás do filtro.
+
+**Contrato:**
+- a rota continua `/boards/{uuid}/tasks`. Abrir o quadro ou um card não seleciona workspace. A query `workspace` não troca a lista nem a sessão
+- o card mostra título, prioridade, prazo em `d/m/Y` no fuso do workspace, responsável e "Bloqueada" quando algum predecessor não está `done`
+- o id de agente não aparece. Se houver id gravado, o card diz só "Agente atribuído". O nome espera a entidade de agente. "Aguardando entrada" espera a entidade de pedido, que ainda não existe
+- `?cancelled=1` mostra só as canceladas, sem as cinco colunas. Sem esse filtro, elas ficam de fora do quadro
+- quem escreve continua vendo "Criar tarefa". Quem só lê vê os cards sem esse link. Quem não lê o board recebe 404, sem os títulos
+- não há arraste, botão de transição, filtro Hoje nem "Nova tarefa"
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_ui/tests/src/Functional/TaskKanbanUiTest.php
+OK (1 test, 71 assertions)
+```
+
+`TaskKanbanUiTest` coloca cada status na coluna correspondente, esconde a cancelada até o filtro, mostra Bloqueada só no card que espera, omite o id do agente e não deixa a query trocar o board nem a sessão. Fora do workspace a lista responde 404 sem os títulos. As deprecações do PHPUnit são o aviso de metadata `@group`.
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_ui/tests/src/Functional/TaskScreensUiTest.php
+OK (1 test, 88 assertions)
+```
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice \
+    --extensions=php,yml \
+    web/modules/custom/ab_ui/src/Controller/TaskController.php \
+    web/modules/custom/ab_ui/src/Hook/AbUiHooks.php \
+    web/modules/custom/ab_ui/tests/src/Functional/TaskKanbanUiTest.php \
+    web/themes/custom/agent_board/agent_board.info.yml
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse
+PHPStan: exit 0
+```
+
+No navegador, em `http://agentdock.lndo.site`, grace abriu as tarefas do Quadro Casa. "Preparar o material" ficou em Backlog, com Bloqueada. "Tema revisado" ficou em Pronta, com Alta, prazo 20/10/2026 e responsável grace. O cabeçalho continuou "Casa Grace". O filtro de canceladas mostrou "Nenhuma tarefa cancelada." e não as cinco colunas. Abrir "Tema revisado" não trocou o workspace. Em largura de telefone as colunas empilham.
+
+**Bloqueios:** nenhum nesta task.
+
+**Próxima ação:** —
+
+#### US-11/T02 — Movimento acessível
+
+**Status:** done  
+**Entrega:** Cada card que o humano pode mover tem o menu Mover, com os mesmos botões da policy. O arraste solta o card na coluna e envia esse botão. Versão antiga não grava: o quadro volta a mostrar a coluna gravada e avisa o conflito.
+
+**Contrato:**
+- o menu só oferece os destinos de `TaskTransitionPolicy`. `in_progress`, `in_review` e `done` não são botão nem coluna de soltura
+- quem não escreve não vê o menu e o card não é arrastável. Quem não lê o board continua recebendo 404
+- o envio usa a versão renderizada. Conflito não muda status nem versão e o card permanece na coluna gravada
+- sucesso no quadro volta para o quadro. Cancelar abre o filtro de canceladas. O detalhe da tarefa continua na própria tela
+- o arraste não tem outro comando: ele aciona o botão da coluna de destino
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_ui/tests/src/Functional/TaskKanbanMoveUiTest.php \
+    web/modules/custom/ab_ui/tests/src/Functional/TaskTransitionUiTest.php
+OK (2 tests, 105 assertions)
+```
+
+`TaskKanbanMoveUiTest` envia Liberar com a versão atrasada: a mensagem pede para recarregar, o título fica em Backlog e o status não muda. O envio seguinte grava `ready` e o card aparece em Pronta. Cancelar e reabrir pelo quadro também passam pelo mesmo comando. Uma tarefa `in_progress` não é arrastável. O viewer não vê Mover. As deprecações do PHPUnit são o aviso de metadata `@group`.
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice \
+    --extensions=php,yml \
+    web/modules/custom/ab_ui/src/Form/TaskTransitionForm.php \
+    web/modules/custom/ab_ui/src/Controller/TaskController.php \
+    web/modules/custom/ab_ui/ab_ui.libraries.yml \
+    web/modules/custom/ab_ui/tests/src/Functional/TaskKanbanMoveUiTest.php
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse
+PHPStan: exit 0
+```
+
+No navegador, em `http://agentdock.lndo.site`, grace viu Mover em "Preparar o material" (Liberar e Cancelar) e em "Tema revisado" (Devolver ao backlog e Cancelar). O primeiro card aceita soltar em `ready` e `cancelled`; o segundo, em `backlog` e `cancelled`. O cabeçalho continuou "Casa Grace".
+
+**Bloqueios:** nenhum nesta task.
+
+**Próxima ação:** —
+
+#### US-11/T03 — Ordenação e filtro Hoje
+
+**Status:** done  
+**Entrega:** Subir e Descer reordenam a coluna com posições inteiras espaçadas. O filtro Hoje mostra vencidas, as do dia e as que estão em andamento. A virada do dia não grava nada.
+
+**Contrato:**
+- `TaskManager::reorder()` exige `write` e a versão lida. O lock segue workspace, board e a tarefa. Duas reordenações do mesmo board entram uma depois da outra
+- a posição nova fica entre as vizinhas. Se não houver inteiro livre, a coluna inteira é reescrita na mesma transação, com intervalo de 1024. A versão sobe só na tarefa movida
+- destino fora da coluna, ou a própria tarefa, não grava. Versão antiga não grava e a ordem fica como estava
+- o arraste na mesma coluna envia esse mesmo formulário. Quem não escreve não vê Subir nem Descer
+- `?today=1` inclui prazo até o fim do dia no fuso do workspace, inclusive vencidas, e qualquer tarefa `in_progress`. Canceladas ficam de fora. Consultar o filtro não muda versão, status, prazo nem posição
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_board/tests/src/Kernel/TaskReorderKernelTest.php
+OK (2 tests, 56 assertions)
+```
+
+`TaskReorderKernelTest` aproxima duas posições até reescrever a coluna, aplica uma segunda reordenação sem perder a ordem crescente e recusa versão antiga, outra coluna e viewer. Às 23:30 a tarefa de amanhã fica fora do filtro; às 00:10 ela entra, e o registro continua com o mesmo prazo, status e versão. As deprecações do PHPUnit são o aviso de metadata `@group`.
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_ui/tests/src/Functional/TaskKanbanOrderUiTest.php
+OK (1 test, 42 assertions)
+```
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice \
+    --extensions=php,yml \
+    web/modules/custom/ab_board/src/TaskManager.php \
+    web/modules/custom/ab_board/src/TaskColumnOrder.php \
+    web/modules/custom/ab_board/src/TaskDayWindow.php \
+    web/modules/custom/ab_ui/src/Form/TaskReorderForm.php \
+    web/modules/custom/ab_ui/src/Controller/TaskController.php \
+    web/modules/custom/ab_board/tests/src/Kernel/TaskReorderKernelTest.php \
+    web/modules/custom/ab_ui/tests/src/Functional/TaskKanbanOrderUiTest.php
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse
+PHPStan: exit 0
+```
+
+No navegador, em `http://agentdock.lndo.site`, o filtro Hoje do Quadro Casa mostrou "Nenhuma tarefa para hoje." "Tema revisado" vence em 20/10/2026 e "Preparar o material" não tem prazo nem está em andamento. Ao voltar ao quadro, as duas continuavam nas colunas gravadas. Versão, status e posição não mudaram. O cabeçalho continuou "Casa Grace".
+
+**Bloqueios:** nenhum nesta task.
+
+**Próxima ação:** —
+
+---
+
 ## Estatísticas
 
 - **Total de tasks:** 83 (conforme backlog)
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
-- **M2:** US-07 done; US-08 done; US-09 done; US-10 done
+- **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
 
 ---
 
 ## Próximos Passos
 
-1. US-11/T01 — colunas e cards do Kanban, com o estado persistido
+1. US-12/T01 — cadastro do agente no workspace
 
 ---
 

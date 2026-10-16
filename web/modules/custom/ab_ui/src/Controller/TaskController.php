@@ -7,6 +7,7 @@ namespace Drupal\ab_ui\Controller;
 use Drupal\ab_board\BoardRepository;
 use Drupal\ab_board\Entity\Board;
 use Drupal\ab_board\Entity\Task;
+use Drupal\ab_board\TaskDayWindow;
 use Drupal\ab_board\TaskDependencyManager;
 use Drupal\ab_board\TaskRepository;
 use Drupal\ab_board\TaskTransitionPolicy;
@@ -14,8 +15,10 @@ use Drupal\ab_core\Authorization\MembershipScope;
 use Drupal\ab_core\Authorization\WorkspacePermission;
 use Drupal\ab_core\Entity\Workspace;
 use Drupal\ab_ui\Form\TaskDependencyForm;
+use Drupal\ab_ui\Form\TaskReorderForm;
 use Drupal\ab_ui\Form\TaskTransitionForm;
 use Drupal\ab_ui\TaskMarkdown;
+use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\DependencyInjection\AutowireTrait;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
@@ -26,6 +29,7 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\Url;
 use Drupal\user\UserInterface;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Lists and opens tasks without changing the selected workspace.
@@ -34,6 +38,17 @@ final class TaskController implements ContainerInjectionInterface {
 
   use AutowireTrait;
   use StringTranslationTrait;
+
+  /**
+   * Statuses rendered as columns. Cancelled stays behind its filter.
+   */
+  private const COLUMN_STATUSES = [
+    'backlog',
+    'ready',
+    'in_progress',
+    'in_review',
+    'done',
+  ];
 
   public function __construct(
     private readonly BoardRepository $boards,
@@ -44,37 +59,90 @@ final class TaskController implements ContainerInjectionInterface {
     private readonly TaskMarkdown $markdown,
     private readonly FormBuilderInterface $formBuilder,
     private readonly AccountInterface $currentUser,
+    private readonly TimeInterface $time,
   ) {}
 
   /**
-   * Lists tasks of one readable board.
+   * Lists one board as fixed columns, with cancelled behind a filter.
+   *
+   * The query only chooses that filter. It does not select a workspace.
    *
    * @return array<string, mixed>
    *   A render array.
    */
-  public function listing(string $uuid): array {
+  public function listing(string $uuid, Request $request): array {
     $board = $this->visibleBoard($uuid);
     $workspace = $this->tasks->workspaceOf($board);
     $can_write = $this->canWrite($workspace);
-    $items = [];
-    foreach ($this->tasks->accessibleTasks($board) as $task) {
-      $items[] = [
-        'label' => (string) $task->label(),
-        'url' => Url::fromRoute('ab_ui.task_view', [
-          'uuid' => $task->uuid(),
-        ])->toString(),
-        'priority' => $this->priorityLabel($task->get('priority')->getString()),
-        'due' => $this->dueLabel($workspace, $task->get('due_at')->getString()),
+    $cancelled_only = $request->query->get('cancelled') === '1';
+    $today_only = !$cancelled_only && $request->query->get('today') === '1';
+    $columns = [];
+    foreach (self::COLUMN_STATUSES as $status) {
+      $columns[$status] = [
+        'status' => $status,
+        'label' => $this->statusLabel($status),
+        'cards' => [],
       ];
     }
+    $cancelled = [];
+    $tasks = $this->tasks->accessibleTasks($board);
+    foreach ($tasks as $task) {
+      $card = $this->card($workspace, $task, $can_write);
+      $status = $task->get('status')->getString();
+      if ($status === 'cancelled') {
+        if (!$today_only) {
+          $cancelled[] = $card;
+        }
+        continue;
+      }
+      if ($today_only && !$this->dueToday($workspace, $task)) {
+        continue;
+      }
+      if (isset($columns[$status])) {
+        $columns[$status]['cards'][] = $card;
+      }
+    }
+    $return_to = $today_only ? 'today' : '';
+    if ($cancelled_only) {
+      $cancelled = $this->withReorder($cancelled, $can_write, '');
+    }
+    else {
+      foreach ($columns as $status => $column) {
+        $columns[$status]['cards'] = $this->withReorder($column['cards'], $can_write, $return_to);
+      }
+    }
+    $visible = 0;
+    foreach ($columns as $column) {
+      $visible += count($column['cards']);
+    }
+    $cache = $this->cacheMeta($workspace);
+    $cache['contexts'][] = 'url.query_args:cancelled';
+    $cache['contexts'][] = 'url.query_args:today';
     return [
       '#theme' => 'ab_ui_task_list',
       '#board_label' => (string) $board->label(),
       '#add_url' => $can_write ? Url::fromRoute('ab_ui.task_add', [
         'uuid' => $board->uuid(),
       ])->toString() : '',
-      '#items' => $items,
-      '#cache' => $this->cacheMeta($workspace),
+      '#columns' => $cancelled_only ? [] : $columns,
+      '#cancelled' => $cancelled_only ? $cancelled : [],
+      '#cancelled_only' => $cancelled_only,
+      '#cancelled_url' => Url::fromRoute('ab_ui.board_tasks', [
+        'uuid' => $board->uuid(),
+      ], ['query' => ['cancelled' => '1']])->toString(),
+      '#today_only' => $today_only,
+      '#today_url' => Url::fromRoute('ab_ui.board_tasks', [
+        'uuid' => $board->uuid(),
+      ], ['query' => ['today' => '1']])->toString(),
+      '#board_url' => Url::fromRoute('ab_ui.board_tasks', [
+        'uuid' => $board->uuid(),
+      ])->toString(),
+      '#empty' => $tasks === [],
+      '#today_empty' => $today_only && $visible === 0,
+      '#attached' => [
+        'library' => ['ab_ui/kanban'],
+      ],
+      '#cache' => $cache,
     ];
   }
 
@@ -179,6 +247,90 @@ final class TaskController implements ContainerInjectionInterface {
       return $task;
     }
     throw new CacheableNotFoundHttpException($this->notFoundCache());
+  }
+
+  /**
+   * Adds the reorder form when the column has another card.
+   *
+   * @param array<int, array<string, mixed>> $cards
+   *   Cards already ordered for one column.
+   * @param bool $can_write
+   *   Whether the account can edit tasks.
+   * @param string $return_to
+   *   Board filter to reopen after the move. Empty returns to the board.
+   *
+   * @return array<int, array<string, mixed>>
+   *   The same cards, with a form on each when reordering is possible.
+   */
+  private function withReorder(array $cards, bool $can_write, string $return_to): array {
+    if (!$can_write || count($cards) < 2) {
+      return $cards;
+    }
+    $count = count($cards);
+    foreach ($cards as $index => $card) {
+      $before_up = $index > 0 ? (string) $cards[$index - 1]['uuid'] : '';
+      $can_down = $index < $count - 1;
+      $before_down = '';
+      if ($can_down && isset($cards[$index + 2]['uuid'])) {
+        $before_down = (string) $cards[$index + 2]['uuid'];
+      }
+      $cards[$index]['reorder_form'] = $this->formBuilder->getForm(
+        TaskReorderForm::class,
+        (string) $card['uuid'],
+        $before_up,
+        $before_down,
+        $can_down ? '1' : '0',
+        $return_to,
+      );
+    }
+    return $cards;
+  }
+
+  /**
+   * Reports whether the task belongs on the Hoje filter.
+   */
+  private function dueToday(Workspace $workspace, Task $task): bool {
+    $raw = $task->get('due_at')->getString();
+    $due = $raw === '' ? NULL : (int) $raw;
+    return (new TaskDayWindow())->includes(
+      $due,
+      $task->get('status')->getString(),
+      $workspace->get('timezone')->getString(),
+      $this->time->getRequestTime(),
+    );
+  }
+
+  /**
+   * Builds one card from the stored task.
+   *
+   * The agent name waits for the agent entity. A stored id only says
+   * that an agent is assigned. Waiting on input waits for that entity.
+   *
+   * @return array<string, mixed>
+   *   Title, link, priority, due date, owner, blocked flag and move form.
+   */
+  private function card(Workspace $workspace, Task $task, bool $can_write): array {
+    $agent = $task->get('assigned_agent')->getString();
+    $status = $task->get('status')->getString();
+    $targets = (new TaskTransitionPolicy())->targets($status);
+    $move_form = [];
+    if ($can_write && $targets !== []) {
+      $move_form = $this->formBuilder->getForm(TaskTransitionForm::class, $task->uuid(), 'board');
+    }
+    return [
+      'label' => (string) $task->label(),
+      'uuid' => $task->uuid(),
+      'url' => Url::fromRoute('ab_ui.task_view', [
+        'uuid' => $task->uuid(),
+      ])->toString(),
+      'priority' => $this->priorityLabel($task->get('priority')->getString()),
+      'due' => $this->dueLabel($workspace, $task->get('due_at')->getString()),
+      'owner' => $this->ownerName($task),
+      'blocked' => $this->dependencies->isBlocked($task),
+      'agent' => $agent !== '' && $agent !== '0',
+      'targets' => $can_write ? $targets : [],
+      'move_form' => $move_form,
+    ];
   }
 
   /**

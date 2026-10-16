@@ -1,0 +1,6 @@
+kanban:
+  js:
+    js/task-kanban.js: {}
+  dependencies:
+    - core/drupal
+    - core/once

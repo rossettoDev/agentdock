@@ -4,6 +4,8 @@ description: 'Tema customizado para AgentDock'
 package: 'AgentDock'
 base theme: olivero
 core_version_requirement: ^11
+libraries:
+  - agent_board/global
 regions:
   header: Header
   primary_menu: 'Primary menu'

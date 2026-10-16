@@ -65,7 +65,15 @@ final class AbUiHooks {
         'variables' => [
           'board_label' => '',
           'add_url' => '',
-          'items' => [],
+          'columns' => [],
+          'cancelled' => [],
+          'cancelled_only' => FALSE,
+          'cancelled_url' => '',
+          'today_only' => FALSE,
+          'today_url' => '',
+          'today_empty' => FALSE,
+          'board_url' => '',
+          'empty' => TRUE,
         ],
       ],
       'ab_ui_task_view' => [

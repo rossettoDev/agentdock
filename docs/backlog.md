@@ -293,23 +293,23 @@ Como humano, quero liberar tarefas válidas para execução.
 
 Como humano, quero acompanhar o fluxo visual.
 
-**Dependências:** US-10. **Status:** todo.
+**Dependências:** US-10. **Status:** done.
 
 ### US-11/T01 — Renderizar colunas e cards
 
-- [ ] **Entrega:** Consultar tela Kanban; exibir estados fixos, prioridade, prazo e bloqueios.
+- [x] **Entrega:** Consultar tela Kanban; exibir estados fixos, prioridade, prazo e bloqueios.
 - **Aceite:** Cards correspondem ao estado persistido; cancelled tem filtro próprio se não houver coluna na referência.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-11/T02 — Implementar movimento acessível
 
-- [ ] **Entrega:** Botão/menu por teclado chama serviço de transição; adicionar drag-and-drop sobre a mesma operação.
+- [x] **Entrega:** Botão/menu por teclado chama serviço de transição; adicionar drag-and-drop sobre a mesma operação.
 - **Aceite:** Conflito reverte movimento visual e informa usuário.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-11/T03 — Implementar ordenação e filtro Hoje
 
-- [ ] **Entrega:** Serializar reordenação por board, posições com intervalos; filtro por timezone e execuções em andamento.
+- [x] **Entrega:** Serializar reordenação por board, posições com intervalos; filtro por timezone e execuções em andamento.
 - **Aceite:** Reordenação concorrente mantém ordem válida; virada do dia não altera tarefas.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

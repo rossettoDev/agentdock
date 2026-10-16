@@ -7,6 +7,7 @@ namespace Drupal\ab_ui\Controller;
 use Drupal\ab_board\BoardRepository;
 use Drupal\ab_board\Entity\Board;
 use Drupal\ab_board\Entity\Task;
+use Drupal\ab_board\TaskDayWindow;
 use Drupal\ab_board\TaskDependencyManager;
 use Drupal\ab_board\TaskRepository;
 use Drupal\ab_board\TaskTransitionPolicy;
@@ -14,8 +15,10 @@ use Drupal\ab_core\Authorization\MembershipScope;
 use Drupal\ab_core\Authorization\WorkspacePermission;
 use Drupal\ab_core\Entity\Workspace;
 use Drupal\ab_ui\Form\TaskDependencyForm;
+use Drupal\ab_ui\Form\TaskReorderForm;
 use Drupal\ab_ui\Form\TaskTransitionForm;
 use Drupal\ab_ui\TaskMarkdown;
+use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\DependencyInjection\AutowireTrait;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
@@ -56,6 +59,7 @@ final class TaskController implements ContainerInjectionInterface {
     private readonly TaskMarkdown $markdown,
     private readonly FormBuilderInterface $formBuilder,
     private readonly AccountInterface $currentUser,
+    private readonly TimeInterface $time,
   ) {}
 
   /**
@@ -71,6 +75,7 @@ final class TaskController implements ContainerInjectionInterface {
     $workspace = $this->tasks->workspaceOf($board);
     $can_write = $this->canWrite($workspace);
     $cancelled_only = $request->query->get('cancelled') === '1';
+    $today_only = !$cancelled_only && $request->query->get('today') === '1';
     $columns = [];
     foreach (self::COLUMN_STATUSES as $status) {
       $columns[$status] = [
@@ -85,15 +90,34 @@ final class TaskController implements ContainerInjectionInterface {
       $card = $this->card($workspace, $task, $can_write);
       $status = $task->get('status')->getString();
       if ($status === 'cancelled') {
-        $cancelled[] = $card;
+        if (!$today_only) {
+          $cancelled[] = $card;
+        }
+        continue;
+      }
+      if ($today_only && !$this->dueToday($workspace, $task)) {
         continue;
       }
       if (isset($columns[$status])) {
         $columns[$status]['cards'][] = $card;
       }
     }
+    $return_to = $today_only ? 'today' : '';
+    if ($cancelled_only) {
+      $cancelled = $this->withReorder($cancelled, $can_write, '');
+    }
+    else {
+      foreach ($columns as $status => $column) {
+        $columns[$status]['cards'] = $this->withReorder($column['cards'], $can_write, $return_to);
+      }
+    }
+    $visible = 0;
+    foreach ($columns as $column) {
+      $visible += count($column['cards']);
+    }
     $cache = $this->cacheMeta($workspace);
     $cache['contexts'][] = 'url.query_args:cancelled';
+    $cache['contexts'][] = 'url.query_args:today';
     return [
       '#theme' => 'ab_ui_task_list',
       '#board_label' => (string) $board->label(),
@@ -106,10 +130,15 @@ final class TaskController implements ContainerInjectionInterface {
       '#cancelled_url' => Url::fromRoute('ab_ui.board_tasks', [
         'uuid' => $board->uuid(),
       ], ['query' => ['cancelled' => '1']])->toString(),
+      '#today_only' => $today_only,
+      '#today_url' => Url::fromRoute('ab_ui.board_tasks', [
+        'uuid' => $board->uuid(),
+      ], ['query' => ['today' => '1']])->toString(),
       '#board_url' => Url::fromRoute('ab_ui.board_tasks', [
         'uuid' => $board->uuid(),
       ])->toString(),
       '#empty' => $tasks === [],
+      '#today_empty' => $today_only && $visible === 0,
       '#attached' => [
         'library' => ['ab_ui/kanban'],
       ],
@@ -218,6 +247,57 @@ final class TaskController implements ContainerInjectionInterface {
       return $task;
     }
     throw new CacheableNotFoundHttpException($this->notFoundCache());
+  }
+
+  /**
+   * Adds the reorder form when the column has another card.
+   *
+   * @param array<int, array<string, mixed>> $cards
+   *   Cards already ordered for one column.
+   * @param bool $can_write
+   *   Whether the account can edit tasks.
+   * @param string $return_to
+   *   Board filter to reopen after the move. Empty returns to the board.
+   *
+   * @return array<int, array<string, mixed>>
+   *   The same cards, with a form on each when reordering is possible.
+   */
+  private function withReorder(array $cards, bool $can_write, string $return_to): array {
+    if (!$can_write || count($cards) < 2) {
+      return $cards;
+    }
+    $count = count($cards);
+    foreach ($cards as $index => $card) {
+      $before_up = $index > 0 ? (string) $cards[$index - 1]['uuid'] : '';
+      $can_down = $index < $count - 1;
+      $before_down = '';
+      if ($can_down && isset($cards[$index + 2]['uuid'])) {
+        $before_down = (string) $cards[$index + 2]['uuid'];
+      }
+      $cards[$index]['reorder_form'] = $this->formBuilder->getForm(
+        TaskReorderForm::class,
+        (string) $card['uuid'],
+        $before_up,
+        $before_down,
+        $can_down ? '1' : '0',
+        $return_to,
+      );
+    }
+    return $cards;
+  }
+
+  /**
+   * Reports whether the task belongs on the Hoje filter.
+   */
+  private function dueToday(Workspace $workspace, Task $task): bool {
+    $raw = $task->get('due_at')->getString();
+    $due = $raw === '' ? NULL : (int) $raw;
+    return (new TaskDayWindow())->includes(
+      $due,
+      $task->get('status')->getString(),
+      $workspace->get('timezone')->getString(),
+      $this->time->getRequestTime(),
+    );
   }
 
   /**

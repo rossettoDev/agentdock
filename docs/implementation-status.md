@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-16  
-**Marco atual:** M2 — US-11/T02 concluída; US-11/T03 segue todo. US-10 permanece done.
+**Marco atual:** M2 — US-11 concluída. US-12 segue todo.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -1508,7 +1508,7 @@ PHPStan: exit 0
 
 ## US-11 — Exibir e operar Kanban
 
-**Status:** in_progress  
+**Status:** done  
 **Dependências:** US-10 done.  
 **Objetivo:** Mostrar o fluxo fixo do board, com o card na coluna do status gravado.
 
@@ -1559,7 +1559,7 @@ No navegador, em `http://agentdock.lndo.site`, grace abriu as tarefas do Quadro 
 
 **Bloqueios:** nenhum nesta task.
 
-**Próxima ação:** US-11/T02 — movimento pelo teclado e arraste sobre a mesma transição.
+**Próxima ação:** —
 
 #### US-11/T02 — Movimento acessível
 
@@ -1601,7 +1601,58 @@ No navegador, em `http://agentdock.lndo.site`, grace viu Mover em "Preparar o ma
 
 **Bloqueios:** nenhum nesta task.
 
-**Próxima ação:** US-11/T03 — ordenação por intervalos e filtro Hoje.
+**Próxima ação:** —
+
+#### US-11/T03 — Ordenação e filtro Hoje
+
+**Status:** done  
+**Entrega:** Subir e Descer reordenam a coluna com posições inteiras espaçadas. O filtro Hoje mostra vencidas, as do dia e as que estão em andamento. A virada do dia não grava nada.
+
+**Contrato:**
+- `TaskManager::reorder()` exige `write` e a versão lida. O lock segue workspace, board e a tarefa. Duas reordenações do mesmo board entram uma depois da outra
+- a posição nova fica entre as vizinhas. Se não houver inteiro livre, a coluna inteira é reescrita na mesma transação, com intervalo de 1024. A versão sobe só na tarefa movida
+- destino fora da coluna, ou a própria tarefa, não grava. Versão antiga não grava e a ordem fica como estava
+- o arraste na mesma coluna envia esse mesmo formulário. Quem não escreve não vê Subir nem Descer
+- `?today=1` inclui prazo até o fim do dia no fuso do workspace, inclusive vencidas, e qualquer tarefa `in_progress`. Canceladas ficam de fora. Consultar o filtro não muda versão, status, prazo nem posição
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_board/tests/src/Kernel/TaskReorderKernelTest.php
+OK (2 tests, 56 assertions)
+```
+
+`TaskReorderKernelTest` aproxima duas posições até reescrever a coluna, aplica uma segunda reordenação sem perder a ordem crescente e recusa versão antiga, outra coluna e viewer. Às 23:30 a tarefa de amanhã fica fora do filtro; às 00:10 ela entra, e o registro continua com o mesmo prazo, status e versão. As deprecações do PHPUnit são o aviso de metadata `@group`.
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_ui/tests/src/Functional/TaskKanbanOrderUiTest.php
+OK (1 test, 42 assertions)
+```
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice \
+    --extensions=php,yml \
+    web/modules/custom/ab_board/src/TaskManager.php \
+    web/modules/custom/ab_board/src/TaskColumnOrder.php \
+    web/modules/custom/ab_board/src/TaskDayWindow.php \
+    web/modules/custom/ab_ui/src/Form/TaskReorderForm.php \
+    web/modules/custom/ab_ui/src/Controller/TaskController.php \
+    web/modules/custom/ab_board/tests/src/Kernel/TaskReorderKernelTest.php \
+    web/modules/custom/ab_ui/tests/src/Functional/TaskKanbanOrderUiTest.php
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse
+PHPStan: exit 0
+```
+
+No navegador, em `http://agentdock.lndo.site`, o filtro Hoje do Quadro Casa mostrou "Nenhuma tarefa para hoje." "Tema revisado" vence em 20/10/2026 e "Preparar o material" não tem prazo nem está em andamento. Ao voltar ao quadro, as duas continuavam nas colunas gravadas. Versão, status e posição não mudaram. O cabeçalho continuou "Casa Grace".
+
+**Bloqueios:** nenhum nesta task.
+
+**Próxima ação:** —
 
 ---
 
@@ -1610,13 +1661,13 @@ No navegador, em `http://agentdock.lndo.site`, grace viu Mover em "Preparar o ma
 - **Total de tasks:** 83 (conforme backlog)
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
-- **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 in_progress (T01 e T02 done)
+- **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
 
 ---
 
 ## Próximos Passos
 
-1. US-11/T03 — ordenação por intervalos e filtro Hoje, sem mover tarefa na virada do dia
+1. US-12/T01 — cadastro do agente no workspace
 
 ---
 

@@ -217,6 +217,69 @@ class TaskManager {
   }
 
   /**
+   * Moves a task inside its column and records task.reordered.
+   *
+   * The board row is locked after the workspace, so two reorders of the
+   * same board run one after the other. Positions keep a gap. A gap of
+   * one integer rewrites the column in the same transaction.
+   *
+   * @param \Drupal\ab_board\Entity\Task $task
+   *   Task to move.
+   * @param int $expectedVersion
+   *   Version the caller read. A mismatch is a conflict.
+   * @param string|null $beforeUuid
+   *   Task that should end up after this one. NULL moves it last.
+   *
+   * @throws \Drupal\ab_board\TaskReorderRejectedException
+   *   The destination is outside the column.
+   * @throws \Drupal\ab_board\TaskVersionConflictException
+   *   The stored version is no longer the expected one.
+   * @throws \Drupal\ab_core\Authorization\ScopedResourceNotFoundException
+   *   The task workspace is outside the caller's scope.
+   * @throws \Drupal\ab_core\Authorization\ScopedOperationDeniedException
+   *   The caller can see the workspace but cannot edit tasks.
+   */
+  public function reorder(Task $task, int $expectedVersion, ?string $beforeUuid): Task {
+    $workspace = $this->workspaceOfTask($task);
+    $this->assertWrite($workspace);
+    $this->assertBefore($beforeUuid);
+    $transaction = $this->database->startTransaction();
+    try {
+      $this->lockWorkspace($workspace);
+      $board = $this->boardOf($task);
+      $this->lockBoard($board);
+      $this->lockTask($task);
+      $current = $this->reloadTask($task);
+      $version = (int) $current->get('version')->getString();
+      if ($version !== $expectedVersion) {
+        throw new TaskVersionConflictException('The task version is stale.');
+      }
+      $status = $current->get('status')->getString();
+      $column = $this->orderedColumn($board, $status, $current);
+      $neighbors = [];
+      $positions = [];
+      foreach ($column as $item) {
+        if ((string) $item->id() === (string) $current->id()) {
+          continue;
+        }
+        $neighbors[] = $item;
+        $positions[] = (int) $item->get('position')->getString();
+      }
+      $index = $this->indexBefore($neighbors, $current, $beforeUuid);
+      $placed = (new TaskColumnOrder())->place($positions, $index);
+      $this->assignPlace($neighbors, $current, $index, $placed, $version + 1);
+      $position = (int) $current->get('position')->getString();
+      $this->record($workspace, $current, 'task.reordered', NULL, $position);
+      $this->afterRecord($current);
+      return $current;
+    }
+    catch (\Throwable $exception) {
+      $transaction->rollBack();
+      throw $exception;
+    }
+  }
+
+  /**
    * Runs after the event is recorded and before the caller commits.
    */
   protected function afterRecord(Task $task): void {
@@ -557,9 +620,119 @@ class TaskManager {
   }
 
   /**
+   * Rejects a destination that is not a task UUID.
+   */
+  private function assertBefore(?string $beforeUuid): void {
+    if ($beforeUuid === NULL) {
+      return;
+    }
+    $uuid = '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/';
+    if (preg_match($uuid, $beforeUuid) !== 1) {
+      throw new TaskReorderRejectedException('Order stays inside the same column.');
+    }
+  }
+
+  /**
+   * Loads one status column in display order.
+   *
+   * @param \Drupal\ab_board\Entity\Board $board
+   *   Board that owns the column.
+   * @param string $status
+   *   Status shared by the column.
+   * @param \Drupal\ab_board\Entity\Task $current
+   *   Task being moved. Its in-memory copy is kept.
+   *
+   * @return \Drupal\ab_board\Entity\Task[]
+   *   Tasks of the column, including the one being moved.
+   */
+  private function orderedColumn(Board $board, string $status, Task $current): array {
+    $query = $this->database->select('ab_task', 't');
+    $query->addField('t', 'id');
+    $query->condition('t.board', $board->id());
+    $query->condition('t.status', $status);
+    $query->orderBy('t.position');
+    $query->orderBy('t.title');
+    $query->orderBy('t.id');
+    $ids = $query->execute()->fetchCol();
+    $loaded = $this->entityTypeManager->getStorage('ab_task')->loadMultiple($ids);
+    $tasks = [];
+    foreach ($ids as $id) {
+      $task = $loaded[$id] ?? NULL;
+      if (!$task instanceof Task) {
+        continue;
+      }
+      $same = (string) $task->id() === (string) $current->id();
+      $tasks[] = $same ? $current : $task;
+    }
+    return $tasks;
+  }
+
+  /**
+   * Finds the index of the task that should follow the moved one.
+   *
+   * @param \Drupal\ab_board\Entity\Task[] $neighbors
+   *   The column without the moved task.
+   * @param \Drupal\ab_board\Entity\Task $current
+   *   Task being moved.
+   * @param string|null $beforeUuid
+   *   Task that should end up after this one. NULL moves it last.
+   */
+  private function indexBefore(array $neighbors, Task $current, ?string $beforeUuid): int {
+    if ($beforeUuid === NULL) {
+      return count($neighbors);
+    }
+    if ($beforeUuid === $current->uuid()) {
+      throw new TaskReorderRejectedException('A task is not ordered before itself.');
+    }
+    foreach ($neighbors as $index => $item) {
+      if ($item->uuid() === $beforeUuid) {
+        return $index;
+      }
+    }
+    throw new TaskReorderRejectedException('Order stays inside the same column.');
+  }
+
+  /**
+   * Stores the chosen positions.
+   *
+   * @param \Drupal\ab_board\Entity\Task[] $neighbors
+   *   The column without the moved task.
+   * @param \Drupal\ab_board\Entity\Task $current
+   *   Task being moved.
+   * @param int $index
+   *   Index where the moved task should sit.
+   * @param array{position: int, rebalance: int[]} $placed
+   *   Position choice from TaskColumnOrder.
+   * @param int $version
+   *   Version to store on the moved task.
+   */
+  private function assignPlace(array $neighbors, Task $current, int $index, array $placed, int $version): void {
+    if ($placed['rebalance'] === []) {
+      $current->set('position', $placed['position']);
+      $current->set('version', $version);
+      $current->save();
+      return;
+    }
+    array_splice($neighbors, $index, 0, [$current]);
+    foreach ($neighbors as $i => $item) {
+      $item->set('position', $placed['rebalance'][$i]);
+      if ((string) $item->id() === (string) $current->id()) {
+        $item->set('version', $version);
+      }
+      $item->save();
+    }
+  }
+
+  /**
    * Records a task event for the authenticated actor.
    */
-  private function record(Workspace $workspace, Task $task, string $type, ?string $from = NULL): void {
+  private function record(
+    Workspace $workspace,
+    Task $task,
+    string $type,
+    ?string $from = NULL,
+    ?int $position = NULL,
+  ): void {
     $actor = $this->actors->create($workspace);
     $payload = [
       'title' => (string) $task->label(),
@@ -575,6 +748,9 @@ class TaskManager {
         'priority' => $payload['priority'],
         'version' => $payload['version'],
       ];
+    }
+    if ($position !== NULL) {
+      $payload['position'] = $position;
     }
     $this->events->record(new EventDraft(
       (string) $workspace->uuid(),

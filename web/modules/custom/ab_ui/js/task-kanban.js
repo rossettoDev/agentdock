@@ -11,8 +11,26 @@
    * Reports whether the card may enter that column.
    */
   function allows(card, column) {
-    const targets = (card.getAttribute('data-targets') || '').split(' ');
+    const raw = card.getAttribute('data-targets') || '';
+    const targets = raw === '' ? [] : raw.split(' ');
     return targets.indexOf(column.getAttribute('data-status')) !== -1;
+  }
+
+  /**
+   * Returns the card that should follow the dropped one.
+   */
+  function cardAfter(cards, clientY, dragged) {
+    const articles = cards.querySelectorAll('article[data-uuid]');
+    for (let index = 0; index < articles.length; index++) {
+      if (articles[index] === dragged) {
+        continue;
+      }
+      const box = articles[index].getBoundingClientRect();
+      if (clientY < box.top + (box.height / 2)) {
+        return articles[index];
+      }
+    }
+    return null;
   }
 
   Drupal.behaviors.abUiKanban = {
@@ -21,7 +39,7 @@
         let dragged = null;
 
         board.addEventListener('dragstart', function (event) {
-          const card = event.target.closest('[data-targets]');
+          const card = event.target.closest('[data-uuid]');
           if (!card || event.target.closest('button, summary, a, input, select')) {
             event.preventDefault();
             return;
@@ -40,7 +58,11 @@
 
         board.querySelectorAll('[data-status]').forEach(function (column) {
           column.addEventListener('dragover', function (event) {
-            if (!dragged || !allows(dragged, column)) {
+            if (!dragged) {
+              return;
+            }
+            const same = dragged.closest('[data-status]') === column;
+            if (!same && !allows(dragged, column)) {
               return;
             }
             event.preventDefault();
@@ -51,7 +73,33 @@
           });
           column.addEventListener('drop', function (event) {
             column.classList.remove('is-drop-target');
-            if (!dragged || !allows(dragged, column)) {
+            if (!dragged) {
+              return;
+            }
+            const same = dragged.closest('[data-status]') === column;
+            if (same) {
+              event.preventDefault();
+              const cards = column.querySelector('.ab-kanban__cards');
+              const after = cards ? cardAfter(cards, event.clientY, dragged) : dragged;
+              const input = dragged.querySelector('input[name="before_uuid"]');
+              const button = dragged.querySelector('[name="reorder"]');
+              if (!cards || !input || !button || after === dragged) {
+                dragged = null;
+                return;
+              }
+              if (after) {
+                cards.insertBefore(dragged, after);
+                input.value = after.getAttribute('data-uuid') || '';
+              }
+              else {
+                cards.appendChild(dragged);
+                input.value = '';
+              }
+              button.click();
+              dragged = null;
+              return;
+            }
+            if (!allows(dragged, column)) {
               return;
             }
             event.preventDefault();

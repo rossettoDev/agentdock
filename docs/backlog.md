@@ -293,7 +293,7 @@ Como humano, quero liberar tarefas válidas para execução.
 
 Como humano, quero acompanhar o fluxo visual.
 
-**Dependências:** US-10. **Status:** in_progress.
+**Dependências:** US-10. **Status:** done.
 
 ### US-11/T01 — Renderizar colunas e cards
 
@@ -309,7 +309,7 @@ Como humano, quero acompanhar o fluxo visual.
 
 ### US-11/T03 — Implementar ordenação e filtro Hoje
 
-- [ ] **Entrega:** Serializar reordenação por board, posições com intervalos; filtro por timezone e execuções em andamento.
+- [x] **Entrega:** Serializar reordenação por board, posições com intervalos; filtro por timezone e execuções em andamento.
 - **Aceite:** Reordenação concorrente mantém ordem válida; virada do dia não altera tarefas.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

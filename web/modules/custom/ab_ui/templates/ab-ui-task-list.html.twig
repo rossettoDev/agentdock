@@ -7,7 +7,7 @@
  */
 #}
 {% macro card(card) %}
-  <article class="ab-card{% if card.targets %} ab-card--movable{% endif %}"{% if card.targets %} draggable="true" data-uuid="{{ card.uuid }}" data-targets="{{ card.targets|join(' ') }}"{% endif %}>
+  <article class="ab-card{% if card.targets or card.reorder_form %} ab-card--movable{% endif %}" data-uuid="{{ card.uuid }}"{% if card.targets or card.reorder_form %} draggable="true"{% endif %}{% if card.targets %} data-targets="{{ card.targets|join(' ') }}"{% endif %}>
     <h4><a href="{{ card.url }}">{{ card.label }}</a></h4>
     <p>{{ card.priority }}</p>
     {% if card.due %}
@@ -28,6 +28,9 @@
         {{ card.move_form }}
       </details>
     {% endif %}
+    {% if card.reorder_form %}
+      {{ card.reorder_form }}
+    {% endif %}
   </article>
 {% endmacro %}
 {% import _self as kanban %}
@@ -40,8 +43,15 @@
       <a class="ab-button" href="{{ add_url }}">{{ 'Criar tarefa'|t }}</a>
     </p>
   {% endif %}
-  {% if cancelled_only %}
+  {% if cancelled_only or today_only %}
     <p><a href="{{ board_url }}">{{ 'Voltar ao quadro'|t }}</a></p>
+  {% else %}
+    <p>
+      <a href="{{ cancelled_url }}">{{ 'Canceladas'|t }}</a>
+      <a href="{{ today_url }}">{{ 'Hoje'|t }}</a>
+    </p>
+  {% endif %}
+  {% if cancelled_only %}
     <section class="ab-kanban-cancelled">
       <h3>{{ 'Canceladas'|t }}</h3>
       {% if cancelled is empty %}
@@ -53,8 +63,9 @@
       {% endif %}
     </section>
   {% else %}
-    <p><a href="{{ cancelled_url }}">{{ 'Canceladas'|t }}</a></p>
-    {% if empty %}
+    {% if today_empty %}
+      <p>{{ 'Nenhuma tarefa para hoje.'|t }}</p>
+    {% elseif empty %}
       <p>{{ 'Nenhuma tarefa neste board.'|t }}</p>
     {% endif %}
     <div class="ab-kanban">

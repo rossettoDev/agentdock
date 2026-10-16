@@ -54,6 +54,7 @@ final class WorkspaceController implements ContainerInjectionInterface {
         'members_url' => Url::fromRoute('ab_ui.workspace_members', [
           'uuid' => $workspace->uuid(),
         ])->toString(),
+        'boards_url' => Url::fromRoute('ab_ui.boards')->toString(),
       ];
     }
     $form = $items === [] ? NULL : $this->formBuilder->getForm(WorkspaceSelectForm::class);
@@ -80,9 +81,11 @@ final class WorkspaceController implements ContainerInjectionInterface {
     $workspace = $this->loadVisible($uuid);
     return [
       '#type' => 'inline_template',
-      '#template' => '<p class="ab-workspace-view">{{ label }}</p><p><a href="{{ members }}">{{ members_label }}</a></p><p><a href="{{ back }}">{{ back_label }}</a></p>',
+      '#template' => '<p class="ab-workspace-view">{{ label }}</p><p><a href="{{ boards }}">{{ boards_label }}</a></p><p><a href="{{ members }}">{{ members_label }}</a></p><p><a href="{{ back }}">{{ back_label }}</a></p>',
       '#context' => [
         'label' => (string) $workspace->label(),
+        'boards' => Url::fromRoute('ab_ui.boards')->toString(),
+        'boards_label' => $this->t('Boards'),
         'members' => Url::fromRoute('ab_ui.workspace_members', [
           'uuid' => $workspace->uuid(),
         ])->toString(),

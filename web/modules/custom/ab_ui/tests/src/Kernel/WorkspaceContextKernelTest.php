@@ -28,6 +28,7 @@ class WorkspaceContextKernelTest extends KernelTestBase {
     'user',
     'options',
     'ab_core',
+    'ab_event',
     'ab_board',
     'ab_agent',
     'ab_communication',

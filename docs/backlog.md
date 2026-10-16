@@ -227,7 +227,7 @@ Como sistema, quero registrar alterações sem perder consistência.
 
 Como membro autorizado, quero organizar projetos em boards.
 
-**Dependências:** US-06, US-07. **Status:** in_progress.
+**Dependências:** US-06, US-07. **Status:** done.
 
 ### US-08/T01 — Criar entidade e serviço de board
 
@@ -237,7 +237,7 @@ Como membro autorizado, quero organizar projetos em boards.
 
 ### US-08/T02 — Criar listagem e formulários
 
-- [ ] **Entrega:** Consultar screens; aplicar matriz de acesso: owner/admin gerenciam boards, demais leem.
+- [x] **Entrega:** Consultar screens; aplicar matriz de acesso: owner/admin gerenciam boards, demais leem.
 - **Aceite:** Usuário acessa somente boards do workspace permitido.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

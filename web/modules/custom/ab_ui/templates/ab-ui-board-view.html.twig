@@ -1,0 +1,21 @@
+{#
+/**
+ * @file
+ * Shows one board without changing the selected workspace.
+ */
+#}
+<div class="ab-board-view">
+  <p class="ab-board-name">{{ label }}</p>
+  {% if description %}
+    <p class="ab-board-description">{{ description|nl2br }}</p>
+  {% endif %}
+  {% if archived %}
+    <p class="ab-board-archived">{{ 'Arquivado'|t }}</p>
+  {% endif %}
+  {% if archive_form %}
+    {{ archive_form }}
+  {% endif %}
+  <p>
+    <a href="{{ back_url }}">{{ 'Meus boards'|t }}</a>
+  </p>
+</div>

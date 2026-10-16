@@ -17,6 +17,7 @@ final class ClaimedTask {
     public readonly string $leaseToken,
     public readonly int $leaseExpiresAt,
     public readonly int $taskVersion,
+    public readonly int $generation = 1,
   ) {}
 
 }

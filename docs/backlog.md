@@ -389,23 +389,23 @@ Como agente, quero reservar uma tarefa sem disputa.
 
 Como sistema, quero detectar interrupções de agentes.
 
-**Dependências:** US-14. **Status:** todo.
+**Dependências:** US-14. **Status:** done.
 
 ### US-15/T01 — Implementar heartbeat e validação de lease
 
-- [ ] **Entrega:** Checar identidade, token, generation, estado e prazo a cada mutação; usar clock injetável.
+- [x] **Entrega:** Checar identidade, token, generation, estado e prazo a cada mutação; usar clock injetável.
 - **Aceite:** Lease vencida falha mesmo antes do worker.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-15/T02 — Implementar fail/release e expiração
 
-- [ ] **Entrega:** Encerrar execução, liberar lease e retornar tarefa a ready com impedimentos preservados; serviço invocável por Drush.
+- [x] **Entrega:** Encerrar execução, liberar lease e retornar tarefa a ready com impedimentos preservados; serviço invocável por Drush.
 - **Aceite:** Repetir recuperação não duplica transição/evento.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-15/T03 — Testar executor obsoleto
 
-- [ ] **Entrega:** Expirar, recuperar e assumir novamente; tentar heartbeat e submit do executor antigo.
+- [x] **Entrega:** Expirar, recuperar e assumir novamente; tentar heartbeat e submit do executor antigo.
 - **Aceite:** Executor antigo não altera a tarefa da nova execução.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

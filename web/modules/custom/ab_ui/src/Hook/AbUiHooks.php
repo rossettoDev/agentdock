@@ -77,9 +77,11 @@ final class AbUiHooks {
           'limit' => '',
           'signal' => '',
           'grants' => [],
+          'tokens' => [],
           'back_url' => '',
           'edit_form' => NULL,
           'grant_form' => NULL,
+          'token_form' => NULL,
         ],
       ],
       'ab_ui_task_list' => [

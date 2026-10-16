@@ -21,3 +21,30 @@ services:
       - '@Drupal\ab_core\Authorization\MembershipScope'
       - '@Drupal\ab_core\Authorization\HumanActorContextFactory'
       - '@Drupal\ab_event\EventStoreInterface'
+  Drupal\ab_agent\AgentTokenManager:
+    arguments:
+      - '@database'
+      - '@entity_type.manager'
+      - '@current_user'
+      - '@Drupal\ab_core\Authorization\MembershipScope'
+      - '@Drupal\ab_core\Authorization\HumanActorContextFactory'
+      - '@Drupal\ab_event\EventStoreInterface'
+      - '@datetime.time'
+      - '@cache_tags.invalidator'
+  Drupal\ab_agent\AgentActorContextFactory: ~
+  Drupal\ab_agent\AgentOperationGate:
+    arguments:
+      - '@Drupal\ab_agent\AgentTokenManager'
+      - '@entity_type.manager'
+      - '@database'
+      - '@datetime.time'
+  ab_agent.authentication.agent_token:
+    class: Drupal\ab_agent\Authentication\AgentTokenAuthenticationProvider
+    arguments:
+      - '@Drupal\ab_agent\AgentTokenManager'
+    tags:
+      - { name: authentication_provider, provider_id: ab_agent_token, priority: 100, global: TRUE }
+  ab_agent.page_cache_request_policy.disallow_agent_token:
+    class: Drupal\ab_agent\PageCache\DisallowAgentTokenRequests
+    tags:
+      - { name: page_cache_request_policy }

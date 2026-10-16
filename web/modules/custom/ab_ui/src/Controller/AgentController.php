@@ -6,13 +6,16 @@ namespace Drupal\ab_ui\Controller;
 
 use Drupal\ab_agent\AgentGrantManager;
 use Drupal\ab_agent\AgentRepository;
+use Drupal\ab_agent\AgentTokenManager;
 use Drupal\ab_agent\Entity\Agent;
 use Drupal\ab_core\Authorization\MembershipScope;
 use Drupal\ab_core\Authorization\WorkspacePermission;
 use Drupal\ab_core\Entity\Workspace;
 use Drupal\ab_ui\Form\AgentEditForm;
 use Drupal\ab_ui\Form\AgentGrantForm;
+use Drupal\ab_ui\Form\AgentTokenForm;
 use Drupal\ab_ui\WorkspaceContext;
+use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\DependencyInjection\AutowireTrait;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
@@ -37,11 +40,13 @@ final class AgentController implements ContainerInjectionInterface {
   public function __construct(
     private readonly AgentRepository $agents,
     private readonly AgentGrantManager $grants,
+    private readonly AgentTokenManager $tokens,
     private readonly WorkspaceContext $context,
     private readonly MembershipScope $scope,
     private readonly EntityTypeManagerInterface $entityTypeManager,
     private readonly FormBuilderInterface $formBuilder,
     private readonly AccountInterface $currentUser,
+    private readonly TimeInterface $time,
   ) {}
 
   /**
@@ -100,6 +105,11 @@ final class AgentController implements ContainerInjectionInterface {
       $workspace,
       WorkspacePermission::MANAGE_AGENTS,
     );
+    $can_credentials = $workspace instanceof Workspace && $this->scope->allows(
+      $this->currentUser,
+      $workspace,
+      WorkspacePermission::MANAGE_CREDENTIALS,
+    );
     $build = [
       '#theme' => 'ab_ui_agent_view',
       '#label' => (string) $agent->label(),
@@ -109,14 +119,20 @@ final class AgentController implements ContainerInjectionInterface {
       '#limit' => $agent->get('concurrency_limit')->getString(),
       '#signal' => (string) $this->t('Não há sinal de execução.'),
       '#grants' => $this->grantLabels($agent),
+      '#tokens' => $can_credentials ? $this->tokenLines($agent, $workspace) : [],
       '#back_url' => Url::fromRoute('ab_ui.agents')->toString(),
       '#edit_form' => NULL,
       '#grant_form' => NULL,
+      '#token_form' => NULL,
       '#cache' => $this->cacheMeta($workspace),
     ];
+    $build['#cache']['tags'][] = 'ab_agent_tokens:' . $agent->id();
     if ($can_manage) {
       $build['#edit_form'] = $this->formBuilder->getForm(AgentEditForm::class, $agent->uuid());
       $build['#grant_form'] = $this->formBuilder->getForm(AgentGrantForm::class, $agent->uuid());
+    }
+    if ($can_credentials) {
+      $build['#token_form'] = $this->formBuilder->getForm(AgentTokenForm::class, $agent->uuid());
     }
     return $build;
   }
@@ -172,6 +188,37 @@ final class AgentController implements ContainerInjectionInterface {
         };
       }
       $lines[] = $name . ': ' . implode(', ', $labels);
+    }
+    return $lines;
+  }
+
+  /**
+   * Public token lines. The secret and the hash stay out.
+   *
+   * @return string[]
+   *   One line per stored token.
+   */
+  private function tokenLines(Agent $agent, Workspace $workspace): array {
+    $timezone = $workspace->get('timezone')->getString();
+    try {
+      $zone = new \DateTimeZone($timezone === '' ? 'America/Sao_Paulo' : $timezone);
+    }
+    catch (\Exception) {
+      $zone = new \DateTimeZone('America/Sao_Paulo');
+    }
+    $lines = [];
+    foreach ($this->tokens->list($agent) as $token) {
+      $when = (new \DateTimeImmutable('@' . $token->expiresAt))->setTimezone($zone);
+      if ($token->revokedAt !== NULL) {
+        $state = (string) $this->t('Revogado');
+      }
+      elseif ($token->expiresAt <= $this->time->getRequestTime()) {
+        $state = (string) $this->t('Expirado');
+      }
+      else {
+        $state = (string) $this->t('Ativo');
+      }
+      $lines[] = 'ab_' . $token->publicId . ' · ' . $token->scopes . ' · ' . $when->format('d/m/Y') . ' · ' . $state;
     }
     return $lines;
   }

@@ -7,6 +7,7 @@
 
 declare(strict_types=1);
 
+use Drupal\ab_agent\AgentRuntimeAccount;
 use Drupal\ab_agent\AgentSchemaInstaller;
 
 /**
@@ -16,7 +17,15 @@ use Drupal\ab_agent\AgentSchemaInstaller;
  */
 function ab_agent_schema(): array {
   $schema['ab_agent_board_grant'] = AgentSchemaInstaller::grantTable();
+  $schema['ab_agent_token'] = AgentSchemaInstaller::tokenTable();
   return $schema;
+}
+
+/**
+ * Creates the blocked account that bearer requests run as.
+ */
+function ab_agent_install(): void {
+  AgentRuntimeAccount::ensure();
 }
 
 /**
@@ -24,4 +33,11 @@ function ab_agent_schema(): array {
  */
 function ab_agent_update_11001(): string {
   return AgentSchemaInstaller::install();
+}
+
+/**
+ * Installs hashed agent tokens and the blocked runtime account.
+ */
+function ab_agent_update_11002(): string {
+  return AgentSchemaInstaller::installTokens();
 }

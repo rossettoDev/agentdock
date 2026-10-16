@@ -26,6 +26,7 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\Url;
 use Drupal\user\UserInterface;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Lists and opens tasks without changing the selected workspace.
@@ -34,6 +35,17 @@ final class TaskController implements ContainerInjectionInterface {
 
   use AutowireTrait;
   use StringTranslationTrait;
+
+  /**
+   * Statuses rendered as columns. Cancelled stays behind its filter.
+   */
+  private const COLUMN_STATUSES = [
+    'backlog',
+    'ready',
+    'in_progress',
+    'in_review',
+    'done',
+  ];
 
   public function __construct(
     private readonly BoardRepository $boards,
@@ -47,34 +59,57 @@ final class TaskController implements ContainerInjectionInterface {
   ) {}
 
   /**
-   * Lists tasks of one readable board.
+   * Lists one board as fixed columns, with cancelled behind a filter.
+   *
+   * The query only chooses that filter. It does not select a workspace.
    *
    * @return array<string, mixed>
    *   A render array.
    */
-  public function listing(string $uuid): array {
+  public function listing(string $uuid, Request $request): array {
     $board = $this->visibleBoard($uuid);
     $workspace = $this->tasks->workspaceOf($board);
     $can_write = $this->canWrite($workspace);
-    $items = [];
-    foreach ($this->tasks->accessibleTasks($board) as $task) {
-      $items[] = [
-        'label' => (string) $task->label(),
-        'url' => Url::fromRoute('ab_ui.task_view', [
-          'uuid' => $task->uuid(),
-        ])->toString(),
-        'priority' => $this->priorityLabel($task->get('priority')->getString()),
-        'due' => $this->dueLabel($workspace, $task->get('due_at')->getString()),
+    $cancelled_only = $request->query->get('cancelled') === '1';
+    $columns = [];
+    foreach (self::COLUMN_STATUSES as $status) {
+      $columns[$status] = [
+        'label' => $this->statusLabel($status),
+        'cards' => [],
       ];
     }
+    $cancelled = [];
+    $tasks = $this->tasks->accessibleTasks($board);
+    foreach ($tasks as $task) {
+      $card = $this->card($workspace, $task);
+      $status = $task->get('status')->getString();
+      if ($status === 'cancelled') {
+        $cancelled[] = $card;
+        continue;
+      }
+      if (isset($columns[$status])) {
+        $columns[$status]['cards'][] = $card;
+      }
+    }
+    $cache = $this->cacheMeta($workspace);
+    $cache['contexts'][] = 'url.query_args:cancelled';
     return [
       '#theme' => 'ab_ui_task_list',
       '#board_label' => (string) $board->label(),
       '#add_url' => $can_write ? Url::fromRoute('ab_ui.task_add', [
         'uuid' => $board->uuid(),
       ])->toString() : '',
-      '#items' => $items,
-      '#cache' => $this->cacheMeta($workspace),
+      '#columns' => $cancelled_only ? [] : $columns,
+      '#cancelled' => $cancelled_only ? $cancelled : [],
+      '#cancelled_only' => $cancelled_only,
+      '#cancelled_url' => Url::fromRoute('ab_ui.board_tasks', [
+        'uuid' => $board->uuid(),
+      ], ['query' => ['cancelled' => '1']])->toString(),
+      '#board_url' => Url::fromRoute('ab_ui.board_tasks', [
+        'uuid' => $board->uuid(),
+      ])->toString(),
+      '#empty' => $tasks === [],
+      '#cache' => $cache,
     ];
   }
 
@@ -179,6 +214,30 @@ final class TaskController implements ContainerInjectionInterface {
       return $task;
     }
     throw new CacheableNotFoundHttpException($this->notFoundCache());
+  }
+
+  /**
+   * Builds one card from the stored task.
+   *
+   * The agent name waits for the agent entity. A stored id only says
+   * that an agent is assigned. Waiting on input waits for that entity.
+   *
+   * @return array<string, mixed>
+   *   Title, link, priority, due date, owner and blocked flag.
+   */
+  private function card(Workspace $workspace, Task $task): array {
+    $agent = $task->get('assigned_agent')->getString();
+    return [
+      'label' => (string) $task->label(),
+      'url' => Url::fromRoute('ab_ui.task_view', [
+        'uuid' => $task->uuid(),
+      ])->toString(),
+      'priority' => $this->priorityLabel($task->get('priority')->getString()),
+      'due' => $this->dueLabel($workspace, $task->get('due_at')->getString()),
+      'owner' => $this->ownerName($task),
+      'blocked' => $this->dependencies->isBlocked($task),
+      'agent' => $agent !== '' && $agent !== '0',
+    ];
   }
 
   /**

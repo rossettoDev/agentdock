@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-16  
-**Marco atual:** M2 — US-10 concluída. US-11 segue todo.
+**Marco atual:** M2 — US-11/T01 concluída; US-11/T02 segue todo. US-10 permanece done.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -1506,18 +1506,75 @@ PHPStan: exit 0
 
 ---
 
+## US-11 — Exibir e operar Kanban
+
+**Status:** in_progress  
+**Dependências:** US-10 done.  
+**Objetivo:** Mostrar o fluxo fixo do board, com o card na coluna do status gravado.
+
+#### US-11/T01 — Colunas e cards
+
+**Status:** done  
+**Entrega:** A lista do board virou o quadro. As colunas são Backlog, Pronta, Em andamento, Em revisão e Concluída. Cancelada não é coluna: fica atrás do filtro.
+
+**Contrato:**
+- a rota continua `/boards/{uuid}/tasks`. Abrir o quadro ou um card não seleciona workspace. A query `workspace` não troca a lista nem a sessão
+- o card mostra título, prioridade, prazo em `d/m/Y` no fuso do workspace, responsável e "Bloqueada" quando algum predecessor não está `done`
+- o id de agente não aparece. Se houver id gravado, o card diz só "Agente atribuído". O nome espera a entidade de agente. "Aguardando entrada" espera a entidade de pedido, que ainda não existe
+- `?cancelled=1` mostra só as canceladas, sem as cinco colunas. Sem esse filtro, elas ficam de fora do quadro
+- quem escreve continua vendo "Criar tarefa". Quem só lê vê os cards sem esse link. Quem não lê o board recebe 404, sem os títulos
+- não há arraste, botão de transição, filtro Hoje nem "Nova tarefa"
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_ui/tests/src/Functional/TaskKanbanUiTest.php
+OK (1 test, 71 assertions)
+```
+
+`TaskKanbanUiTest` coloca cada status na coluna correspondente, esconde a cancelada até o filtro, mostra Bloqueada só no card que espera, omite o id do agente e não deixa a query trocar o board nem a sessão. Fora do workspace a lista responde 404 sem os títulos. As deprecações do PHPUnit são o aviso de metadata `@group`.
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_ui/tests/src/Functional/TaskScreensUiTest.php
+OK (1 test, 88 assertions)
+```
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice \
+    --extensions=php,yml \
+    web/modules/custom/ab_ui/src/Controller/TaskController.php \
+    web/modules/custom/ab_ui/src/Hook/AbUiHooks.php \
+    web/modules/custom/ab_ui/tests/src/Functional/TaskKanbanUiTest.php \
+    web/themes/custom/agent_board/agent_board.info.yml
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse
+PHPStan: exit 0
+```
+
+No navegador, em `http://agentdock.lndo.site`, grace abriu as tarefas do Quadro Casa. "Preparar o material" ficou em Backlog, com Bloqueada. "Tema revisado" ficou em Pronta, com Alta, prazo 20/10/2026 e responsável grace. O cabeçalho continuou "Casa Grace". O filtro de canceladas mostrou "Nenhuma tarefa cancelada." e não as cinco colunas. Abrir "Tema revisado" não trocou o workspace. Em largura de telefone as colunas empilham.
+
+**Bloqueios:** nenhum nesta task.
+
+**Próxima ação:** US-11/T02 — movimento pelo teclado e arraste sobre a mesma transição.
+
+---
+
 ## Estatísticas
 
 - **Total de tasks:** 83 (conforme backlog)
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
-- **M2:** US-07 done; US-08 done; US-09 done; US-10 done
+- **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 in_progress (T01 done)
 
 ---
 
 ## Próximos Passos
 
-1. US-11/T01 — colunas e cards do Kanban, com o estado persistido
+1. US-11/T02 — movimento acessível do card, pela mesma transição do teclado e do arraste
 
 ---
 

@@ -293,11 +293,11 @@ Como humano, quero liberar tarefas válidas para execução.
 
 Como humano, quero acompanhar o fluxo visual.
 
-**Dependências:** US-10. **Status:** todo.
+**Dependências:** US-10. **Status:** in_progress.
 
 ### US-11/T01 — Renderizar colunas e cards
 
-- [ ] **Entrega:** Consultar tela Kanban; exibir estados fixos, prioridade, prazo e bloqueios.
+- [x] **Entrega:** Consultar tela Kanban; exibir estados fixos, prioridade, prazo e bloqueios.
 - **Aceite:** Cards correspondem ao estado persistido; cancelled tem filtro próprio se não houver coluna na referência.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

@@ -100,6 +100,9 @@ final class BoardController implements ContainerInjectionInterface {
       '#description' => $board->get('description')->getString(),
       '#archived' => $archived,
       '#back_url' => Url::fromRoute('ab_ui.boards')->toString(),
+      '#tasks_url' => Url::fromRoute('ab_ui.board_tasks', [
+        'uuid' => $board->uuid(),
+      ])->toString(),
       '#archive_form' => NULL,
       '#cache' => $this->cacheMeta($workspace),
     ];

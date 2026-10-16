@@ -1,0 +1,31 @@
+{#
+/**
+ * @file
+ * Lists tasks of one board.
+ */
+#}
+<div class="ab-task-list">
+  {% if board_label %}
+    <p class="ab-task-board">{{ board_label }}</p>
+  {% endif %}
+  {% if add_url %}
+    <p>
+      <a class="ab-button" href="{{ add_url }}">{{ 'Criar tarefa'|t }}</a>
+    </p>
+  {% endif %}
+  {% if items %}
+    <ul class="ab-task-items">
+      {% for item in items %}
+        <li class="ab-card">
+          <a href="{{ item.url }}">{{ item.label }}</a>
+          <span class="ab-task-priority">{{ item.priority }}</span>
+          {% if item.due %}
+            <span class="ab-task-due">{{ item.due }}</span>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>{{ 'Nenhuma tarefa neste board.'|t }}</p>
+  {% endif %}
+</div>

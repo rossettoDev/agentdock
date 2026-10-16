@@ -56,3 +56,39 @@ ab_ui.board_view:
   requirements:
     _user_is_logged_in: 'TRUE'
     uuid: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+
+ab_ui.board_tasks:
+  path: '/boards/{uuid}/tasks'
+  defaults:
+    _controller: '\Drupal\ab_ui\Controller\TaskController::listing'
+    _title: 'Tarefas'
+  requirements:
+    _user_is_logged_in: 'TRUE'
+    uuid: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+
+ab_ui.task_add:
+  path: '/boards/{uuid}/tasks/add'
+  defaults:
+    _form: '\Drupal\ab_ui\Form\TaskCreateForm'
+    _title: 'Criar tarefa'
+  requirements:
+    _user_is_logged_in: 'TRUE'
+    uuid: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+
+ab_ui.task_view:
+  path: '/tasks/{uuid}'
+  defaults:
+    _controller: '\Drupal\ab_ui\Controller\TaskController::view'
+    _title: 'Tarefa'
+  requirements:
+    _user_is_logged_in: 'TRUE'
+    uuid: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+
+ab_ui.task_edit:
+  path: '/tasks/{uuid}/edit'
+  defaults:
+    _form: '\Drupal\ab_ui\Form\TaskEditForm'
+    _title: 'Editar tarefa'
+  requirements:
+    _user_is_logged_in: 'TRUE'
+    uuid: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'

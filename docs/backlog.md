@@ -245,7 +245,7 @@ Como membro autorizado, quero organizar projetos em boards.
 
 Como membro, quero descrever o trabalho e seu resultado esperado.
 
-**Dependências:** US-08. **Status:** in_progress.
+**Dependências:** US-08. **Status:** done.
 
 ### US-09/T01 — Criar entidade tarefa
 
@@ -261,7 +261,7 @@ Como membro, quero descrever o trabalho e seu resultado esperado.
 
 ### US-09/T03 — Criar formulário e detalhe básico
 
-- [ ] **Entrega:** Título, descrição, critérios, prioridade, responsável humano e prazo; Markdown sanitizado.
+- [x] **Entrega:** Título, descrição, critérios, prioridade, responsável humano e prazo; Markdown sanitizado.
 - **Aceite:** Dados persistem e script/HTML arbitrário não executa.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

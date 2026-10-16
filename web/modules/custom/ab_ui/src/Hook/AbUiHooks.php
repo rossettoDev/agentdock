@@ -57,7 +57,28 @@ final class AbUiHooks {
           'description' => '',
           'archived' => FALSE,
           'back_url' => '',
+          'tasks_url' => '',
           'archive_form' => NULL,
+        ],
+      ],
+      'ab_ui_task_list' => [
+        'variables' => [
+          'board_label' => '',
+          'add_url' => '',
+          'items' => [],
+        ],
+      ],
+      'ab_ui_task_view' => [
+        'variables' => [
+          'label' => '',
+          'status' => '',
+          'priority' => '',
+          'owner' => '',
+          'due' => '',
+          'description' => [],
+          'criteria' => [],
+          'edit_url' => '',
+          'back_url' => '',
         ],
       ],
     ];

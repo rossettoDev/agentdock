@@ -12,6 +12,11 @@
   {% if archived %}
     <p class="ab-board-archived">{{ 'Arquivado'|t }}</p>
   {% endif %}
+  {% if tasks_url %}
+    <p>
+      <a href="{{ tasks_url }}">{{ 'Tarefas'|t }}</a>
+    </p>
+  {% endif %}
   {% if archive_form %}
     {{ archive_form }}
   {% endif %}

@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-16  
-**Marco atual:** M2 — US-09/T02 concluída; US-09/T03 segue todo. US-08 permanece done.
+**Marco atual:** M2 — US-09 concluída. US-10 segue todo.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -1200,7 +1200,7 @@ PHPStan: exit 0
 
 ## US-09 — Cadastrar e editar tarefas
 
-**Status:** in_progress  
+**Status:** done  
 **Dependências:** US-08 done.  
 **Objetivo:** Descrever o trabalho e o resultado esperado dentro de um board.
 
@@ -1299,7 +1299,56 @@ PHPStan: exit 0
 
 **Bloqueios:** nenhum nesta task.
 
-**Próxima ação:** US-09/T03.
+**Próxima ação:** —
+
+#### US-09/T03 — Formulário e detalhe da tarefa
+
+**Status:** done  
+**Entrega:** O formulário grava título, descrição, critérios, prioridade, responsável humano e prazo. O detalhe mostra esses dados e o status, com Markdown sanitizado. Checklist, anexos, agentes e conversa continuam fora.
+
+**Contrato:**
+- `/boards/{uuid}/tasks` lista as tarefas daquele board. A query `?workspace=` não troca a lista nem a sessão. Sem `write`, a página não oferece criar
+- `/boards/{uuid}/tasks/add` e `/tasks/{uuid}/edit` exigem `write`. Quem só lê recebe acesso negado. Board ou tarefa fora do escopo respondem 404, sem título nem descrição
+- `/tasks/{uuid}` abre a tarefa sem trocar o workspace da sessão. O detalhe mostra status, prioridade, responsável e prazo
+- o formulário não tem workspace, board, status, execução, autor nem posição. O responsável é o nome da conta. O prazo é o dia no fuso do workspace e fica gravado como meia-noite UTC
+- a versão vai no campo oculto. Um envio com versão antiga avisa o conflito e não sobrescreve
+- o Markdown gravado permanece o texto original. A renderização escapa o HTML, aplica um subconjunto (`p`, `br`, `strong`, `em`, `code`, `a`, `ul`, `li`, `h1`–`h3`) e filtra de novo. `javascript:` não vira link
+- o detalhe do board ganhou o link "Tarefas" para a lista daquele board
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_ui/tests/src/Functional/TaskScreensUiTest.php \
+    web/modules/custom/ab_ui/tests/src/Unit/TaskMarkdownTest.php
+OK (4 tests, 98 assertions)
+```
+
+`TaskScreensUiTest` cobre o anônimo, a criação sem status nem workspace, o HTML escapado, a edição, o conflito de versão, o 404 sem vazamento e o viewer sem criar nem editar. `TaskMarkdownTest` cobre script, `javascript:` e o subconjunto permitido. As deprecações do PHPUnit são o aviso de metadata `@group`.
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_ui/tests/src/Functional/WorkspaceBoardsUiTest.php
+OK (1 test, 72 assertions)
+```
+
+No navegador, em `http://agentdock.lndo.site`, grace criou "Escrever o tema" no board Quadro Casa, com prioridade Alta, responsável grace e prazo 20/10/2026. O detalhe mostrou Backlog e o cabeçalho continuou Casa Grace. A descrição saiu como `<strong>negrito</strong>` e o script ficou texto (`&lt;script&gt;`). Editar o título para "Tema revisado" persistiu, sem mudar o status. Ada, sem membership nesse workspace, recebeu 404 nesse UUID, sem o título na página, e o cabeçalho continuou "Meus workspaces".
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice \
+    --extensions=php,yml web/modules/custom/ab_ui \
+    web/modules/custom/ab_board/src/TaskRepository.php \
+    web/modules/custom/ab_board/ab_board.services.yml
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse
+PHPStan: exit 0
+```
+
+**Bloqueios:** nenhum nesta task.
+
+**Próxima ação:** —
 
 ---
 
@@ -1308,13 +1357,13 @@ PHPStan: exit 0
 - **Total de tasks:** 83 (conforme backlog)
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
-- **M2:** US-07 done; US-08 done; US-09 in_progress (T01 e T02 done)
+- **M2:** US-07 done; US-08 done; US-09 done
 
 ---
 
 ## Próximos Passos
 
-1. US-09/T03 — formulário e detalhe da tarefa, com Markdown sanitizado
+1. US-10/T01 — transições humanas iniciais de status, sem simular execução
 
 ---
 

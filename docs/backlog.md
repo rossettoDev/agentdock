@@ -317,23 +317,23 @@ Como humano, quero acompanhar o fluxo visual.
 
 Como admin, quero delegar acesso limitado a agentes.
 
-**Dependências:** US-10. **Status:** todo.
+**Dependências:** US-10. **Status:** done.
 
 ### US-12/T01 — Criar entidade agente
 
-- [ ] **Entrega:** Workspace, nome, descrição, capabilities, enabled e concurrency_limit.
+- [x] **Entrega:** Workspace, nome, descrição, capabilities, enabled e concurrency_limit.
 - **Aceite:** Limite inválido é rejeitado e agente desabilitado não inicia trabalho.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-12/T02 — Criar grants por board
 
-- [ ] **Entrega:** Persistir permissões e validar interseção com workspace.
+- [x] **Entrega:** Persistir permissões e validar interseção com workspace.
 - **Aceite:** Grant para board externo é rejeitado.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-12/T03 — Criar Central de Agentes inicial
 
-- [ ] **Entrega:** Consultar screens; cadastro, ativação e grants; status distingue habilitado de execução/heartbeat.
+- [x] **Entrega:** Consultar screens; cadastro, ativação e grants; status distingue habilitado de execução/heartbeat.
 - **Aceite:** Interface não afirma agente online sem sinal recente verificável.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

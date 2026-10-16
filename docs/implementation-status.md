@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-16  
-**Marco atual:** M2 — US-11 concluída. US-12 segue todo.
+**Marco atual:** M3 — US-12 concluída. US-13 segue todo.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -1656,18 +1656,105 @@ No navegador, em `http://agentdock.lndo.site`, o filtro Hoje do Quadro Casa most
 
 ---
 
+## US-12 — Cadastrar agentes e grants
+
+**Status:** done  
+**Dependências:** US-10 done.  
+**Objetivo:** Cadastrar o agente no workspace, limitar o grant ao board dele e não chamar isso de execução.
+
+#### US-12/T01 — Entidade agente
+
+**Status:** done  
+**Entrega:** A entidade `ab_agent` guarda workspace, nome, descrição, capacidades, habilitado e limite de concorrência. O limite menor que 1 é rejeitado. O agente desabilitado fica gravado e não passa da porta que a execução futura vai chamar.
+
+**Contrato:**
+- o agente nasce no workspace da sessão e não troca de workspace
+- criar e editar exigem `agent.manage` (admin e owner). Quem só lê o workspace não cria. Quem está fora recebe "não encontrado"
+- `enabled` desligado faz `AgentManager::assertCanStartWork()` recusar. Não existe execução nem botão de iniciar
+- o evento é `agent.created` ou `agent.updated`. O payload traz nome, `enabled` e `concurrency_limit`. O ator é o humano autenticado
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_agent/tests/src/Kernel/AgentKernelTest.php
+OK (3 tests, 92 assertions)
+```
+
+`testAgentStaysInTheWorkspace` rejeita nome vazio e limite 0 sem gravar linha, grava `agent.created`, recusa o desabilitado em `assertCanStartWork()`, deixa o habilitado passar, recusa a troca de workspace e impede viewer, member e outsider. O admin cria. `testFailedRecordRollsBack` apaga a linha quando o evento não fecha. As deprecações do PHPUnit são o aviso de metadata `@group`.
+
+#### US-12/T02 — Grants por board
+
+**Status:** done  
+**Entrega:** A tabela `ab_agent_board_grant` guarda o par agente/board e as permissões `read`, `write` e `review`. Qualquer outra permissão, lista vazia ou board de outro workspace é rejeitada.
+
+**Contrato:**
+- a permissão gravada sai ordenada (`read,write`). O mesmo par com a mesma lista não gera evento. Mudança gera `agent.grant_updated`. Par novo gera `agent.grant_added`. Remoção gera `agent.grant_removed`
+- o lock segue o chamador: workspace, agente, board, e só então o evento
+- a tabela entra no `hook_schema` e no update `ab_agent_update_11001` para o site que já tinha o módulo vazio
+
+**Evidências:** o mesmo `AgentKernelTest`. `testGrantStaysOnTheAgentBoard` grava `read,write` no board do workspace, ignora a repetição, atualiza para `review`, rejeita o board de fora e `agent.manage`, e remove o par uma vez só.
+
+No site local, `lando drush updb` rodou `ab_agent_update_11001` e criou `ab_agent` e `ab_agent_board_grant`.
+
+#### US-12/T03 — Central de Agentes inicial
+
+**Status:** done  
+**Entrega:** Lista `/agents`, cadastro `/agents/add` e ficha `/agents/{uuid}`. O status é Habilitado ou Desabilitado, com a frase "Não há sinal de execução."
+
+**Contrato:**
+- a lista usa o workspace da sessão. Abrir o UUID não seleciona workspace. A query `workspace` não troca a lista nem a sessão
+- quem gerencia agentes vê criar, editar e o grant. Quem só lê vê o agente sem "Criar agente", sem "Salvar" e sem "Adicionar grant". Quem está fora recebe 404 sem o nome
+- o grant oferece só os boards daquele workspace, com Ler, Escrever e Revisar
+- a tela não diz Online, Trabalhando, Em execução, nem mostra gráfico, modelo ou credencial
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_ui/tests/src/Functional/AgentUiTest.php
+OK (1 test, 67 assertions)
+```
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,yml \
+    web/modules/custom/ab_agent \
+    web/modules/custom/ab_ui/src/Controller/AgentController.php \
+    web/modules/custom/ab_ui/src/Form/AgentCreateForm.php \
+    web/modules/custom/ab_ui/src/Form/AgentEditForm.php \
+    web/modules/custom/ab_ui/src/Form/AgentGrantForm.php
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse --memory-limit=1G \
+    web/modules/custom/ab_agent/src \
+    web/modules/custom/ab_ui/src/Controller/AgentController.php \
+    web/modules/custom/ab_ui/src/Form/AgentCreateForm.php \
+    web/modules/custom/ab_ui/src/Form/AgentEditForm.php \
+    web/modules/custom/ab_ui/src/Form/AgentGrantForm.php
+PHPStan: exit 0
+```
+
+No navegador, em `http://agentdock.lndo.site`, a lista de Casa Grace abriu vazia, com "Criar agente" e o cabeçalho "Casa Grace". O cadastro gravou "Revisor da casa", habilitado, limite 1. A ficha mostrou "Habilitado" e "Não há sinal de execução." O texto da página não continha "Online" nem "Trabalhando". O grant ofereceu só "Quadro Casa". Depois de marcar Ler, a ficha passou a mostrar "Quadro Casa: Ler". Em Meus workspaces o cabeçalho continuou "Casa Grace" e o link "Agentes" apareceu ao lado de Boards. "Tema revisado" e "Preparar o material" continuam nas mesmas versão, status e posição.
+
+**Bloqueios:** nenhum nesta história.
+
+**Próxima ação:** —
+
+---
+
 ## Estatísticas
 
 - **Total de tasks:** 83 (conforme backlog)
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
+- **M3:** US-12 done
 
 ---
 
 ## Próximos Passos
 
-1. US-12/T01 — cadastro do agente no workspace
+1. US-13/T01 — ciclo de tokens do agente
 
 ---
 

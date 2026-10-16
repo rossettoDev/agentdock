@@ -48,6 +48,13 @@ final class WorkspaceQueryScope {
   }
 
   /**
+   * Limits an ab_agent query to visible workspaces.
+   */
+  public function alterAgent(AlterableInterface $query): void {
+    $this->restrict($query, 'base_table.workspace');
+  }
+
+  /**
    * Adds the workspace condition for the query account.
    */
   private function restrict(AlterableInterface $query, string $field): void {

@@ -1,0 +1,32 @@
+{#
+/**
+ * @file
+ * Shows one agent without claiming it is running.
+ */
+#}
+<article class="ab-agent-view">
+  <h2>{{ label }}</h2>
+  {% if description %}
+    <p class="ab-agent-description">{{ description }}</p>
+  {% endif %}
+  {% if capabilities %}
+    <p class="ab-agent-capabilities">{{ capabilities }}</p>
+  {% endif %}
+  <p class="ab-agent-status">{{ status }}</p>
+  <p class="ab-agent-limit">{{ 'Limite: @limit'|t({'@limit': limit}) }}</p>
+  <p class="ab-agent-signal">{{ signal }}</p>
+  {% if grants %}
+    <ul class="ab-agent-grants">
+      {% for grant in grants %}
+        <li>{{ grant }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  {% if edit_form %}
+    {{ edit_form }}
+  {% endif %}
+  {% if grant_form %}
+    {{ grant_form }}
+  {% endif %}
+  <p><a href="{{ back_url }}">{{ 'Agentes'|t }}</a></p>
+</article>

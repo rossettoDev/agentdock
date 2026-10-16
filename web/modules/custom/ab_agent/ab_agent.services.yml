@@ -1,0 +1,23 @@
+services:
+  Drupal\ab_agent\AgentRepository:
+    arguments:
+      - '@current_user'
+      - '@entity_type.manager'
+      - '@Drupal\ab_core\Authorization\MembershipScope'
+      - '@Drupal\ab_core\UuidLookup'
+  Drupal\ab_agent\AgentManager:
+    arguments:
+      - '@database'
+      - '@entity_type.manager'
+      - '@current_user'
+      - '@Drupal\ab_core\Authorization\MembershipScope'
+      - '@Drupal\ab_core\Authorization\HumanActorContextFactory'
+      - '@Drupal\ab_event\EventStoreInterface'
+  Drupal\ab_agent\AgentGrantManager:
+    arguments:
+      - '@database'
+      - '@entity_type.manager'
+      - '@current_user'
+      - '@Drupal\ab_core\Authorization\MembershipScope'
+      - '@Drupal\ab_core\Authorization\HumanActorContextFactory'
+      - '@Drupal\ab_event\EventStoreInterface'

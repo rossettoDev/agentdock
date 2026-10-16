@@ -84,6 +84,31 @@ ab_ui.task_view:
     _user_is_logged_in: 'TRUE'
     uuid: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
 
+ab_ui.agents:
+  path: '/agents'
+  defaults:
+    _controller: '\Drupal\ab_ui\Controller\AgentController::listing'
+    _title: 'Agentes'
+  requirements:
+    _user_is_logged_in: 'TRUE'
+
+ab_ui.agent_add:
+  path: '/agents/add'
+  defaults:
+    _form: '\Drupal\ab_ui\Form\AgentCreateForm'
+    _title: 'Criar agente'
+  requirements:
+    _user_is_logged_in: 'TRUE'
+
+ab_ui.agent_view:
+  path: '/agents/{uuid}'
+  defaults:
+    _controller: '\Drupal\ab_ui\Controller\AgentController::view'
+    _title: 'Agente'
+  requirements:
+    _user_is_logged_in: 'TRUE'
+    uuid: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+
 ab_ui.task_edit:
   path: '/tasks/{uuid}/edit'
   defaults:

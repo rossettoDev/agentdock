@@ -1,0 +1,27 @@
+<?php
+
+/**
+ * @file
+ * Install and update hooks for agents and board grants.
+ */
+
+declare(strict_types=1);
+
+use Drupal\ab_agent\AgentSchemaInstaller;
+
+/**
+ * Implements hook_schema().
+ *
+ * The grant pair is an internal table. It is not a content entity.
+ */
+function ab_agent_schema(): array {
+  $schema['ab_agent_board_grant'] = AgentSchemaInstaller::grantTable();
+  return $schema;
+}
+
+/**
+ * Installs the agent entity and the grant table on existing sites.
+ */
+function ab_agent_update_11001(): string {
+  return AgentSchemaInstaller::install();
+}

@@ -6,12 +6,14 @@
  */
 
 use Drupal\ab_board\BoardSchemaInstaller;
+use Drupal\ab_board\TaskSchemaInstaller;
 
 /**
- * Installs the board entity schema.
+ * Installs the board and task entity schemas.
  */
 function ab_board_install(): void {
   BoardSchemaInstaller::install();
+  TaskSchemaInstaller::install();
 }
 
 /**
@@ -19,4 +21,11 @@ function ab_board_install(): void {
  */
 function ab_board_update_11001(): string {
   return BoardSchemaInstaller::install();
+}
+
+/**
+ * Installs the task entity schema on sites that already had the module.
+ */
+function ab_board_update_11002(): string {
+  return TaskSchemaInstaller::install();
 }

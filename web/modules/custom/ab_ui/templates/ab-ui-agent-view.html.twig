@@ -22,11 +22,21 @@
       {% endfor %}
     </ul>
   {% endif %}
+  {% if tokens %}
+    <ul class="ab-agent-tokens">
+      {% for token in tokens %}
+        <li>{{ token }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
   {% if edit_form %}
     {{ edit_form }}
   {% endif %}
   {% if grant_form %}
     {{ grant_form }}
+  {% endif %}
+  {% if token_form %}
+    {{ token_form }}
   {% endif %}
   <p><a href="{{ back_url }}">{{ 'Agentes'|t }}</a></p>
 </article>

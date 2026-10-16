@@ -341,23 +341,23 @@ Como admin, quero delegar acesso limitado a agentes.
 
 Como agente, quero acessar a plataforma com identidade própria.
 
-**Dependências:** US-12. **Status:** todo.
+**Dependências:** US-12. **Status:** done.
 
 ### US-13/T01 — Implementar ciclo de tokens
 
-- [ ] **Entrega:** Gerar secret seguro, armazenar hash, scopes, validade, rotação e revogação.
+- [x] **Entrega:** Gerar secret seguro, armazenar hash, scopes, validade, rotação e revogação.
 - **Aceite:** Segredo aparece uma vez e nunca fica em logs ou campos públicos.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-13/T02 — Implementar provider e ActorContext agente
 
-- [ ] **Entrega:** Conta técnica restrita e identidade real do agente; aplicar grants/scopes ao acesso.
+- [x] **Entrega:** Conta técnica restrita e identidade real do agente; aplicar grants/scopes ao acesso.
 - **Aceite:** Payload não pode forjar outro agente; query string não autentica.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-13/T03 — Testar autenticação e acesso
 
-- [ ] **Entrega:** Expirado, revogado, disabled, scope ausente e board externo.
+- [x] **Entrega:** Expirado, revogado, disabled, scope ausente e board externo.
 - **Aceite:** Todos os cenários negam a operação sem expor segredo.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

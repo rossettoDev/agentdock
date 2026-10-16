@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-16  
-**Marco atual:** M3 — US-12 concluída. US-13 segue todo.
+**Marco atual:** M3 — US-13 concluída. US-14 segue todo.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -1742,19 +1742,97 @@ No navegador, em `http://agentdock.lndo.site`, a lista de Casa Grace abriu vazia
 
 ---
 
+## US-13 — Autenticar agentes
+
+**Status:** done  
+**Dependências:** US-12 done.  
+**Objetivo:** Dar ao agente uma credencial própria, sem gravar o segredo e sem deixar o payload escolher a identidade.
+
+#### US-13/T01 — Ciclo de tokens
+
+**Status:** done  
+**Entrega:** O owner emite, revoga e rotaciona um bearer `ab_<id>.<segredo>`. O banco guarda só o SHA-256 do segredo. A validade padrão é 90 dias.
+
+**Contrato:**
+- escopos permitidos: `boards:read`, `tasks:read`, `tasks:write`, `tasks:claim`, `executions:write`, `messages:read`, `messages:write`, `events:read`. Lista vazia ou permissão de workspace é rejeitada
+- emitir, revogar e rotacionar exigem `credential.manage`. Admin, member e viewer não passam. Quem está fora recebe "não encontrado"
+- a rotação revoga o token anterior e emite outro na mesma transação. Revogar de novo não grava outro evento
+- eventos `agent.token_issued`, `agent.token_revoked` e `agent.token_rotated` levam o id público, nunca o segredo nem o hash
+- a tela mostra o bearer uma vez, na mensagem de status. A lista seguinte mostra só `ab_<id>`, escopos, validade e Ativo/Revogado/Expirado
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_agent/tests/src/Kernel/AgentTokenKernelTest.php
+OK (3 tests, 114 assertions)
+```
+
+`testSecretIsStoredAsHash` rejeita escopo vazio e `agent.manage`, confere o hash, impede admin, viewer e outsider, rotaciona, revoga uma vez só e deixa a conta `ab-agent-runtime` bloqueada para o login de formulário. `testFailedIssueRollsBack` não deixa linha quando o evento não fecha. As deprecações do PHPUnit são o aviso de metadata `@group`.
+
+#### US-13/T02 — Provider e ActorContext do agente
+
+**Status:** done  
+**Entrega:** O provider lê `Authorization: Bearer`. A query string não autentica. O `ActorContext` fica com o UUID do agente, não com a conta técnica.
+
+**Contrato:**
+- a conta técnica não tem membership nem papel extra e está bloqueada. Sozinha ela não lê workspace
+- o header válido preenche o atributo do request. `agent_id` no corpo ou na query não troca o agente
+- a resposta com bearer não entra no cache anônimo de página
+
+#### US-13/T03 — Negar credencial inválida
+
+**Status:** done  
+**Entrega:** Expirado, revogado, agente desabilitado, escopo ausente e board de outro workspace negam a operação. A mensagem não contém o segredo.
+
+**Contrato:**
+- a permissão efetiva é a interseção do escopo do token com o grant do board (`read` ou `write`) e com o workspace do agente
+- `AgentOperationGate` não consulta a conta Drupal da request
+
+**Evidências:** o mesmo `AgentTokenKernelTest`. `testBearerCannotForgeAnotherAgent` ignora a query, mantém o agente do header e recusa escrita sem escopo, board de fora, token vencido, token revogado e agente desabilitado.
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_ui/tests/src/Functional/AgentTokenUiTest.php
+OK (1 test, 38 assertions)
+```
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,yml \
+    web/modules/custom/ab_agent \
+    web/modules/custom/ab_ui/src/Controller/AgentController.php \
+    web/modules/custom/ab_ui/src/Form/AgentTokenForm.php
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse --memory-limit=1G \
+    web/modules/custom/ab_agent/src \
+    web/modules/custom/ab_ui/src/Controller/AgentController.php \
+    web/modules/custom/ab_ui/src/Form/AgentTokenForm.php
+PHPStan: exit 0
+```
+
+No site local, `lando drush updb` rodou `ab_agent_update_11002`, criou `ab_agent_token` e a conta `ab-agent-runtime` com status 0. No navegador, a ficha de "Revisor da casa" em Casa Grace ganhou o formulário de token. Depois de marcar "Ler tarefas", a lista mostrou o id público, `tasks:read`, validade 14/01/2027 e "Ativo". O texto da página não tinha o bearer completo. O cabeçalho continuou "Casa Grace". O hash gravado tem 64 caracteres e não contém o id público. "Tema revisado" e "Preparar o material" seguem na mesma versão, status e posição.
+
+**Bloqueios:** nenhum nesta história.
+
+**Próxima ação:** —
+
+---
+
 ## Estatísticas
 
 - **Total de tasks:** 83 (conforme backlog)
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
-- **M3:** US-12 done
+- **M3:** US-12 done; US-13 done
 
 ---
 
 ## Próximos Passos
 
-1. US-13/T01 — ciclo de tokens do agente
+1. US-14/T01 — execução e lease exclusivos da tarefa
 
 ---
 

@@ -78,4 +78,96 @@ final class AgentSchemaInstaller {
     return implode(' ', $messages);
   }
 
+  /**
+   * Schema for the token table.
+   *
+   * The secret itself is not a column. Only its hash is stored.
+   *
+   * @return array<string, mixed>
+   *   A hook_schema table definition.
+   */
+  public static function tokenTable(): array {
+    return [
+      'description' => 'Hashed bearer credentials for one agent.',
+      'fields' => [
+        'token_id' => [
+          'description' => 'Public id. The secret is not stored.',
+          'type' => 'varchar',
+          'length' => 32,
+          'not null' => TRUE,
+        ],
+        'workspace' => [
+          'description' => 'Workspace id copied from the agent.',
+          'type' => 'int',
+          'size' => 'big',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'agent_id' => [
+          'description' => 'Agent that owns the credential.',
+          'type' => 'int',
+          'size' => 'big',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'secret_hash' => [
+          'description' => 'SHA-256 of the secret, hex encoded.',
+          'type' => 'varchar',
+          'length' => 64,
+          'not null' => TRUE,
+        ],
+        'scopes' => [
+          'description' => 'Comma-separated token scopes.',
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => TRUE,
+        ],
+        'expires_at' => [
+          'description' => 'UTC timestamp when the credential stops working.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'revoked_at' => [
+          'description' => 'UTC timestamp when the credential was revoked.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => FALSE,
+        ],
+        'last_used_at' => [
+          'description' => 'UTC timestamp of the last accepted use.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => FALSE,
+        ],
+        'created' => [
+          'description' => 'UTC timestamp when the credential was issued.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+      ],
+      'primary key' => ['token_id'],
+      'indexes' => [
+        'workspace' => ['workspace'],
+        'agent_id' => ['agent_id'],
+      ],
+    ];
+  }
+
+  /**
+   * Creates the token table and the blocked runtime account.
+   */
+  public static function installTokens(): string {
+    $schema = \Drupal::database()->schema();
+    $messages = [];
+    if (!$schema->tableExists('ab_agent_token')) {
+      $schema->createTable('ab_agent_token', self::tokenTable());
+      $messages[] = 'Created the agent token table.';
+    }
+    AgentRuntimeAccount::ensure();
+    $messages[] = 'Ensured the blocked agent runtime account.';
+    return implode(' ', $messages);
+  }
+
 }

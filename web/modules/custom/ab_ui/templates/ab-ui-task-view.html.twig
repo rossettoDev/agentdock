@@ -25,5 +25,8 @@
   {% if edit_url %}
     <p><a href="{{ edit_url }}">{{ 'Editar'|t }}</a></p>
   {% endif %}
+  {% if transition_form %}
+    {{ transition_form }}
+  {% endif %}
   <p><a href="{{ back_url }}">{{ 'Tarefas'|t }}</a></p>
 </div>

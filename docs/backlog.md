@@ -269,11 +269,11 @@ Como membro, quero descrever o trabalho e seu resultado esperado.
 
 Como humano, quero liberar tarefas válidas para execução.
 
-**Dependências:** US-09. **Status:** todo.
+**Dependências:** US-09. **Status:** in_progress.
 
 ### US-10/T01 — Implementar transições humanas iniciais
 
-- [ ] **Entrega:** Backlog/ready/cancelamento/reabertura conforme policy; in_progress e in_review ficam reservados ao ciclo de execução.
+- [x] **Entrega:** Backlog/ready/cancelamento/reabertura conforme policy; in_progress e in_review ficam reservados ao ciclo de execução.
 - **Aceite:** Não é possível simular execução apenas arrastando card.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

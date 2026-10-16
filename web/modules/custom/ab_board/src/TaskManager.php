@@ -22,9 +22,10 @@ use Drupal\user\UserInterface;
 /**
  * Creates and edits tasks inside the caller's transaction.
  *
- * The editor writes only the whitelist. Workspace, board, status, version
- * and active execution stay on their own commands. The actor comes from
- * the authenticated account. Locks follow workspace, board, then task.
+ * The editor writes only the whitelist. Status changes go through
+ * transition(), which never writes in_progress, in_review or done.
+ * The actor comes from the authenticated account. Locks follow
+ * workspace, board, then task.
  */
 class TaskManager {
 
@@ -148,6 +149,64 @@ class TaskManager {
       $current->set('version', $version + 1);
       $current->save();
       $this->record($workspace, $current, 'task.updated');
+      $this->afterRecord($current);
+      return $current;
+    }
+    catch (\Throwable $exception) {
+      $transaction->rollBack();
+      throw $exception;
+    }
+  }
+
+  /**
+   * Moves a task along the human graph and records task.transitioned.
+   *
+   * The in_progress, in_review and done statuses are refused before the
+   * transaction.
+   * A task with an active execution is also refused.
+   *
+   * @param \Drupal\ab_board\Entity\Task $task
+   *   Task to move.
+   * @param string $target
+   *   Status the human asked for.
+   * @param int $expectedVersion
+   *   Version the caller read. A mismatch is a conflict.
+   *
+   * @throws \Drupal\ab_board\TaskTransitionRejectedException
+   *   The pair is not a human transition.
+   * @throws \Drupal\ab_board\TaskVersionConflictException
+   *   The stored version is no longer the expected one.
+   * @throws \Drupal\ab_core\Authorization\ScopedResourceNotFoundException
+   *   The task workspace is outside the caller's scope.
+   * @throws \Drupal\ab_core\Authorization\ScopedOperationDeniedException
+   *   The caller can see the workspace but cannot edit tasks.
+   */
+  public function transition(Task $task, string $target, int $expectedVersion): Task {
+    $workspace = $this->workspaceOfTask($task);
+    $this->assertWrite($workspace);
+    $this->assertHumanTarget($target);
+    $transaction = $this->database->startTransaction();
+    try {
+      $this->lockWorkspace($workspace);
+      $board = $this->boardOf($task);
+      $this->lockBoard($board);
+      $this->lockTask($task);
+      $current = $this->reloadTask($task);
+      $version = (int) $current->get('version')->getString();
+      if ($version !== $expectedVersion) {
+        throw new TaskVersionConflictException('The task version is stale.');
+      }
+      if ($current->get('active_execution')->getString() !== '') {
+        throw new TaskTransitionRejectedException('An active execution owns this task.');
+      }
+      $from = $current->get('status')->getString();
+      if (!$this->transitionPolicy()->allows($from, $target)) {
+        throw new TaskTransitionRejectedException('That status change is not a human transition.');
+      }
+      $current->set('status', $target);
+      $current->set('version', $version + 1);
+      $current->save();
+      $this->record($workspace, $current, 'task.transitioned', $from);
       $this->afterRecord($current);
       return $current;
     }
@@ -470,22 +529,60 @@ class TaskManager {
   }
 
   /**
+   * Refuses statuses that belong to execution or approval.
+   */
+  private function assertHumanTarget(string $target): void {
+    $known = [
+      'backlog',
+      'ready',
+      'in_progress',
+      'in_review',
+      'done',
+      'cancelled',
+    ];
+    if (!in_array($target, $known, TRUE)) {
+      throw new TaskTransitionRejectedException('That status is unknown.');
+    }
+    $reserved = in_array($target, TaskTransitionPolicy::RESERVED, TRUE);
+    if ($reserved) {
+      throw new TaskTransitionRejectedException('Execution status is not a human transition.');
+    }
+  }
+
+  /**
+   * Loads the human transition graph.
+   */
+  private function transitionPolicy(): TaskTransitionPolicy {
+    return new TaskTransitionPolicy();
+  }
+
+  /**
    * Records a task event for the authenticated actor.
    */
-  private function record(Workspace $workspace, Task $task, string $type): void {
+  private function record(Workspace $workspace, Task $task, string $type, ?string $from = NULL): void {
     $actor = $this->actors->create($workspace);
+    $payload = [
+      'title' => (string) $task->label(),
+      'status' => $task->get('status')->getString(),
+      'priority' => $task->get('priority')->getString(),
+      'version' => (int) $task->get('version')->getString(),
+    ];
+    if ($from !== NULL) {
+      $payload = [
+        'title' => $payload['title'],
+        'status' => $payload['status'],
+        'from' => $from,
+        'priority' => $payload['priority'],
+        'version' => $payload['version'],
+      ];
+    }
     $this->events->record(new EventDraft(
       (string) $workspace->uuid(),
       $type,
       (string) $task->uuid(),
       $actor->actorType,
       $actor->actorId,
-      [
-        'title' => (string) $task->label(),
-        'status' => $task->get('status')->getString(),
-        'priority' => $task->get('priority')->getString(),
-        'version' => (int) $task->get('version')->getString(),
-      ],
+      $payload,
     ));
   }
 

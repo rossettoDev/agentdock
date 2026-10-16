@@ -78,6 +78,7 @@ final class AbUiHooks {
           'description' => [],
           'criteria' => [],
           'edit_url' => '',
+          'transition_form' => NULL,
           'back_url' => '',
         ],
       ],

@@ -177,6 +177,8 @@ class TaskScreensUiTest extends BrowserTestBase {
     $this->assertSession()->responseContains('&lt;script&gt;');
     $this->assertSession()->responseNotContains('<script>alert(1)</script>');
     $this->assertSession()->linkNotExists('Editar');
+    $this->assertSession()->buttonNotExists('Liberar');
+    $this->assertSession()->buttonNotExists('Cancelar');
     $this->drupalGet('tasks/' . $task->uuid() . '/edit');
     $this->assertSession()->statusCodeEquals(403);
     $this->drupalGet('tasks/' . $grace_task->uuid());

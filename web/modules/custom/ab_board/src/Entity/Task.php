@@ -109,7 +109,7 @@ class Task extends ContentEntityBase {
     $fields['assigned_agent'] = BaseFieldDefinition::create('integer')
       ->setLabel(new TranslatableMarkup('Assigned agent'))
       ->setDescription(new TranslatableMarkup(
-        'Internal id reserved until the agent entity exists.',
+        'Numeric id of the assigned agent. The column stays an integer.',
       ))
       ->setSetting('unsigned', TRUE);
 
@@ -131,7 +131,7 @@ class Task extends ContentEntityBase {
     $fields['active_execution'] = BaseFieldDefinition::create('integer')
       ->setLabel(new TranslatableMarkup('Active execution'))
       ->setDescription(new TranslatableMarkup(
-        'Internal id reserved until the execution entity exists.',
+        'Numeric id of the active execution. The column stays an integer.',
       ))
       ->setSetting('unsigned', TRUE);
 

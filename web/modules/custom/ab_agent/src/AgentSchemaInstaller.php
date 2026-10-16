@@ -170,4 +170,100 @@ final class AgentSchemaInstaller {
     return implode(' ', $messages);
   }
 
+  /**
+   * Schema for the one lease row of a task.
+   *
+   * The secret itself is not a column. Only its hash is stored.
+   *
+   * @return array<string, mixed>
+   *   A hook_schema table definition.
+   */
+  public static function leaseTable(): array {
+    return [
+      'description' => 'Exclusive lease that reserves one task for one execution.',
+      'fields' => [
+        'task_id' => [
+          'description' => 'Task this lease reserves. One row per task.',
+          'type' => 'int',
+          'size' => 'big',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'execution_id' => [
+          'description' => 'Execution that holds the lease.',
+          'type' => 'int',
+          'size' => 'big',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'workspace' => [
+          'description' => 'Workspace id copied from the task.',
+          'type' => 'int',
+          'size' => 'big',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'agent_id' => [
+          'description' => 'Agent that claimed the task.',
+          'type' => 'int',
+          'size' => 'big',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'token_hash' => [
+          'description' => 'SHA-256 of the lease secret, hex encoded.',
+          'type' => 'varchar',
+          'length' => 64,
+          'not null' => TRUE,
+        ],
+        'expires_at' => [
+          'description' => 'UTC timestamp when the lease stops being current.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'generation' => [
+          'description' => 'Increments when a later story replaces the row.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'created' => [
+          'description' => 'UTC timestamp when the lease was written.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+      ],
+      'primary key' => ['task_id'],
+      'indexes' => [
+        'execution_id' => ['execution_id'],
+        'workspace' => ['workspace'],
+      ],
+    ];
+  }
+
+  /**
+   * Installs the execution entity and the lease table.
+   */
+  public static function installExecution(): string {
+    $schema = \Drupal::database()->schema();
+    $messages = [];
+    if (!$schema->tableExists('ab_execution')) {
+      $manager = \Drupal::entityTypeManager();
+      $manager->clearCachedDefinitions();
+      $entity_type = $manager->getDefinition('ab_execution');
+      \Drupal::entityDefinitionUpdateManager()->installEntityType($entity_type);
+      $messages[] = 'Installed the execution entity schema.';
+    }
+    if (!$schema->tableExists('ab_execution_lease')) {
+      $schema->createTable('ab_execution_lease', self::leaseTable());
+      $messages[] = 'Created the execution lease table.';
+    }
+    if ($messages === []) {
+      return 'Execution schema already present.';
+    }
+    return implode(' ', $messages);
+  }
+
 }

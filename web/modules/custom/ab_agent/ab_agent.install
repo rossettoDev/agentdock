@@ -18,6 +18,7 @@ use Drupal\ab_agent\AgentSchemaInstaller;
 function ab_agent_schema(): array {
   $schema['ab_agent_board_grant'] = AgentSchemaInstaller::grantTable();
   $schema['ab_agent_token'] = AgentSchemaInstaller::tokenTable();
+  $schema['ab_execution_lease'] = AgentSchemaInstaller::leaseTable();
   return $schema;
 }
 
@@ -40,4 +41,11 @@ function ab_agent_update_11001(): string {
  */
 function ab_agent_update_11002(): string {
   return AgentSchemaInstaller::installTokens();
+}
+
+/**
+ * Installs executions and the one lease row per task.
+ */
+function ab_agent_update_11003(): string {
+  return AgentSchemaInstaller::installExecution();
 }

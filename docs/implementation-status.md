@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-16  
-**Marco atual:** M3 — US-13 concluída. US-14 segue todo.
+**Marco atual:** M3 — US-14 concluída. US-15 segue todo.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -1223,7 +1223,7 @@ PHPStan: exit 0
 - a validação da referência ao board confere a existência, sem a consulta com acesso. Essa consulta carregaria memberships dentro da transação de gravação, e o PostgreSQL recusa o savepoint aninhado
 - a tarefa não é revisionável. O histórico editorial continua nos eventos e em `version`
 
-**Plano de update:** quando US-12 tiver `ab_agent` e US-14 tiver `ab_execution`, um `hook_update_N` troca esses dois base fields de `integer` para `entity_reference`. Na tabela compartilhada o nome da coluna não muda (`assigned_agent` e `active_execution`). O update precisa preservar os valores; se o atualizador recriar a coluna, copiar os pares id/valor antes e gravá-los de volta. A foreign key só entra depois, e só para ids que existam na tabela alvo. Esse update não pode rodar antes dos dois tipos de entidade existirem.
+**Decisão posterior:** US-14 manteve `assigned_agent` e `active_execution` como inteiros. O plano de trocá-los por `entity_reference` não foi executado. `ab_board` não pode depender de `ab_agent`, e os testes já gravam ids numéricos nessas colunas. O claim escreve o id do agente e o id da execução nesses mesmos campos.
 
 **Evidências:**
 ```bash
@@ -1820,19 +1820,84 @@ No site local, `lando drush updb` rodou `ab_agent_update_11002`, criou `ab_agent
 
 ---
 
+## US-14 — Assumir tarefa com exclusividade
+
+**Status:** done  
+**Dependências:** US-07 done, US-10 done, US-13 done.  
+**Objetivo:** Reservar uma tarefa pronta para o agente autenticado, com uma lease por tarefa e sem replay do segredo.
+
+#### US-14/T01 — Execução e lease
+
+**Status:** done  
+**Entrega:** A execução é uma entidade de `ab_agent`. A lease é uma tabela interna com uma linha por tarefa. O segredo da lease não é coluna.
+
+**Contrato:**
+- `ab_execution` guarda workspace, tarefa, agente, status, `lease_expires_at`, `heartbeat_at`, `started_at`, `ended_at`, `attempt`, `result_summary`, `failure_code` e `version`. O claim grava `running`. Heartbeat, falha e liberação ficam na US-15
+- `assigned_agent` e `active_execution` na tarefa continuam inteiros. O claim grava o id numérico do agente e o id numérico da execução. Não viram `entity_reference`
+- `ab_execution_lease` tem chave primária em `task_id`. Também indexa `execution_id` e `workspace`. A coluna `token_hash` é o SHA-256 do segredo
+- a consulta com `accessCheck(TRUE)` de execução fica nos workspaces legíveis. O claim não usa essa consulta
+- sites que já tinham o módulo recebem a entidade e a tabela em `ab_agent_update_11003`
+
+#### US-14/T02 — Claim transacional
+
+**Status:** done  
+**Entrega:** `TaskClaim::claim()` usa o `ActorContext` do token. Não aceita um id de agente no argumento. A segunda reserva conflita e não devolve o segredo de novo.
+
+**Contrato:**
+- antes da transação, o gate exige `tasks:claim`, grant `write` no board e o workspace do ator. Humano, escopo ausente, grant só de leitura, board de fora, agente desabilitado, token vencido ou revogado negam a operação
+- dentro da transação a ordem é a do ADR 002: agente, depois tarefa e lease, e só então o contador de eventos. O escritor não abre outra transação
+- a tarefa precisa estar `ready`, sem predecessora fora de `done`, sem lease e dentro do `concurrency_limit`. Execuções `running` e `waiting_input` contam, mesmo com lease vencida. Atribuição a outro agente recusa
+- o token da lease sai uma vez, no formato `ab_lease_<32 hex>.<64 hex>`. A validade é 120 segundos. O evento `task.claimed` leva a execução, o agente, o status, a versão, a validade e a tentativa. Não leva segredo nem hash
+- a gravação é SQL direto, para não aninhar savepoint no PostgreSQL. A tag `ab_workspace_tasks:{id}` é invalidada porque o update não passa pelo hook da entidade
+- uma falha depois do evento desfaz execução, lease, tarefa e evento
+
+#### US-14/T03 — Disputas reais
+
+**Status:** done  
+**Entrega:** Dois processos disputam a mesma tarefa. Outros dois disputam o limite 1 do mesmo agente.
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_agent/tests/src/Kernel/ClaimKernelTest.php
+OK (4 tests, 259 assertions)
+```
+
+`testClaimStoresHashAndRejectsSecondClaim` confere o hash, a versão, os ids numéricos e recusa a segunda reserva e a transição humana. `testClaimRejectsUnavailableTasks` recusa backlog, dependência aberta, atribuição alheia, limite, grant de leitura, escopo sem claim, board sem grant, agente desabilitado, token vencido, token revogado e tarefa de outro workspace. O rollback não deixa execução nem evento. `testTwoProcessesClaimSameTask` deixa uma execução, uma lease e um `task.claimed`. `testTwoProcessesStopAtConcurrencyLimit` deixa uma tarefa em andamento e a outra pronta. As deprecações do PHPUnit são o aviso de metadata `@group`.
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,yml \
+    web/modules/custom/ab_agent \
+    web/modules/custom/ab_core/src/Authorization/WorkspaceQueryScope.php \
+    web/modules/custom/ab_board/src/Entity/Task.php
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse --memory-limit=1G
+PHPStan: exit 0
+```
+
+No site local, `lando drush updb` rodou `ab_agent_update_11003` e criou `ab_execution` e `ab_execution_lease`. As duas tabelas ficaram vazias. "Tema revisado" continua `ready` na versão 3 e "Preparar o material" continua `backlog` na versão 2. Não há tela de claim nesta história.
+
+**Bloqueios:** nenhum nesta história.
+
+**Próxima ação:** —
+
+---
+
 ## Estatísticas
 
 - **Total de tasks:** 83 (conforme backlog)
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
-- **M3:** US-12 done; US-13 done
+- **M3:** US-12 done; US-13 done; US-14 done
 
 ---
 
 ## Próximos Passos
 
-1. US-14/T01 — execução e lease exclusivos da tarefa
+1. US-15/T01 — heartbeat e validação da lease
 
 ---
 

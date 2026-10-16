@@ -21,7 +21,7 @@ use Drupal\Core\Session\AccountProxyInterface;
  * Creates and updates agents inside the caller's transaction.
  *
  * A disabled agent is stored and can be edited. It cannot start work.
- * The claim that uses this gate arrives in a later story.
+ * Claim uses the operation gate and does not pass through this editor.
  */
 class AgentManager {
 

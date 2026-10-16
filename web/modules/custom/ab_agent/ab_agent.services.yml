@@ -31,6 +31,19 @@ services:
       - '@Drupal\ab_event\EventStoreInterface'
       - '@datetime.time'
       - '@cache_tags.invalidator'
+  Drupal\ab_agent\ClaimWriter:
+    arguments:
+      - '@database'
+      - '@Drupal\ab_event\EventStoreInterface'
+      - '@uuid'
+      - '@datetime.time'
+  Drupal\ab_agent\TaskClaim:
+    arguments:
+      - '@database'
+      - '@entity_type.manager'
+      - '@Drupal\ab_agent\ClaimWriter'
+      - '@Drupal\ab_agent\AgentOperationGate'
+      - '@cache_tags.invalidator'
   Drupal\ab_agent\AgentActorContextFactory: ~
   Drupal\ab_agent\AgentOperationGate:
     arguments:

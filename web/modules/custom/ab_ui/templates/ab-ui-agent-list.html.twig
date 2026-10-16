@@ -1,0 +1,33 @@
+{#
+/**
+ * @file
+ * Lists agents of the workspace selected in the session.
+ */
+#}
+<div class="ab-agent-list">
+  {% if workspace_label %}
+    <p class="ab-workspace-current">{{ 'Workspace atual: @name'|t({'@name': workspace_label}) }}</p>
+  {% else %}
+    <p class="ab-workspace-current">{{ 'Nenhum workspace selecionado.'|t }}</p>
+  {% endif %}
+
+  {% if add_url %}
+    <p>
+      <a class="ab-button" href="{{ add_url }}">{{ 'Criar agente'|t }}</a>
+    </p>
+  {% endif %}
+
+  {% if items %}
+    <ul class="ab-agent-items">
+      {% for item in items %}
+        <li class="ab-card">
+          <a href="{{ item.url }}">{{ item.label }}</a>
+          <span class="ab-agent-status">{{ item.status }}</span>
+          <span class="ab-agent-limit">{{ 'Limite: @limit'|t({'@limit': item.limit}) }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% elseif workspace_label %}
+    <p>{{ 'Nenhum agente neste workspace.'|t }}</p>
+  {% endif %}
+</div>

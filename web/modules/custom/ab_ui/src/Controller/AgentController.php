@@ -1,0 +1,196 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\ab_ui\Controller;
+
+use Drupal\ab_agent\AgentGrantManager;
+use Drupal\ab_agent\AgentRepository;
+use Drupal\ab_agent\Entity\Agent;
+use Drupal\ab_core\Authorization\MembershipScope;
+use Drupal\ab_core\Authorization\WorkspacePermission;
+use Drupal\ab_core\Entity\Workspace;
+use Drupal\ab_ui\Form\AgentEditForm;
+use Drupal\ab_ui\Form\AgentGrantForm;
+use Drupal\ab_ui\WorkspaceContext;
+use Drupal\Core\Cache\CacheableMetadata;
+use Drupal\Core\DependencyInjection\AutowireTrait;
+use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Form\FormBuilderInterface;
+use Drupal\Core\Http\Exception\CacheableNotFoundHttpException;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\Core\Url;
+
+/**
+ * Lists agents of the selected workspace and opens one by UUID.
+ *
+ * The screen shows enabled or disabled. It does not claim the agent is
+ * online, because execution and heartbeat do not exist yet.
+ */
+final class AgentController implements ContainerInjectionInterface {
+
+  use AutowireTrait;
+  use StringTranslationTrait;
+
+  public function __construct(
+    private readonly AgentRepository $agents,
+    private readonly AgentGrantManager $grants,
+    private readonly WorkspaceContext $context,
+    private readonly MembershipScope $scope,
+    private readonly EntityTypeManagerInterface $entityTypeManager,
+    private readonly FormBuilderInterface $formBuilder,
+    private readonly AccountInterface $currentUser,
+  ) {}
+
+  /**
+   * Lists agents of the selected workspace.
+   *
+   * @return array<string, mixed>
+   *   A render array.
+   */
+  public function listing(): array {
+    $workspace = $this->context->workspace();
+    if (!$workspace instanceof Workspace) {
+      return [
+        '#theme' => 'ab_ui_agent_list',
+        '#workspace_label' => NULL,
+        '#add_url' => '',
+        '#items' => [],
+        '#cache' => $this->cacheMeta(NULL),
+      ];
+    }
+    $can_manage = $this->scope->allows(
+      $this->currentUser,
+      $workspace,
+      WorkspacePermission::MANAGE_AGENTS,
+    );
+    $items = [];
+    foreach ($this->agents->accessibleAgents($workspace) as $agent) {
+      $items[] = [
+        'label' => (string) $agent->label(),
+        'url' => Url::fromRoute('ab_ui.agent_view', [
+          'uuid' => $agent->uuid(),
+        ])->toString(),
+        'status' => $this->statusLabel($agent),
+        'limit' => $agent->get('concurrency_limit')->getString(),
+      ];
+    }
+    return [
+      '#theme' => 'ab_ui_agent_list',
+      '#workspace_label' => (string) $workspace->label(),
+      '#add_url' => $can_manage ? Url::fromRoute('ab_ui.agent_add')->toString() : '',
+      '#items' => $items,
+      '#cache' => $this->cacheMeta($workspace),
+    ];
+  }
+
+  /**
+   * Shows one readable agent without changing the selected workspace.
+   *
+   * @return array<string, mixed>
+   *   A render array.
+   */
+  public function view(string $uuid): array {
+    $agent = $this->loadVisible($uuid);
+    $workspace = $this->workspaceOf($agent);
+    $can_manage = $workspace instanceof Workspace && $this->scope->allows(
+      $this->currentUser,
+      $workspace,
+      WorkspacePermission::MANAGE_AGENTS,
+    );
+    $build = [
+      '#theme' => 'ab_ui_agent_view',
+      '#label' => (string) $agent->label(),
+      '#description' => $agent->get('description')->getString(),
+      '#capabilities' => $agent->get('capabilities')->getString(),
+      '#status' => $this->statusLabel($agent),
+      '#limit' => $agent->get('concurrency_limit')->getString(),
+      '#signal' => (string) $this->t('Não há sinal de execução.'),
+      '#grants' => $this->grantLabels($agent),
+      '#back_url' => Url::fromRoute('ab_ui.agents')->toString(),
+      '#edit_form' => NULL,
+      '#grant_form' => NULL,
+      '#cache' => $this->cacheMeta($workspace),
+    ];
+    if ($can_manage) {
+      $build['#edit_form'] = $this->formBuilder->getForm(AgentEditForm::class, $agent->uuid());
+      $build['#grant_form'] = $this->formBuilder->getForm(AgentGrantForm::class, $agent->uuid());
+    }
+    return $build;
+  }
+
+  /**
+   * Loads a readable agent or answers 404.
+   */
+  private function loadVisible(string $uuid): Agent {
+    $agent = $this->agents->loadAccessibleByUuid($uuid);
+    if ($agent instanceof Agent) {
+      return $agent;
+    }
+    $cache = (new CacheableMetadata())
+      ->addCacheContexts(['user', 'ab_memberships', 'ab_workspace'])
+      ->addCacheTags(['ab_membership_list:' . $this->currentUser->id()]);
+    throw new CacheableNotFoundHttpException($cache);
+  }
+
+  /**
+   * Loads the workspace stored on the agent.
+   */
+  private function workspaceOf(Agent $agent): ?Workspace {
+    $workspace = $this->entityTypeManager->getStorage('ab_workspace')->load($agent->get('workspace')->getString());
+    return $workspace instanceof Workspace ? $workspace : NULL;
+  }
+
+  /**
+   * Status the screen is allowed to show.
+   */
+  private function statusLabel(Agent $agent): string {
+    $enabled = (int) $agent->get('enabled')->getString() === 1;
+    return (string) ($enabled ? $this->t('Habilitado') : $this->t('Desabilitado'));
+  }
+
+  /**
+   * Grant lines for the agent view.
+   *
+   * @return string[]
+   *   One line per stored grant.
+   */
+  private function grantLabels(Agent $agent): array {
+    $storage = $this->entityTypeManager->getStorage('ab_board');
+    $lines = [];
+    foreach ($this->grants->pairs($agent) as $pair) {
+      $board = $storage->load($pair['board_id']);
+      $name = $board === NULL ? $pair['board_id'] : (string) $board->label();
+      $labels = [];
+      foreach (explode(',', $pair['permissions']) as $permission) {
+        $labels[] = match ($permission) {
+          WorkspacePermission::WRITE => (string) $this->t('Escrever'),
+          WorkspacePermission::REVIEW => (string) $this->t('Revisar'),
+          default => (string) $this->t('Ler'),
+        };
+      }
+      $lines[] = $name . ': ' . implode(', ', $labels);
+    }
+    return $lines;
+  }
+
+  /**
+   * Cache metadata for one workspace list.
+   *
+   * @return array<string, mixed>
+   *   Render cache metadata.
+   */
+  private function cacheMeta(?Workspace $workspace): array {
+    $tags = ['ab_membership_list:' . $this->currentUser->id()];
+    if ($workspace instanceof Workspace && $workspace->id() !== NULL) {
+      $tags[] = 'ab_workspace_agents:' . $workspace->id();
+    }
+    return [
+      'contexts' => ['user', 'ab_memberships', 'ab_workspace'],
+      'tags' => $tags,
+    ];
+  }
+
+}

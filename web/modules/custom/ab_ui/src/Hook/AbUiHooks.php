@@ -61,6 +61,27 @@ final class AbUiHooks {
           'archive_form' => NULL,
         ],
       ],
+      'ab_ui_agent_list' => [
+        'variables' => [
+          'workspace_label' => NULL,
+          'add_url' => '',
+          'items' => [],
+        ],
+      ],
+      'ab_ui_agent_view' => [
+        'variables' => [
+          'label' => '',
+          'description' => '',
+          'capabilities' => '',
+          'status' => '',
+          'limit' => '',
+          'signal' => '',
+          'grants' => [],
+          'back_url' => '',
+          'edit_form' => NULL,
+          'grant_form' => NULL,
+        ],
+      ],
       'ab_ui_task_list' => [
         'variables' => [
           'board_label' => '',

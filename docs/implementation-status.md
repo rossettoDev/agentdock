@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-16  
-**Marco atual:** M2 — US-09/T01 concluída; US-09/T02 segue todo. US-08 permanece done.
+**Marco atual:** M2 — US-09/T02 concluída; US-09/T03 segue todo. US-08 permanece done.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -1263,7 +1263,43 @@ PHPStan: exit 0
 
 **Bloqueios:** nenhum nesta task.
 
-**Próxima ação:** US-09/T02.
+**Próxima ação:** —
+
+#### US-09/T02 — Criar e editar tarefas pelo serviço
+
+**Status:** done  
+**Entrega:** O editor grava só a whitelist. O autor do evento é a conta autenticada. Cada edição que muda dados incrementa `version`.
+
+**Contrato:**
+- `TaskManager::create()` e `update()` são o caminho de escrita. Exigem `write`. Quem não lê o workspace recebe recurso inexistente. Quem lê e não escreve recebe operação negada
+- a whitelist é título, descrição, critérios, prioridade, responsável humano, agente atribuído, prazo e posição. `workspace`, `board`, `status`, `version`, `active_execution` e `author_id` são recusados e a linha não muda
+- criar não recebe workspace: a tarefa fica no workspace do board, com `status` `backlog`, `version` 1 e execução vazia
+- editar compara a versão lida. Uma versão antiga lança conflito e não grava. Uma edição sem mudança não incrementa a versão nem grava outro evento
+- a transação trava `ab_workspace`, depois `ab_board` e, na edição, `ab_task`, e só então chama `EventStore::record()`. Tipos: `task.created` e `task.updated`
+- o ator é `human` com o id da conta autenticada. O payload leva título, status, prioridade e versão
+- falha depois do evento desfaz a tarefa, o evento e a outbox
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit web/modules/custom/ab_board/tests
+OK (11 tests, 302 assertions)
+```
+
+`TaskManagerKernelTest` cobre a whitelist, o ator autenticado, o conflito de versão, o rollback e o viewer. As deprecações do PHPUnit são o aviso de metadata `@group`.
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice \
+    --extensions=php,yml web/modules/custom/ab_board
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse
+PHPStan: exit 0
+```
+
+**Bloqueios:** nenhum nesta task.
+
+**Próxima ação:** US-09/T03.
 
 ---
 
@@ -1272,13 +1308,13 @@ PHPStan: exit 0
 - **Total de tasks:** 83 (conforme backlog)
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
-- **M2:** US-07 done; US-08 done; US-09 in_progress (T01 done)
+- **M2:** US-07 done; US-08 done; US-09 in_progress (T01 e T02 done)
 
 ---
 
 ## Próximos Passos
 
-1. US-09/T02 — criação e edição por serviço, com autor autenticado e versão
+1. US-09/T03 — formulário e detalhe da tarefa, com Markdown sanitizado
 
 ---
 

@@ -255,7 +255,7 @@ Como membro, quero descrever o trabalho e seu resultado esperado.
 
 ### US-09/T02 — Implementar criação e edição por serviço
 
-- [ ] **Entrega:** Whitelist de campos, autor autenticado, eventos e incremento de versão.
+- [x] **Entrega:** Whitelist de campos, autor autenticado, eventos e incremento de versão.
 - **Aceite:** Workspace/status/execução não podem ser alterados pelo editor genérico.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

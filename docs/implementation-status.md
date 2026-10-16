@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-16  
-**Marco atual:** M2 — US-10/T02 concluída; US-10/T03 segue todo. US-09 permanece done.
+**Marco atual:** M2 — US-10 concluída. US-11 segue todo.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -1354,7 +1354,7 @@ PHPStan: exit 0
 
 ## US-10 — Controlar estados e dependências
 
-**Status:** in_progress  
+**Status:** done  
 **Dependências:** US-09 done.  
 **Objetivo:** Liberar tarefas válidas para execução, sem deixar o humano simular esse ciclo.
 
@@ -1464,7 +1464,45 @@ PHPStan: exit 0
 
 **Bloqueios:** nenhum nesta task.
 
-**Próxima ação:** US-10/T03.
+**Próxima ação:** —
+
+#### US-10/T03 — Versão otimista nos formulários
+
+**Status:** done  
+**Entrega:** Editar, transicionar e mudar dependência enviam a versão que a tela mostrou. Uma gravação mais nova ganha, e o formulário aberto avisa o conflito sem sobrescrever. A API HTTP, quando existir, usará `If-Match` com essa mesma versão.
+
+**Contrato:**
+- `TaskManager::update()`, `TaskManager::transition()` e `TaskDependencyManager::add()` / `remove()` exigem a versão lida. Versão diferente lança `TaskVersionConflictException` e não grava
+- o campo oculto usa o valor renderizado. Relê-lo na hora do envio faria o segundo editor passar por cima do primeiro
+- uma edição sem mudança de dados continua sem incrementar a versão
+- a API futura recusa a ausência de `If-Match` com 428 e mapeia esta exceção para 412. Este marco não expõe HTTP
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_ui/tests/src/Functional/TaskVersionUiTest.php
+OK (1 test, 30 assertions)
+```
+
+`TaskVersionUiTest` abre a tarefa na versão 1, grava outra versão por baixo e envia Liberar: o status continua `backlog`, o título da gravação nova permanece e a mensagem pede para recarregar. O mesmo envio atrasado de dependência não cria o par. As deprecações do PHPUnit são o aviso de metadata `@group`. O conflito do formulário de edição já estava coberto em `TaskScreensUiTest`.
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice \
+    --extensions=php \
+    web/modules/custom/ab_ui/src/Form/TaskTransitionForm.php \
+    web/modules/custom/ab_ui/src/Form/TaskDependencyForm.php \
+    web/modules/custom/ab_board/src/TaskVersionConflictException.php \
+    web/modules/custom/ab_ui/tests/src/Functional/TaskVersionUiTest.php
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse
+PHPStan: exit 0
+```
+
+**Bloqueios:** nenhum nesta task.
+
+**Próxima ação:** —
 
 ---
 
@@ -1473,13 +1511,13 @@ PHPStan: exit 0
 - **Total de tasks:** 83 (conforme backlog)
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
-- **M2:** US-07 done; US-08 done; US-09 done; US-10 in_progress (T01 e T02 done)
+- **M2:** US-07 done; US-08 done; US-09 done; US-10 done
 
 ---
 
 ## Próximos Passos
 
-1. US-10/T03 — versão esperada nos serviços e nos formulários
+1. US-11/T01 — colunas e cards do Kanban, com o estado persistido
 
 ---
 

@@ -13,3 +13,11 @@ services:
       - '@Drupal\ab_core\Authorization\MembershipScope'
       - '@Drupal\ab_core\Authorization\HumanActorContextFactory'
       - '@Drupal\ab_event\EventStoreInterface'
+  Drupal\ab_board\TaskManager:
+    arguments:
+      - '@database'
+      - '@entity_type.manager'
+      - '@current_user'
+      - '@Drupal\ab_core\Authorization\MembershipScope'
+      - '@Drupal\ab_core\Authorization\HumanActorContextFactory'
+      - '@Drupal\ab_event\EventStoreInterface'

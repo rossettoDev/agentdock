@@ -4,7 +4,7 @@
  * Lists internal notifications without the message text.
  */
 #}
-<div class="ab-notification-list">
+<div class="ab-notification-list" data-ab-sync="notifications" data-ab-sync-root>
   {% if items %}
     <ul class="ab-notifications">
       {% for item in items %}

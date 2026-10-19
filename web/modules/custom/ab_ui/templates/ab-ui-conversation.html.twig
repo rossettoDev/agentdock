@@ -12,6 +12,7 @@
   {% if older_url %}
     <p><a href="{{ older_url }}">{{ 'Mensagens anteriores'|t }}</a></p>
   {% endif %}
+  <div data-ab-sync="messages" data-ab-sync-root>
   {% if messages %}
     <ol class="ab-messages">
       {% for message in messages %}
@@ -29,6 +30,7 @@
   {% else %}
     <p>{{ empty }}</p>
   {% endif %}
+  </div>
   {% if form %}
     {{ form }}
   {% endif %}

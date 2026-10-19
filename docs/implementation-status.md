@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-19  
-**Marco atual:** M6 — US-24 concluída. US-25 segue todo.
+**Marco atual:** M6 — US-25 concluída. US-26 segue todo.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -2673,6 +2673,85 @@ Não houve tabela nova. A tela não mudou. A verificação foi o teste HTTP.
 
 ---
 
+## US-25 — Atualizar interface automaticamente
+
+**Status:** done  
+**Dependências:** US-24 done, US-11 done, US-19 done.  
+**Objetivo:** A tela acompanha os eventos do workspace sem apagar um rascunho e sem deixar conteúdo visível depois que o acesso acaba.
+
+#### US-25/T01 — Implementar polling compartilhado
+
+**Status:** done  
+**Entrega:** Um behavior, um timer, 3s com a aba visível e 15s com a aba oculta.
+
+**Contrato:**
+- a primeira região arma o timer. Outra região na mesma página não arma outro. Ao sair da página, o timer para
+- a espera dobra a cada falha temporária, com jitter, e para em 60s. A requisição seguinte só começa quando a anterior termina
+- a aba visível espera 3s, abaixo dos 5s em que duas abas devem refletir a mudança
+
+#### US-25/T02 — Atualizar cards, conversas e notificações
+
+**Status:** done  
+**Entrega:** O poll lê `GET /events`, ignora `event_id` repetido e troca só a região afetada.
+
+**Contrato:**
+- a página de eventos devolve `page.cursor`, a última sequência inspecionada, inclusive a dos eventos que o chamador não lê. O próximo poll manda esse valor. `next_cursor` continua nulo quando a leitura chegou ao fim
+- mensagem e input atualizam a conversa e as notificações. Tarefa, execução e board atualizam os cards. O formulário de mensagem fica fora da região e o texto digitado permanece
+- uma região com foco, campo alterado ou card sendo arrastado espera o `focusout`
+
+#### US-25/T03 — Tratar perda de acesso e rede
+
+**Status:** done  
+**Entrega:** Estado visual para sessão, acesso revogado, cursor vencido e falha temporária.
+
+**Contrato:**
+- 401 esvazia as regiões e mostra "A sessão expirou. Entre de novo para continuar." 403 e 404 mostram "O acesso a este conteúdo acabou." O poll para
+- 410 busca o snapshot do board, ou o cursor impresso na página, e atualiza as regiões. 429, 500 e falha de rede mantêm o conteúdo e tentam de novo
+
+**Evidências:**
+```bash
+$ node web/modules/custom/ab_ui/tests/js/sync-schedule.test.js
+ok
+```
+
+A espera visível é 3000ms e a oculta é 15000ms. O segundo attach não cria outro timer. O detach do último root desliga o timer. O mesmo `event_id` não invalida a região de novo. Acesso negado para o poll. Região com foco ou rascunho não é trocada.
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_ui/tests/src/Functional/SyncUiTest.php \
+    web/modules/custom/ab_api/tests/src/Functional/ApiSyncTest.php
+OK (2 tests, 133 assertions)
+```
+
+A lista de tarefas, a conversa e as notificações expõem uma região. O campo da mensagem não fica dentro dela. As páginas autenticadas imprimem a biblioteca, o cursor e o endereço dos eventos.
+
+```bash
+$ npx --yes @redocly/cli@1.25.11 lint docs/openapi.yaml
+Woohoo! Your API description is valid.
+```
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,yml \
+    web/modules/custom/ab_ui/src/Hook/AbUiHooks.php \
+    web/modules/custom/ab_ui/src/Controller/TaskController.php \
+    web/modules/custom/ab_ui/tests/src/Functional/SyncUiTest.php \
+    web/modules/custom/ab_api/src/Http/SyncReader.php
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse --memory-limit=1G \
+    web/modules/custom/ab_ui web/modules/custom/ab_api
+PHPStan: exit 0
+```
+
+No Quadro Casa, com a sessão aberta, a lista de tarefas fez três leituras de eventos em 7s e nunca teve duas ao mesmo tempo. A aba visível pediu a espera de 3s. O rascunho "Rascunho que o poll nao pode apagar" continuou no campo depois de um poll, e o campo está fora da região da conversa. A espera de 15s da aba oculta ficou no teste do agendador: o navegador não deixa substituir `visibilityState`.
+
+**Bloqueios:** nenhum nesta história.
+
+**Próxima ação:** —
+
+---
+
 ## Estatísticas
 
 - **Total de tasks:** 83 (conforme backlog)
@@ -2682,13 +2761,13 @@ Não houve tabela nova. A tela não mudou. A verificação foi o teste HTTP.
 - **M3:** US-12 done; US-13 done; US-14 done; US-15 done; US-16 done
 - **M4:** US-17 done; US-18 done; US-19 done
 - **M5:** US-20 done; US-21 done; US-22 done; US-23 done
-- **M6:** US-24 done
+- **M6:** US-24 done; US-25 done
 
 ---
 
 ## Próximos Passos
 
-1. US-25/T01 — polling compartilhado
+1. US-26/T01 — worker Drush supervisionável
 
 ---
 

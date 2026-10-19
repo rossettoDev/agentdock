@@ -151,6 +151,11 @@ final class TaskController implements ContainerInjectionInterface {
       '#today_empty' => $today_only && $visible === 0,
       '#attached' => [
         'library' => ['ab_ui/kanban'],
+        'drupalSettings' => [
+          'abUiSync' => [
+            'snapshotUrl' => '/api/agent-board/v1/workspaces/' . $workspace->uuid() . '/boards/' . $board->uuid() . '/snapshot',
+          ],
+        ],
       ],
       '#cache' => $cache,
     ];

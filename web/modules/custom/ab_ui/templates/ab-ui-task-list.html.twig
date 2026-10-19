@@ -51,6 +51,7 @@
       <a href="{{ today_url }}">{{ 'Hoje'|t }}</a>
     </p>
   {% endif %}
+  <div data-ab-sync="tasks" data-ab-sync-root>
   {% if cancelled_only %}
     <section class="ab-kanban-cancelled">
       <h3>{{ 'Canceladas'|t }}</h3>
@@ -84,4 +85,5 @@
       {% endfor %}
     </div>
   {% endif %}
+  </div>
 </div>

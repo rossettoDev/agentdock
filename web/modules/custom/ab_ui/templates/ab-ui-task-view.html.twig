@@ -4,7 +4,7 @@
  * Shows one task without changing the selected workspace.
  */
 #}
-<div class="ab-task-view">
+<div class="ab-task-view" data-ab-sync="tasks" data-ab-sync-root>
   <p class="ab-task-title">{{ label }}</p>
   <p class="ab-task-status">{{ status }}</p>
   {% if blocked %}

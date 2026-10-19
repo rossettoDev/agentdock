@@ -629,23 +629,23 @@ Como cliente, quero recuperar mudanças sem recarregar tudo.
 
 Como humano, quero acompanhar agentes quase em tempo real.
 
-**Dependências:** US-24, US-11, US-19. **Status:** todo.
+**Dependências:** US-24, US-11, US-19. **Status:** done.
 
 ### US-25/T01 — Implementar polling compartilhado
 
-- [ ] **Entrega:** Drupal behavior com attach/detach, 3s/15s, backoff/jitter, sem sobreposição.
+- [x] **Entrega:** Drupal behavior com attach/detach, 3s/15s, backoff/jitter, sem sobreposição.
 - **Aceite:** Navegação não multiplica timers; aba oculta reduz frequência.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-25/T02 — Atualizar cards, conversas e notificações
 
-- [ ] **Entrega:** Deduplicar event_id, buscar recursos invalidados e preservar rascunhos/foco.
+- [x] **Entrega:** Deduplicar event_id, buscar recursos invalidados e preservar rascunhos/foco.
 - **Aceite:** Duas abas refletem alterações em até 5s no teste normal.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-25/T03 — Tratar perda de acesso e rede
 
-- [ ] **Entrega:** 401, 403/404, 410 e falhas temporárias com estado visual.
+- [x] **Entrega:** 401, 403/404, 410 e falhas temporárias com estado visual.
 - **Aceite:** Reconexão não duplica mensagens nem mantém conteúdo revogado visível após revalidação.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

@@ -485,23 +485,23 @@ Como agente, quero interromper meu trabalho para esclarecer uma dúvida.
 
 Como participante, quero descobrir mensagens que exigem minha atenção.
 
-**Dependências:** US-18. **Status:** todo.
+**Dependências:** US-18. **Status:** done.
 
 ### US-19/T01 — Persistir menções validadas
 
-- [ ] **Entrega:** Referenciar humano/agente do workspace com acesso ao contexto; evento de menção.
+- [x] **Entrega:** Referenciar humano/agente do workspace com acesso ao contexto; evento de menção.
 - **Aceite:** @texto isolado não executa nem cria comandos.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-19/T02 — Criar notificações internas
 
-- [ ] **Entrega:** Projeção idempotente por evento/destinatário; listar e marcar como lida.
+- [x] **Entrega:** Projeção idempotente por evento/destinatário; listar e marcar como lida.
 - **Aceite:** Reprocessamento não duplica notificação; revogação de acesso protege conteúdo.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-19/T03 — Aplicar limites de comunicação
 
-- [ ] **Entrega:** Contador de mensagens e duração máxima; limite encerra reserva e exige intervenção humana.
+- [x] **Entrega:** Contador de mensagens e duração máxima; limite encerra reserva e exige intervenção humana.
 - **Aceite:** Dois agentes não podem produzir loop ilimitado por menções.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

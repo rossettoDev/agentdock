@@ -1,0 +1,23 @@
+{#
+/**
+ * @file
+ * Lists internal notifications without the message text.
+ */
+#}
+<div class="ab-notification-list">
+  {% if items %}
+    <ul class="ab-notifications">
+      {% for item in items %}
+        <li>
+          <p>{{ item.label }} — {{ item.workspace }}</p>
+          <p>{{ item.read }}</p>
+          {% if item.form %}
+            {{ item.form }}
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>{{ empty }}</p>
+  {% endif %}
+</div>

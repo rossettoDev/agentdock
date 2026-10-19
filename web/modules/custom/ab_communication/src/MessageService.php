@@ -8,6 +8,7 @@ use Drupal\ab_agent\AgentAccessDeniedException;
 use Drupal\ab_agent\AgentOperationGate;
 use Drupal\ab_agent\AgentTokenScope;
 use Drupal\ab_agent\Entity\Agent;
+use Drupal\ab_agent\ExecutionWriter;
 use Drupal\ab_board\Entity\Board;
 use Drupal\ab_board\Entity\Task;
 use Drupal\ab_core\Authorization\ActorContext;
@@ -23,6 +24,7 @@ use Drupal\Core\Cache\CacheTagsInvalidatorInterface;
 use Drupal\Core\Database\Connection;
 use Drupal\Core\Database\IntegrityConstraintViolationException;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\user\UserInterface;
 
 /**
  * Opens one thread per board or task and appends messages.
@@ -49,6 +51,16 @@ class MessageService {
   public const PAGE_MAX = 100;
 
   /**
+   * Agent messages allowed on one execution.
+   */
+  public const MESSAGE_BUDGET = 50;
+
+  /**
+   * Seconds an execution may run before a message ends the lease.
+   */
+  public const DURATION_BUDGET = 7200;
+
+  /**
    * Kinds a human may write.
    */
   private const HUMAN_KINDS = ['comment', 'answer'];
@@ -66,6 +78,8 @@ class MessageService {
     private readonly UuidInterface $uuid,
     private readonly TimeInterface $time,
     private readonly CacheTagsInvalidatorInterface $cacheTagsInvalidator,
+    private readonly ExecutionWriter $leases,
+    private readonly NotificationService $notifications,
   ) {}
 
   /**
@@ -79,6 +93,7 @@ class MessageService {
     string $body,
     ?string $replyTo = NULL,
     ?string $executionUuid = NULL,
+    array $mentions = [],
   ): PostedMessage {
     $body = trim(str_replace(["\r\n", "\r"], "\n", $body));
     if ($body === '' || strlen($body) > self::BODY_LIMIT) {
@@ -87,6 +102,7 @@ class MessageService {
     $place = $this->loadScope($actor, $scope, $scopeUuid);
     $this->assertKind($actor, $kind);
     $this->assertMayWrite($actor, $place['board']);
+    $recipients = $this->recipients($place, $mentions);
     $transaction = $this->database->startTransaction();
     try {
       if ($actor->actorType === ActorContext::TYPE_AGENT) {
@@ -97,12 +113,13 @@ class MessageService {
       if ($place['taskId'] > 0) {
         $this->lockTask($place['taskId'], $place['boardId']);
       }
+      $this->guardBudget($actor, $place);
       $thread = $this->ensureThread($place);
       $replyId = $this->replyId($thread['id'], $replyTo);
       $executionId = $this->executionId($actor, $place, $executionUuid);
       $messageUuid = $this->uuid->generate();
       $now = $this->time->getRequestTime();
-      $this->database->insert('ab_message')
+      $messageId = (int) $this->database->insert('ab_message')
         ->fields([
           'uuid' => $messageUuid,
           'workspace' => $place['workspaceId'],
@@ -116,6 +133,12 @@ class MessageService {
           'created' => $now,
         ])
         ->execute();
+      $signals = $this->storeMentions($place, $messageId, $recipients);
+      foreach ($signals as $signal) {
+        if ($signal['user_id'] !== NULL) {
+          $this->notifications->project($signal['event_id'], $place['workspaceId'], $signal['user_id']);
+        }
+      }
       $payload = [
         'thread_id' => $thread['uuid'],
         'kind' => $kind,
@@ -132,11 +155,34 @@ class MessageService {
         $actor->actorId,
         $payload,
       ));
+      foreach ($signals as $signal) {
+        $this->events->record(new EventDraft(
+          $place['workspaceUuid'],
+          'message.mentioned',
+          $signal['uuid'],
+          $actor->actorType,
+          $actor->actorId,
+          [
+            'message_id' => $messageUuid,
+            'thread_id' => $thread['uuid'],
+            'recipient_type' => $signal['type'],
+            'recipient_id' => $signal['id'],
+          ],
+          [EventStoreInterface::DESTINATION_SYNC],
+          $signal['event_id'],
+        ));
+      }
       $this->afterRecord();
       $this->cacheTagsInvalidator->invalidateTags([
         'ab_workspace_messages:' . $place['workspaceId'],
       ]);
       return new PostedMessage($messageUuid, $thread['uuid'], $kind);
+    }
+    catch (MessageRejectedException $exception) {
+      if ($exception->getMessage() !== MessageRejectedException::BUDGET) {
+        $transaction->rollBack();
+      }
+      throw $exception;
     }
     catch (\Throwable $exception) {
       $transaction->rollBack();
@@ -168,6 +214,9 @@ class MessageService {
       throw new \InvalidArgumentException('Message body is invalid.');
     }
     $this->assertKind($actor, $kind);
+    if ($actor->actorType === ActorContext::TYPE_AGENT && $taskId > 0) {
+      $this->guardBudget($actor, $this->budgetPlace($workspaceId, $boardId, $taskId, $actor->actorId));
+    }
     $thread = $this->ensureThread([
       'workspaceId' => $workspaceId,
       'boardId' => $boardId,
@@ -400,6 +449,234 @@ class MessageService {
    * Tests override this to prove a failure rolls the write back.
    */
   protected function afterRecord(): void {
+  }
+
+  /**
+   * Checks structured recipients before the message is stored.
+   *
+   * Text such as @name is not a recipient and does not start work.
+   *
+   * @return array<int, array<string, mixed>>
+   *   Recipients that may be stored with the message.
+   */
+  private function recipients(array $place, array $mentions): array {
+    $normalized = [];
+    $seen = [];
+    foreach ($mentions as $mention) {
+      if (!is_array($mention) || !isset($mention['type'], $mention['id'])) {
+        throw new MessageRejectedException(MessageRejectedException::MENTION);
+      }
+      $type = (string) $mention['type'];
+      $id = (string) $mention['id'];
+      $key = $type . ':' . $id;
+      if (isset($seen[$key])) {
+        continue;
+      }
+      $seen[$key] = TRUE;
+      if ($type === ActorContext::TYPE_HUMAN) {
+        $this->assertHumanRecipient($place, $id);
+        $normalized[] = [
+          'type' => $type,
+          'id' => $id,
+          'user_id' => (int) $id,
+        ];
+      }
+      elseif ($type === ActorContext::TYPE_AGENT) {
+        $this->assertAgentRecipient($place, $id);
+        $normalized[] = [
+          'type' => $type,
+          'id' => $id,
+          'user_id' => NULL,
+        ];
+      }
+      else {
+        throw new MessageRejectedException(MessageRejectedException::MENTION);
+      }
+    }
+    return $normalized;
+  }
+
+  /**
+   * Stores mention rows and returns the events still to record.
+   *
+   * @param array<string, mixed> $place
+   *   The locked board, task and workspace ids.
+   * @param int $messageId
+   *   The stored message id.
+   * @param array<int, array<string, mixed>> $recipients
+   *   Recipients already checked.
+   *
+   * @return array<int, array<string, mixed>>
+   *   Mention ids and the people who get a notification.
+   */
+  private function storeMentions(array $place, int $messageId, array $recipients): array {
+    $signals = [];
+    $now = $this->time->getRequestTime();
+    foreach ($recipients as $recipient) {
+      $uuid = $this->uuid->generate();
+      $signals[] = [
+        'uuid' => $uuid,
+        'event_id' => $this->uuid->generate(),
+        'type' => (string) $recipient['type'],
+        'id' => (string) $recipient['id'],
+        'user_id' => $recipient['user_id'],
+      ];
+      $this->database->insert('ab_message_mention')
+        ->fields([
+          'uuid' => $uuid,
+          'workspace' => $place['workspaceId'],
+          'message_id' => $messageId,
+          'recipient_type' => (string) $recipient['type'],
+          'recipient_id' => (string) $recipient['id'],
+          'created' => $now,
+        ])
+        ->execute();
+    }
+    return $signals;
+  }
+
+  /**
+   * Ends the lease when this execution is over its message budget.
+   */
+  private function guardBudget(ActorContext $actor, array $place): void {
+    if ($actor->actorType !== ActorContext::TYPE_AGENT || (int) $place['taskId'] <= 0) {
+      return;
+    }
+    $execution = $this->database->query(
+      "SELECT id, uuid, started_at, agent FROM {ab_execution} WHERE task = :task AND status IN ('running', 'waiting_input')",
+      [
+        ':task' => (int) $place['taskId'],
+      ],
+    )->fetchAssoc();
+    if (!is_array($execution)) {
+      return;
+    }
+    $started = (int) $execution['started_at'];
+    $count = (int) $this->database->query(
+      "SELECT COUNT(*) FROM {ab_message} m INNER JOIN {ab_thread} t ON t.id = m.thread_id WHERE t.task_id = :task AND t.board_id = :board AND m.actor_type = :actor AND m.created >= :started",
+      [
+        ':task' => (int) $place['taskId'],
+        ':board' => (int) $place['boardId'],
+        ':actor' => ActorContext::TYPE_AGENT,
+        ':started' => $started,
+      ],
+    )->fetchField();
+    $now = $this->time->getRequestTime();
+    $overTime = $started > 0 && ($now - $started) >= self::DURATION_BUDGET;
+    if ($count < self::MESSAGE_BUDGET && !$overTime) {
+      return;
+    }
+    $holderUuid = $this->database->query(
+      'SELECT uuid FROM {ab_agent} WHERE id = :id',
+      [':id' => (int) $execution['agent']],
+    )->fetchField();
+    if (!is_string($holderUuid) || $holderUuid === '') {
+      throw new \RuntimeException('The execution holder was not stored.');
+    }
+    $this->leases->interruptBudget(
+      (int) $place['workspaceId'],
+      (string) $place['workspaceUuid'],
+      (int) $execution['agent'],
+      $holderUuid,
+      (int) $execution['id'],
+      (string) $execution['uuid'],
+      (int) $place['taskId'],
+      (string) $place['taskUuid'],
+      (int) $place['boardId'],
+      $overTime ? 'duration_budget' : 'message_budget',
+    );
+    $this->entityTypeManager->getStorage('ab_task')->resetCache([(int) $place['taskId']]);
+    $this->entityTypeManager->getStorage('ab_execution')->resetCache([(int) $execution['id']]);
+    $this->cacheTagsInvalidator->invalidateTags([
+      'ab_workspace_tasks:' . $place['workspaceId'],
+      'ab_agent_signal:' . $execution['agent'],
+    ]);
+    throw new MessageRejectedException(MessageRejectedException::BUDGET);
+  }
+
+  /**
+   * Builds the place array used by the budget check.
+   *
+   * @return array<string, mixed>
+   *   Identifiers for the open execution.
+   */
+  private function budgetPlace(int $workspaceId, int $boardId, int $taskId, string $agentUuid): array {
+    $workspaceUuid = $this->database->query(
+      'SELECT uuid FROM {ab_workspace} WHERE id = :id',
+      [':id' => $workspaceId],
+    )->fetchField();
+    $taskUuid = $this->database->query(
+      'SELECT uuid FROM {ab_task} WHERE id = :id',
+      [':id' => $taskId],
+    )->fetchField();
+    $agentId = $this->database->query(
+      'SELECT id FROM {ab_agent} WHERE uuid = :uuid AND workspace = :workspace',
+      [
+        ':uuid' => $agentUuid,
+        ':workspace' => $workspaceId,
+      ],
+    )->fetchField();
+    return [
+      'workspaceId' => $workspaceId,
+      'workspaceUuid' => is_string($workspaceUuid) ? $workspaceUuid : '',
+      'boardId' => $boardId,
+      'taskId' => $taskId,
+      'taskUuid' => is_string($taskUuid) ? $taskUuid : '',
+      'agentId' => $agentId === FALSE ? 0 : (int) $agentId,
+    ];
+  }
+
+  /**
+   * Refuses a person who cannot read this workspace.
+   */
+  private function assertHumanRecipient(array $place, string $userId): void {
+    if (preg_match('/^[1-9][0-9]*$/', $userId) !== 1) {
+      throw new MessageRejectedException(MessageRejectedException::MENTION);
+    }
+    $user = $this->entityTypeManager->getStorage('user')->load($userId);
+    if (!$user instanceof UserInterface || (int) $user->get('status')->getString() !== 1) {
+      throw new MessageRejectedException(MessageRejectedException::MENTION);
+    }
+    $membership = $this->database->select('ab_membership', 'm')
+      ->fields('m', ['id'])
+      ->condition('workspace', (int) $place['workspaceId'])
+      ->condition('user', (int) $userId)
+      ->condition('status', 'active')
+      ->execute()
+      ->fetchField();
+    if ($membership === FALSE) {
+      throw new MessageRejectedException(MessageRejectedException::MENTION);
+    }
+  }
+
+  /**
+   * Refuses an agent who cannot read this board.
+   */
+  private function assertAgentRecipient(array $place, string $agentUuid): void {
+    if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/', $agentUuid) !== 1) {
+      throw new MessageRejectedException(MessageRejectedException::MENTION);
+    }
+    $agentId = $this->database->query(
+      'SELECT id, enabled FROM {ab_agent} WHERE uuid = :uuid AND workspace = :workspace',
+      [
+        ':uuid' => $agentUuid,
+        ':workspace' => (int) $place['workspaceId'],
+      ],
+    )->fetchAssoc();
+    if (!is_array($agentId) || (int) $agentId['enabled'] !== 1) {
+      throw new MessageRejectedException(MessageRejectedException::MENTION);
+    }
+    $permissions = $this->database->query(
+      'SELECT permissions FROM {ab_agent_board_grant} WHERE agent_id = :agent AND board_id = :board',
+      [
+        ':agent' => (int) $agentId['id'],
+        ':board' => (int) $place['boardId'],
+      ],
+    )->fetchField();
+    $granted = $permissions === FALSE ? [] : explode(',', (string) $permissions);
+    if (!in_array(WorkspacePermission::READ, $granted, TRUE)) {
+      throw new MessageRejectedException(MessageRejectedException::MENTION);
+    }
   }
 
   /**

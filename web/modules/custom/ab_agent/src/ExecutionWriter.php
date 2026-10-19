@@ -47,6 +47,70 @@ class ExecutionWriter {
   ) {}
 
   /**
+   * Ends a live execution because the message budget was reached.
+   *
+   * The caller already holds the agent and the task. The lease and the
+   * execution are locked here, and the event comes last.
+   */
+  public function interruptBudget(
+    int $workspaceId,
+    string $workspaceUuid,
+    int $agentId,
+    string $agentUuid,
+    int $executionId,
+    string $executionUuid,
+    int $taskId,
+    string $taskUuid,
+    int $boardId,
+    string $reason,
+  ): void {
+    if (!$this->database->inTransaction()) {
+      throw new \RuntimeException('A lease mutation needs an open transaction.');
+    }
+    $task = $this->lockTask($taskId, $workspaceId, $boardId);
+    $this->lockLease($taskId);
+    $execution = $this->database->query(
+      'SELECT id, uuid, status, version, attempt, task, workspace, agent FROM {ab_execution} WHERE id = :id FOR UPDATE',
+      [':id' => $executionId],
+    )->fetchAssoc();
+    $sameExecution = is_array($execution) && (string) $execution['uuid'] === $executionUuid;
+    $sameAgent = is_array($execution) && (int) $execution['agent'] === $agentId;
+    if (!$sameExecution || !$sameAgent || (int) $task['id'] !== $taskId) {
+      throw new LeaseRejectedException(LeaseRejectedException::STATE);
+    }
+    $now = $this->time->getRequestTime();
+    $closed = $this->close(
+      new LeaseCommand(
+        $workspaceId,
+        $workspaceUuid,
+        $agentId,
+        $agentUuid,
+        $executionId,
+        $executionUuid,
+        $taskId,
+        $taskUuid,
+        $boardId,
+        '',
+        '',
+        0,
+        '',
+      ),
+      $task,
+      $execution,
+      'interrupted',
+      $reason,
+      $reason,
+      'execution.interrupted',
+      ActorContext::TYPE_SYSTEM,
+      'message-budget',
+      $now,
+    );
+    if (!$closed) {
+      throw new LeaseRejectedException(LeaseRejectedException::STATE);
+    }
+  }
+
+  /**
    * Applies heartbeat, progress, fail, release or delivery.
    *
    * An expired lease that still matches the holder is interrupted here,

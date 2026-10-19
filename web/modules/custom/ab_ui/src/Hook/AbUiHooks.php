@@ -121,6 +121,12 @@ final class AbUiHooks {
           'back_url' => '',
         ],
       ],
+      'ab_ui_notification_list' => [
+        'variables' => [
+          'items' => [],
+          'empty' => '',
+        ],
+      ],
       'ab_ui_conversation_list' => [
         'variables' => [
           'workspace_label' => NULL,

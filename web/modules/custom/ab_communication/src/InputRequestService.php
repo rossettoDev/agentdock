@@ -158,6 +158,12 @@ class InputRequestService {
       }
       throw $exception;
     }
+    catch (MessageRejectedException $exception) {
+      if ($exception->getMessage() !== MessageRejectedException::BUDGET) {
+        $transaction->rollBack();
+      }
+      throw $exception;
+    }
     catch (\Throwable $exception) {
       $transaction->rollBack();
       throw $exception;

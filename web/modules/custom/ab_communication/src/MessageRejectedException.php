@@ -17,4 +17,8 @@ final class MessageRejectedException extends \RuntimeException {
 
   public const EXECUTION = 'The execution is not part of this conversation.';
 
+  public const MENTION = 'That mention is not allowed.';
+
+  public const BUDGET = 'The execution reached its message budget.';
+
 }

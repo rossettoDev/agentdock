@@ -16,6 +16,8 @@ function ab_communication_schema(): array {
   $schema['ab_thread'] = CommunicationSchema::threadTable();
   $schema['ab_message'] = CommunicationSchema::messageTable();
   $schema['ab_input_request'] = CommunicationSchema::inputTable();
+  $schema['ab_message_mention'] = CommunicationSchema::mentionTable();
+  $schema['ab_notification'] = CommunicationSchema::notificationTable();
   return $schema;
 }
 
@@ -31,4 +33,11 @@ function ab_communication_update_11001(): string {
  */
 function ab_communication_update_11002(): string {
   return CommunicationSchema::installInput();
+}
+
+/**
+ * Installs mention and notification tables on existing sites.
+ */
+function ab_communication_update_11003(): string {
+  return CommunicationSchema::installSignals();
 }

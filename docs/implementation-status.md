@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-19  
-**Marco atual:** M5 — US-23 concluída. US-24 segue todo.
+**Marco atual:** M6 — US-24 concluída. US-25 segue todo.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -2604,6 +2604,75 @@ Não houve rota nova nem mudança de schema. O PHPStan do projeto não inclui `t
 
 ---
 
+## US-24 — Sincronizar por eventos
+
+**Status:** done  
+**Dependências:** US-07 done, US-22 done.  
+**Objetivo:** O cliente recupera o board e os eventos seguintes sem perder um commit e sem ver o que não pode mais ler.
+
+#### US-24/T01 — Criar snapshot consistente
+
+**Status:** done  
+**Entrega:** Tarefas do board e o cursor saem da mesma instrução SQL.
+
+**Contrato:**
+- a leitura junta as tarefas e a sequência do workspace. Um commit não entra nas tarefas e fica atrás do cursor
+- o próximo `GET /events?cursor=` devolve o evento desse commit
+
+#### US-24/T02 — Expor eventos e inbox
+
+**Status:** done  
+**Entrega:** `GET /events`, `GET /boards/{id}/snapshot` e `GET /agent-inbox`.
+
+**Contrato:**
+- o agente precisa de `events:read`. Sem o grant de leitura do board, o evento some da página, mas o cursor passa por ele. A página filtrada não repete o mesmo cursor
+- evento de outro board não aparece, nem o título. Evento do workspace inteiro fica só para humano
+- a inbox lista `message.mentioned` do agente autenticado. O texto da mensagem não vai no item. Humano recebe 403. A menção não abre execução
+- cursor anterior à retenção de 30 dias (`ab_event_retention`) responde 410 `resync_required`
+
+#### US-24/T03 — Testar paginação e reconexão
+
+**Status:** done  
+**Entrega:** Páginas de um evento, revogação do grant e cursor vencido.
+
+**Contrato:**
+- páginas de `limit=1` não repetem `event_id` e mantêm a sequência crescente
+- depois da revogação, o snapshot do board responde 404 e o título deixa de aparecer
+- o 410 manda buscar outro snapshot. O snapshot traz as tarefas já commitadas, e o evento criado depois dele volta na consulta seguinte
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_api/tests/src/Functional/ApiSyncTest.php \
+    web/modules/custom/ab_api/tests/src/Unit/OpenApiContractTest.php
+OK (2 tests, 136 assertions)
+```
+
+O snapshot da tarefa visível não traz o outro quadro. A tarefa criada depois aparece uma vez nos eventos seguintes. O agente não vê o título do quadro sem grant, e a página segue até os eventos que ele pode ler. A inbox traz a menção, sem o texto e sem execução. O outro token não a recebe. O cursor vencido responde 410 `resync_required`. O snapshot seguinte recupera as tarefas, e o commit feito depois dele volta na próxima leitura.
+
+```bash
+$ npx --yes @redocly/cli@1.25.11 lint docs/openapi.yaml
+Woohoo! Your API description is valid.
+```
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,yml \
+    web/modules/custom/ab_api
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse --memory-limit=1G web/modules/custom/ab_api
+PHPStan: exit 0
+```
+
+Não houve tabela nova. A tela não mudou. A verificação foi o teste HTTP.
+
+**Bloqueios:** nenhum nesta história.
+
+**Próxima ação:** —
+
+---
+
 ## Estatísticas
 
 - **Total de tasks:** 83 (conforme backlog)
@@ -2613,12 +2682,13 @@ Não houve rota nova nem mudança de schema. O PHPStan do projeto não inclui `t
 - **M3:** US-12 done; US-13 done; US-14 done; US-15 done; US-16 done
 - **M4:** US-17 done; US-18 done; US-19 done
 - **M5:** US-20 done; US-21 done; US-22 done; US-23 done
+- **M6:** US-24 done
 
 ---
 
 ## Próximos Passos
 
-1. US-24/T01 — snapshot consistente
+1. US-25/T01 — polling compartilhado
 
 ---
 

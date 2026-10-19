@@ -741,6 +741,10 @@ paths:
       operationId: listEvents
       tags: [events]
       summary: Read events after a cursor.
+      description: >
+        The cursor is the last sequence inspected, including events the
+        caller cannot read. A cursor older than the retention window
+        returns 410 with code resync_required. Take a new snapshot.
       parameters:
         - $ref: '#/components/parameters/WorkspaceId'
         - $ref: '#/components/parameters/Cursor'
@@ -1486,7 +1490,15 @@ components:
           $ref: '#/components/schemas/InputRequest'
     Event:
       type: object
-      required: [event_id, sequence, type, resource_id, created_at]
+      required:
+        - event_id
+        - sequence
+        - type
+        - resource_id
+        - actor_type
+        - actor_id
+        - created_at
+        - payload
       properties:
         event_id:
           type: string
@@ -1498,9 +1510,21 @@ components:
         resource_id:
           type: string
           format: uuid
+        actor_type:
+          type: string
+          enum: [human, agent, system]
+        actor_id:
+          type: string
         created_at:
           type: string
           format: date-time
+        payload:
+          type: object
+          additionalProperties: true
+          description: >
+            Minimal fields for the event. Message text and secrets are
+            omitted. Events outside the caller's boards are left out of
+            the page entirely.
     EventPage:
       type: object
       required: [data, page]

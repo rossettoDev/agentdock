@@ -59,6 +59,13 @@ services:
       - '@Drupal\ab_core\UuidLookup'
       - '@database'
       - '@datetime.time'
+  Drupal\ab_api\Http\SyncReader:
+    arguments:
+      - '@database'
+      - '@Drupal\ab_api\Http\ApiCaller'
+      - '@Drupal\ab_api\Http\Catalog'
+      - '@Drupal\ab_api\Http\TaskDocument'
+      - '@datetime.time'
   Drupal\ab_api\Http\TaskCommands:
     arguments:
       - '@Drupal\ab_api\Http\ApiCaller'

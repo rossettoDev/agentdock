@@ -35,6 +35,11 @@ final class ApiLimits {
   public const RETENTION = 86400;
 
   /**
+   * How long a synchronization event stays readable, in seconds.
+   */
+  public const EVENT_RETENTION = 2592000;
+
+  /**
    * Requests one credential may make in a minute.
    *
    * Heartbeat every 30 seconds and a poll fit in this budget.

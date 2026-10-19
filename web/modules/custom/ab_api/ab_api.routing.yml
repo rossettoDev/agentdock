@@ -178,6 +178,33 @@ ab_api.messages:
     # The controller returns 401 when the caller has no credential.
     _access: 'TRUE'
 
+ab_api.events:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/events'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\SyncController::events'
+  methods: [GET]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+
+ab_api.snapshot:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/boards/{board_id}/snapshot'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\SyncController::snapshot'
+  methods: [GET]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+
+ab_api.inbox:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/agent-inbox'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\SyncController::inbox'
+  methods: [GET]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+
 ab_api.messages.create:
   path: '/api/agent-board/v1/workspaces/{workspace_id}/threads/{thread_id}/messages'
   defaults:

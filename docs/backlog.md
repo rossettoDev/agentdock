@@ -605,23 +605,23 @@ Como desenvolvedor, quero testar integração sem depender de LLM.
 
 Como cliente, quero recuperar mudanças sem recarregar tudo.
 
-**Dependências:** US-07, US-22. **Status:** todo.
+**Dependências:** US-07, US-22. **Status:** done.
 
 ### US-24/T01 — Criar snapshot consistente
 
-- [ ] **Entrega:** Ler board e cursor na mesma visão transacional do banco.
+- [x] **Entrega:** Ler board e cursor na mesma visão transacional do banco.
 - **Aceite:** Commit durante snapshot não é perdido na próxima consulta.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-24/T02 — Expor eventos e inbox
 
-- [ ] **Entrega:** Cursor com escopo, filtro por acesso atual, avanço em eventos inspecionados e retenção/410.
+- [x] **Entrega:** Cursor com escopo, filtro por acesso atual, avanço em eventos inspecionados e retenção/410.
 - **Aceite:** Agente não recebe mensagens de outros boards e não fica preso em página filtrada vazia.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-24/T03 — Testar paginação e reconexão
 
-- [ ] **Entrega:** Eventos concorrentes, cursor expirado, revogação e duplicação.
+- [x] **Entrega:** Eventos concorrentes, cursor expirado, revogação e duplicação.
 - **Aceite:** Resync recupera estado sem omitir commits.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

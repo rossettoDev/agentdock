@@ -81,6 +81,37 @@ final class TaskDocument {
   }
 
   /**
+   * Builds a task document from values already read with the cursor.
+   *
+   * @param array<string, mixed> $row
+   *   Task columns captured in the snapshot statement.
+   *
+   * @return array<string, mixed>
+   *   The public task.
+   */
+  public function captured(array $row): array {
+    $owner = (int) ($row['human_owner'] ?? 0);
+    $agent = (int) ($row['assigned_agent'] ?? 0);
+    $execution = (int) ($row['active_execution'] ?? 0);
+    return [
+      'id' => (string) $row['uuid'],
+      'workspace_id' => $this->uuidOf('ab_workspace', (int) $row['workspace']),
+      'board_id' => $this->uuidOf('ab_board', (int) $row['board']),
+      'title' => (string) ($row['title'] ?? ''),
+      'description' => (string) ($row['description'] ?? ''),
+      'acceptance_criteria' => (string) ($row['acceptance_criteria'] ?? ''),
+      'status' => (string) ($row['status'] ?? ''),
+      'priority' => (string) ($row['priority'] ?? ''),
+      'human_owner' => $owner > 0 ? $this->uuidOf('users', $owner, 'uid') : NULL,
+      'assigned_agent' => $agent > 0 ? $this->uuidOf('ab_agent', $agent) : NULL,
+      'due_at' => $this->time($row['due_at'] ?? NULL),
+      'position' => (int) ($row['position'] ?? 0),
+      'version' => (int) ($row['version'] ?? 0),
+      'active_execution' => $execution > 0 ? $this->uuidOf('ab_execution', $execution) : NULL,
+    ];
+  }
+
+  /**
    * Formats a UTC timestamp for the contract.
    */
   public function time(mixed $value): ?string {

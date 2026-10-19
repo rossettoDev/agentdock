@@ -252,9 +252,9 @@ Meta inicial: alteração visível em até 5 segundos em condições normais. SS
 
 ## 12. Runner e MCP
 
-Runner de referência pode ser um pequeno CLI Python ou TypeScript, escolhido no marco de integração. Configuração por variáveis de ambiente: API URL, token e intervalo. Estado local mínimo: cursor, execução ativa e chaves idempotentes; segredos fora do repositório.
+Runner de referência é o CLI PHP em `tools/agent-runner`. A linguagem foi escolhida neste marco porque o teste de integração roda no PHP do appserver. Configuração por variáveis de ambiente: URL da API, token, workspace, intervalo, timeout e o caminho do estado. Estado local mínimo: cursor, execução ativa e chaves idempotentes. A lease fica só nesse arquivo, fora do repositório.
 
-Loop: consultar inbox/tarefas prontas → escolher tarefa elegível → claim → carregar contexto → trabalhar mantendo heartbeat → enviar progresso/dúvidas → submit ou fail. Em perda de lease, parar novas ações e cancelar subprocessos quando possível. Reconexão sempre valida execução antes de retomar.
+Loop: consultar tarefas prontas → escolher tarefa elegível → claim → carregar contexto → trabalhar mantendo heartbeat → enviar progresso/dúvidas → submit ou fail. Em perda de lease, parar novas ações. Reconexão sempre valida execução antes de retomar. Inbox e snapshot ficam na sincronização; até lá, 409 no claim significa que a tarefa não está elegível.
 
 MCP posterior expõe `list_boards`, `list_ready_tasks`, `get_task`, `claim_task`, `report_progress`, `post_message`, `request_human_input`, `get_execution`, `submit_result`, `fail_execution`, `release_task` e `get_agent_inbox`. O adaptador chama API com credencial do agente; não acessa banco diretamente.
 

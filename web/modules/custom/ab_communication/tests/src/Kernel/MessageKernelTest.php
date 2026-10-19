@@ -261,6 +261,8 @@ class MessageKernelTest extends KernelTestBase {
       $this->container->get('uuid'),
       $this->container->get('datetime.time'),
       $this->container->get('cache_tags.invalidator'),
+      $this->container->get('Drupal\ab_agent\ExecutionWriter'),
+      $this->container->get('Drupal\ab_communication\NotificationService'),
     ) extends MessageService {
 
       /**

@@ -258,6 +258,139 @@ final class CommunicationSchema {
   }
 
   /**
+   * Schema for a validated mention on one message.
+   *
+   * @return array<string, mixed>
+   *   A hook_schema table definition.
+   */
+  public static function mentionTable(): array {
+    return [
+      'description' => 'A human or agent mentioned on one message.',
+      'fields' => [
+        'id' => [
+          'description' => 'Primary identifier.',
+          'type' => 'serial',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'size' => 'big',
+        ],
+        'uuid' => [
+          'description' => 'Public identifier.',
+          'type' => 'varchar',
+          'length' => 128,
+          'not null' => TRUE,
+        ],
+        'workspace' => [
+          'description' => 'Workspace that owns the mention.',
+          'type' => 'int',
+          'size' => 'big',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'message_id' => [
+          'description' => 'Message that carries the mention.',
+          'type' => 'int',
+          'size' => 'big',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'recipient_type' => [
+          'description' => 'human or agent.',
+          'type' => 'varchar',
+          'length' => 16,
+          'not null' => TRUE,
+        ],
+        'recipient_id' => [
+          'description' => 'User id or agent uuid.',
+          'type' => 'varchar',
+          'length' => 128,
+          'not null' => TRUE,
+        ],
+        'created' => [
+          'description' => 'UTC timestamp when the mention was stored.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+      ],
+      'primary key' => ['id'],
+      'unique keys' => [
+        'uuid' => ['uuid'],
+        'message_recipient' => ['message_id', 'recipient_type', 'recipient_id'],
+      ],
+      'indexes' => [
+        'workspace' => ['workspace'],
+      ],
+    ];
+  }
+
+  /**
+   * Schema for one internal notification.
+   *
+   * @return array<string, mixed>
+   *   A hook_schema table definition.
+   */
+  public static function notificationTable(): array {
+    return [
+      'description' => 'A notification projected once per event and person.',
+      'fields' => [
+        'id' => [
+          'description' => 'Primary identifier.',
+          'type' => 'serial',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'size' => 'big',
+        ],
+        'uuid' => [
+          'description' => 'Public identifier.',
+          'type' => 'varchar',
+          'length' => 128,
+          'not null' => TRUE,
+        ],
+        'workspace' => [
+          'description' => 'Workspace that owns the notification.',
+          'type' => 'int',
+          'size' => 'big',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'recipient_user' => [
+          'description' => 'Account that receives the notification.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'event_id' => [
+          'description' => 'Event that produced this notification.',
+          'type' => 'varchar',
+          'length' => 128,
+          'not null' => TRUE,
+        ],
+        'read_at' => [
+          'description' => 'UTC timestamp when the person marked it read.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => FALSE,
+        ],
+        'created' => [
+          'description' => 'UTC timestamp when the notification was stored.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+      ],
+      'primary key' => ['id'],
+      'unique keys' => [
+        'uuid' => ['uuid'],
+        'event_recipient' => ['event_id', 'recipient_user'],
+      ],
+      'indexes' => [
+        'recipient_read' => ['recipient_user', 'read_at'],
+      ],
+    ];
+  }
+
+  /**
    * Creates the thread and message tables.
    */
   public static function install(): string {
@@ -287,6 +420,26 @@ final class CommunicationSchema {
     }
     $schema->createTable('ab_input_request', self::inputTable());
     return 'Created the input request table.';
+  }
+
+  /**
+   * Creates mention and notification tables on an existing site.
+   */
+  public static function installSignals(): string {
+    $schema = \Drupal::database()->schema();
+    $messages = [];
+    if (!$schema->tableExists('ab_message_mention')) {
+      $schema->createTable('ab_message_mention', self::mentionTable());
+      $messages[] = 'Created the mention table.';
+    }
+    if (!$schema->tableExists('ab_notification')) {
+      $schema->createTable('ab_notification', self::notificationTable());
+      $messages[] = 'Created the notification table.';
+    }
+    if ($messages === []) {
+      return 'Signal schema already present.';
+    }
+    return implode(' ', $messages);
   }
 
 }

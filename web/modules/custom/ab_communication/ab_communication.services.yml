@@ -8,6 +8,16 @@ services:
       - '@uuid'
       - '@datetime.time'
       - '@cache_tags.invalidator'
+      - '@Drupal\ab_agent\ExecutionWriter'
+      - '@Drupal\ab_communication\NotificationService'
+  Drupal\ab_communication\NotificationService:
+    arguments:
+      - '@database'
+      - '@entity_type.manager'
+      - '@Drupal\ab_core\Authorization\MembershipScope'
+      - '@uuid'
+      - '@datetime.time'
+      - '@cache_tags.invalidator'
   Drupal\ab_communication\InputRequestService:
     arguments:
       - '@database'

@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-19  
-**Marco atual:** M4 — US-18 concluída. US-19 segue todo.
+**Marco atual:** M4 — US-19 concluída. US-20 segue todo.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -2186,6 +2186,96 @@ No navegador, na Casa Grace, a tarefa "Duvida da verificacao" abriu em andamento
 
 ---
 
+## US-19 — Entregar menções e notificações
+
+**Status:** done  
+**Dependências:** US-18 done.  
+**Objetivo:** A menção é um destinatário validado. O texto solto não vira comando. O limite da execução encerra a reserva.
+
+#### US-19/T01 — Persistir menções validadas
+
+**Status:** done  
+**Entrega:** O autor autenticado escolhe humano ou agente do workspace. O evento `message.mentioned` não leva o corpo.
+
+**Contrato:**
+- `@texto` no corpo não cria menção, notificação, comando nem execução. O destinatário vem da lista estruturada, nunca de um `author_id`
+- humano precisa de conta ativa e membership ativa. Agente precisa estar habilitado, no mesmo workspace, com grant de leitura. Grant só de escrita não entra. Duplicata na lista vira uma menção
+- quem está fora recusa a mensagem inteira e não grava nada. A menção de agente não abre execução
+
+#### US-19/T02 — Criar notificações internas
+
+**Status:** done  
+**Entrega:** A projeção usa `event_id` e o destinatário. A lista marca como lida e esconde o texto.
+
+**Contrato:**
+- só a menção humana cria `ab_notification`. A linha entra antes do evento. A chave única é `event_id` + destinatário, então a segunda projeção não duplica
+- a lista mostra "Menção" e o workspace. Não carrega o corpo. Membership revogada some da lista e a leitura devolve não encontrado, sem o texto
+- abrir `/notifications` não troca o workspace da sessão
+
+#### US-19/T03 — Aplicar limites de comunicação
+
+**Status:** done  
+**Entrega:** Cinquenta mensagens de agente ou duas horas encerram a reserva da execução viva.
+
+**Contrato:**
+- o contador vale para a thread da tarefa desde `started_at` e soma os dois agentes. A mensagem que estoura o limite não é gravada. A tarefa volta a `ready` e a lease some
+- o código é `message_budget` ou, se o prazo passou, `duration_budget`. O ator do evento é `system` / `message-budget`
+- mensagem humana e thread de board não disparam o limite. Um claim novo começa outro contador
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_communication/tests/src/Kernel/MentionKernelTest.php
+OK (3 tests, 157 assertions)
+```
+
+`testPlainTextDoesNotMentionOrExecute` grava `@texto` sem menção nem execução, cria a notificação humana sem o corpo, ignora a segunda projeção, esconde a lista depois da revogação e recusa destinatário de fora sem gravar. `testAgentMentionDoesNotStartWork` registra a menção do agente sem notificação e sem execução. `testBudgetEndsTheLease` aceita 50 mensagens entre dois agentes, interrompe a 51ª com `message_budget` e, noutro claim, interrompe pelo prazo com `duration_budget`.
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_communication/tests/src/Kernel/MessageKernelTest.php \
+    web/modules/custom/ab_communication/tests/src/Kernel/InputRequestKernelTest.php
+OK (5 tests, 258 assertions)
+```
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_ui/tests/src/Functional/NotificationUiTest.php
+OK (1 test, 32 assertions)
+```
+
+Visitante recebe 403. O dono menciona o leitor e, em seguida, envia um `@texto` sem destinatário. A lista mostra uma "Menção" não lida, sem nenhum dos dois textos. "Marcar como lida" deixa "Lida". Depois da revogação a lista diz "Nenhuma notificação." A página não oferece mensagem direta. As depreciações do PHPUnit são o aviso de metadata `@group`.
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,yml \
+    web/modules/custom/ab_communication \
+    web/modules/custom/ab_agent/src/ExecutionWriter.php \
+    web/modules/custom/ab_ui/src/Form/MessageComposeForm.php \
+    web/modules/custom/ab_ui/src/Form/NotificationReadForm.php \
+    web/modules/custom/ab_ui/src/Controller/NotificationController.php \
+    web/modules/custom/ab_ui/src/Controller/WorkspaceController.php \
+    web/modules/custom/ab_ui/src/Hook/AbUiHooks.php \
+    web/modules/custom/ab_ui/ab_ui.routing.yml \
+    web/modules/custom/ab_ui/tests/src/Functional/NotificationUiTest.php
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse --memory-limit=1G
+PHPStan: exit 0
+```
+
+`ab_communication_update_11003` criou `ab_message_mention` e `ab_notification`. O schema local ficou em 11003. "Tema revisado" continua `ready` na versão 3 e "Preparar o material" continua `backlog` na versão 2. "Duvida da verificacao" continua `in_progress` na versão 3, com a lease.
+
+No navegador, na Casa Grace, a conversa de "Entrega da verificacao" mencionou grace e gravou o comentário. Um segundo comentário só com `@revisor` não criou outra menção. A lista Notificações mostrou "Menção — Casa Grace" e "Não lida", sem o texto. Depois de marcar, ficou "Lida". O evento `message.mentioned` levou a mensagem, a thread e o destinatário, sem o corpo. A lista de workspaces ganhou o link Notificações e a sessão continuou na Casa Grace.
+
+**Bloqueios:** nenhum nesta história.
+
+**Próxima ação:** —
+
+---
+
 ## Estatísticas
 
 - **Total de tasks:** 83 (conforme backlog)
@@ -2193,13 +2283,13 @@ No navegador, na Casa Grace, a tarefa "Duvida da verificacao" abriu em andamento
 - **M1:** US-04 done; US-05 done; US-06 done
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
 - **M3:** US-12 done; US-13 done; US-14 done; US-15 done; US-16 done
-- **M4:** US-17 done; US-18 done
+- **M4:** US-17 done; US-18 done; US-19 done
 
 ---
 
 ## Próximos Passos
 
-1. US-19/T01 — menções validadas
+1. US-20/T01 — contrato HTTP de leitura e comandos
 
 ---
 

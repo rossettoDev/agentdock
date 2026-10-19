@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\ab_ui\Form;
 
 use Drupal\ab_agent\AgentAccessDeniedException;
+use Drupal\ab_agent\Entity\Agent;
 use Drupal\ab_board\BoardRepository;
 use Drupal\ab_board\Entity\Board;
 use Drupal\ab_board\Entity\Task;
@@ -15,9 +16,11 @@ use Drupal\ab_core\Authorization\HumanActorContextFactory;
 use Drupal\ab_core\Authorization\ScopedOperationDeniedException;
 use Drupal\ab_core\Authorization\ScopedResourceNotFoundException;
 use Drupal\ab_core\Entity\Workspace;
+use Drupal\Core\Database\Connection;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\user\UserInterface;
 
 /**
  * Appends a human comment to a board or task conversation.
@@ -33,6 +36,7 @@ final class MessageComposeForm extends FormBase {
     private readonly BoardRepository $boards,
     private readonly TaskRepository $tasks,
     private readonly EntityTypeManagerInterface $entityTypeManager,
+    private readonly Connection $database,
   ) {}
 
   /**
@@ -65,6 +69,12 @@ final class MessageComposeForm extends FormBase {
       '#options' => $this->replyOptions($scope, $target),
       '#empty_option' => $this->t('Nenhuma'),
       '#empty_value' => '',
+    ];
+    $form['mentions'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Mencionar'),
+      '#options' => $this->mentionOptions($scope, $target),
+      '#multiple' => TRUE,
     ];
     $form['body'] = [
       '#type' => 'textarea',
@@ -104,6 +114,16 @@ final class MessageComposeForm extends FormBase {
       return;
     }
     $reply = (string) $form_state->getValue('reply_to');
+    $mentions = [];
+    foreach ((array) $form_state->getValue('mentions') as $token) {
+      if (!is_string($token) || preg_match('/^(human|agent):(.+)$/', $token, $matches) !== 1) {
+        continue;
+      }
+      $mentions[] = [
+        'type' => $matches[1],
+        'id' => $matches[2],
+      ];
+    }
     try {
       $this->messages->post(
         $this->actors->create($workspace),
@@ -112,9 +132,19 @@ final class MessageComposeForm extends FormBase {
         'comment',
         (string) $form_state->getValue('body'),
         $reply === '' ? NULL : $reply,
+        NULL,
+        $mentions,
       );
     }
-    catch (MessageRejectedException) {
+    catch (MessageRejectedException $exception) {
+      if ($exception->getMessage() === MessageRejectedException::MENTION) {
+        $this->messenger()->addError($this->t('Essa menção não está neste workspace.'));
+        return;
+      }
+      if ($exception->getMessage() === MessageRejectedException::BUDGET) {
+        $this->messenger()->addError($this->t('A execução atingiu o limite e a reserva foi encerrada.'));
+        return;
+      }
       $this->messenger()->addError($this->t('Essa resposta não está nesta conversa.'));
       return;
     }
@@ -178,6 +208,73 @@ final class MessageComposeForm extends FormBase {
       $options[$message->uuid] = $flat === '' ? $message->uuid : $flat;
     }
     return $options;
+  }
+
+  /**
+   * Lists people and agents who can read this conversation.
+   *
+   * @return array<string, string>
+   *   Option labels keyed by recipient token.
+   */
+  private function mentionOptions(string $scope, string $target): array {
+    $workspace = $this->workspaceOf($scope, $target);
+    if (!$workspace instanceof Workspace) {
+      return [];
+    }
+    $boardId = $this->boardId($scope, $target);
+    if ($boardId === 0) {
+      return [];
+    }
+    $options = [];
+    $memberIds = $this->database->select('ab_membership', 'm')
+      ->fields('m', ['user'])
+      ->condition('workspace', (int) $workspace->id())
+      ->condition('status', 'active')
+      ->execute();
+    foreach ($memberIds as $member) {
+      if (!is_object($member)) {
+        continue;
+      }
+      $user = $this->entityTypeManager->getStorage('user')->load($member->user);
+      if (!$user instanceof UserInterface || (int) $user->get('status')->getString() !== 1) {
+        continue;
+      }
+      $options['human:' . $user->id()] = (string) $this->t('Pessoa: @name', [
+        '@name' => $user->getAccountName(),
+      ]);
+    }
+    $grants = $this->database->select('ab_agent_board_grant', 'g')
+      ->fields('g', ['agent_id', 'permissions'])
+      ->condition('board_id', $boardId)
+      ->execute();
+    foreach ($grants as $grant) {
+      if (!is_object($grant) || !in_array('read', explode(',', (string) $grant->permissions), TRUE)) {
+        continue;
+      }
+      $agent = $this->entityTypeManager->getStorage('ab_agent')->load($grant->agent_id);
+      if (!$agent instanceof Agent || (int) $agent->get('enabled')->getString() !== 1) {
+        continue;
+      }
+      $options['agent:' . $agent->uuid()] = (string) $this->t('Agente: @name', [
+        '@name' => (string) $agent->label(),
+      ]);
+    }
+    return $options;
+  }
+
+  /**
+   * Returns the board id for the conversation target.
+   */
+  private function boardId(string $scope, string $target): int {
+    if ($scope === 'board') {
+      $board = $this->boards->loadAccessibleByUuid($target);
+      return $board instanceof Board ? (int) $board->id() : 0;
+    }
+    if ($scope === 'task') {
+      $task = $this->tasks->loadAccessibleByUuid($target);
+      return $task instanceof Task ? (int) $task->get('board')->getString() : 0;
+    }
+    return 0;
   }
 
   /**

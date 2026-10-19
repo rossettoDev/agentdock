@@ -19,6 +19,8 @@ function ab_agent_schema(): array {
   $schema['ab_agent_board_grant'] = AgentSchemaInstaller::grantTable();
   $schema['ab_agent_token'] = AgentSchemaInstaller::tokenTable();
   $schema['ab_execution_lease'] = AgentSchemaInstaller::leaseTable();
+  $schema['ab_execution_progress'] = AgentSchemaInstaller::progressTable();
+  $schema['ab_execution_link'] = AgentSchemaInstaller::linkTable();
   return $schema;
 }
 
@@ -48,4 +50,11 @@ function ab_agent_update_11002(): string {
  */
 function ab_agent_update_11003(): string {
   return AgentSchemaInstaller::installExecution();
+}
+
+/**
+ * Installs limited progress notes and result links.
+ */
+function ab_agent_update_11004(): string {
+  return AgentSchemaInstaller::installReview();
 }

@@ -266,4 +266,129 @@ final class AgentSchemaInstaller {
     return implode(' ', $messages);
   }
 
+  /**
+   * Schema for short progress notes on one execution.
+   *
+   * The note is plain text. A conversation thread is a later story.
+   *
+   * @return array<string, mixed>
+   *   A hook_schema table definition.
+   */
+  public static function progressTable(): array {
+    return [
+      'description' => 'Limited progress notes recorded while a lease is valid.',
+      'fields' => [
+        'execution_id' => [
+          'description' => 'Execution the note belongs to.',
+          'type' => 'int',
+          'size' => 'big',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'sequence' => [
+          'description' => 'Order of the note within the execution.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'workspace' => [
+          'description' => 'Workspace id copied from the execution.',
+          'type' => 'int',
+          'size' => 'big',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'body' => [
+          'description' => 'Plain progress note, at most 500 characters.',
+          'type' => 'varchar',
+          'length' => 500,
+          'not null' => TRUE,
+        ],
+        'created' => [
+          'description' => 'UTC timestamp when the note was written.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+      ],
+      'primary key' => ['execution_id', 'sequence'],
+      'indexes' => [
+        'workspace' => ['workspace'],
+      ],
+    ];
+  }
+
+  /**
+   * Schema for the links delivered with a result.
+   *
+   * Only http and https addresses are stored.
+   *
+   * @return array<string, mixed>
+   *   A hook_schema table definition.
+   */
+  public static function linkTable(): array {
+    return [
+      'description' => 'Result links stored when an execution is submitted.',
+      'fields' => [
+        'execution_id' => [
+          'description' => 'Execution that delivered the link.',
+          'type' => 'int',
+          'size' => 'big',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'delta' => [
+          'description' => 'Position of the link in the delivery.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'workspace' => [
+          'description' => 'Workspace id copied from the execution.',
+          'type' => 'int',
+          'size' => 'big',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'url' => [
+          'description' => 'http or https address.',
+          'type' => 'varchar',
+          'length' => 500,
+          'not null' => TRUE,
+        ],
+        'label' => [
+          'description' => 'Short label. Empty when the address is the label.',
+          'type' => 'varchar',
+          'length' => 80,
+          'not null' => TRUE,
+          'default' => '',
+        ],
+      ],
+      'primary key' => ['execution_id', 'delta'],
+      'indexes' => [
+        'workspace' => ['workspace'],
+      ],
+    ];
+  }
+
+  /**
+   * Creates the progress and result-link tables.
+   */
+  public static function installReview(): string {
+    $schema = \Drupal::database()->schema();
+    $messages = [];
+    if (!$schema->tableExists('ab_execution_progress')) {
+      $schema->createTable('ab_execution_progress', self::progressTable());
+      $messages[] = 'Created the execution progress table.';
+    }
+    if (!$schema->tableExists('ab_execution_link')) {
+      $schema->createTable('ab_execution_link', self::linkTable());
+      $messages[] = 'Created the execution link table.';
+    }
+    if ($messages === []) {
+      return 'Review schema already present.';
+    }
+    return implode(' ', $messages);
+  }
+
 }

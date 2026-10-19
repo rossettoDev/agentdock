@@ -413,23 +413,23 @@ Como sistema, quero detectar interrupções de agentes.
 
 Como humano, quero aprovar o trabalho executado.
 
-**Dependências:** US-15. **Status:** todo.
+**Dependências:** US-15. **Status:** done.
 
 ### US-16/T01 — Implementar progresso e submit
 
-- [ ] **Entrega:** Progresso estruturado limitado; resumo e links de resultado; submit encerra lease e leva a in_review.
+- [x] **Entrega:** Progresso estruturado limitado; resumo e links de resultado; submit encerra lease e leva a in_review.
 - **Aceite:** Agente não envia resultado sem lease válida nem aprova a entrega.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-16/T02 — Implementar approve/reject/cancel
 
-- [ ] **Entrega:** Rejeição exige motivo e retorna ready; cancelamento encerra reserva; correção abre nova tentativa.
+- [x] **Entrega:** Rejeição exige motivo e retorna ready; cancelamento encerra reserva; correção abre nova tentativa.
 - **Aceite:** Histórico das tentativas é preservado e done não conserva execução ativa.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-16/T03 — Completar detalhe e Central de Agentes
 
-- [ ] **Entrega:** Exibir execução, tentativas, resultado e ações humanas conforme screens.
+- [x] **Entrega:** Exibir execução, tentativas, resultado e ações humanas conforme screens.
 - **Aceite:** Ações permitidas refletem policy; campos de anexos/checklist não implementados ficam fora do fluxo.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

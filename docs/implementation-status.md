@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
-**Última atualização:** 2026-10-16  
-**Marco atual:** M3 — US-15 concluída. US-16 segue todo.
+**Última atualização:** 2026-10-19  
+**Marco atual:** M3 — US-16 concluída. US-17 segue todo.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -1918,7 +1918,7 @@ No site local, `lando drush updb` rodou `ab_agent_update_11003` e criou `ab_exec
 **Entrega:** Depois da recuperação, um novo claim cria outra execução. Heartbeat e submit com a lease antiga não alteram essa tarefa.
 
 **Contrato:**
-- `submit` só recusa a lease obsoleta. A entrega que leva a tarefa para revisão continua na US-16. Uma lease válida ainda não grava resultado
+- `submit` com lease obsoleta só recusa a chamada. A US-16 passou a gravar o resultado quando a lease ainda vale
 - a execução antiga permanece `interrupted`. A nova segue `running` até o heartbeat correto
 
 **Evidências:**
@@ -1948,19 +1948,98 @@ No site local não houve update de schema. `lando drush ab-agent:recover-leases`
 
 ---
 
+## US-16 — Entregar e revisar resultado
+
+**Status:** done  
+**Dependências:** US-15 done.  
+**Objetivo:** O agente registra progresso e entrega o resultado. A revisão humana aprova, rejeita ou cancela, e a tarefa concluída ou cancelada não fica com execução ativa.
+
+#### US-16/T01 — Progresso e submit
+
+**Status:** done  
+**Entrega:** Até 20 notas de 500 caracteres, resumo de até 2000 e no máximo 5 links http ou https. O submit encerra a lease e leva a tarefa a `in_review`.
+
+**Contrato:**
+- a nota é texto simples. Marcação, quebra de linha e a nota 21 não são gravadas. O progresso não muda o status, a versão da tarefa nem o prazo da lease. O evento é `execution.progressed`
+- lease vencida, token errado ou generation errada não gravam resultado. A vencida interrompe a execução, como nas outras mutações. A segunda entrega cai em estado, porque a lease já não existe
+- o submit grava `submitted`, o resumo e os links, apaga a lease e muda a tarefa para `in_review`. `assigned_agent` e `active_execution` continuam até a decisão humana, para a transição comum não simular a aprovação. O evento é `execution.submitted`, sem o segredo
+- o agente não aprova. `done` continua fora da transição humana
+
+#### US-16/T02 — Approve, reject e cancel
+
+**Status:** done  
+**Entrega:** Quem tem `review` aprova ou rejeita. Quem tem `write` cancela a reserva. A rejeição exige motivo e a correção é um novo claim.
+
+**Contrato:**
+- aprovar exige `in_review` e execução `submitted`. A tarefa vai para `done`, `active_execution` e `assigned_agent` ficam vazios e a execução continua `submitted`. O evento `task.approved` não se repete. Versão antiga conflita e desfaz
+- rejeitar sem motivo não grava. Com motivo, a tarefa volta a `ready` e a execução enviada permanece. O claim seguinte é a tentativa 2. A dependência não sai da tabela. O evento é `task.rejected`
+- cancelar uma tarefa `in_progress` ou `in_review` marca a execução como `cancelled`, apaga a lease e cancela a tarefa, sem execução ativa. A segunda chamada não grava outro `execution.cancelled`
+- o ator é a conta autenticada. Visitante de fora não encontra a tarefa. Quem só lê recebe recusa. A conta técnica do agente também não aprova. A ordem de lock é agente, tarefa, lease e execução, e só então o evento
+
+#### US-16/T03 — Detalhe da tarefa e central de agentes
+
+**Status:** done  
+**Entrega:** O detalhe lista tentativas, notas, resumo sanitizado e links. A central mostra o último sinal só enquanto há execução viva.
+
+**Contrato:**
+- as ações são Aprovar, Rejeitar com motivo e Cancelar execução, conforme a permissão e o status. Quem só lê não vê os botões. Não há anexo, checklist nem conversa
+- o resumo passa pelo mesmo filtro da descrição. `javascript:` não vira link
+- a central diz "Último sinal" ou "Execução em andamento" quando a execução está `running` ou `waiting_input`. Sem isso, continua "Não há sinal de execução.". A tela não chama o agente de online
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_agent/tests/src/Kernel/ReviewKernelTest.php \
+    web/modules/custom/ab_agent/tests/src/Kernel/LeaseKernelTest.php
+OK (6 tests, 436 assertions)
+```
+
+`testProgressAndSubmitEndTheLease` limita as notas, recusa link `javascript:` e lease obsoleta, envia a tarefa para revisão e interrompe a lease vencida sem gravar resumo. `testHumanReviewKeepsTheAttempt` impede visitante, leitor e a conta do agente de aprovar, conserva a dependência, abre a tentativa 2 depois da rejeição e cancela a reserva uma vez só. O teste de lease da US-15 continua passando com o submit novo.
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_ui/tests/src/Functional/TaskReviewUiTest.php
+OK (1 test, 84 assertions)
+```
+
+O detalhe mostra a tentativa, o resumo em negrito, o script escapado e o link https. Quem só lê não vê Aprovar, Rejeitar nem Cancelar execução. O dono aprova, rejeita com motivo e cancela a execução em andamento. A central mostra o último sinal e, depois do cancelamento, volta a "Não há sinal de execução.". As deprecações do PHPUnit são o aviso de metadata `@group`.
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,yml \
+    web/modules/custom/ab_agent \
+    web/modules/custom/ab_ui/src \
+    web/modules/custom/ab_ui/tests/src/Functional/TaskReviewUiTest.php
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse --memory-limit=1G
+PHPStan: exit 0
+```
+
+`ab_agent_update_11004` criou `ab_execution_progress` e `ab_execution_link`. O schema local ficou em 11004. "Tema revisado" continua `ready` na versão 3 e "Preparar o material" continua `backlog` na versão 2.
+
+No navegador, na Casa Grace, a tarefa nova "Entrega da verificacao" abriu em revisão com a tentativa, o resumo escapado, o link e os botões. Aprovar gravou `done` e esvaziou `active_execution`. A central do agente dessa verificação mostrou "Não há sinal de execução." O board "Verificacao US-16" ficou no workspace só para essa conferência.
+
+**Bloqueios:** nenhum nesta história.
+
+**Próxima ação:** —
+
+---
+
 ## Estatísticas
 
 - **Total de tasks:** 83 (conforme backlog)
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
-- **M3:** US-12 done; US-13 done; US-14 done; US-15 done
+- **M3:** US-12 done; US-13 done; US-14 done; US-15 done; US-16 done
 
 ---
 
 ## Próximos Passos
 
-1. US-16/T01 — progresso e submit da execução
+1. US-17/T01 — conversa de board e tarefa
 
 ---
 

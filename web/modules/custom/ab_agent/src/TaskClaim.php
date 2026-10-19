@@ -71,6 +71,7 @@ class TaskClaim {
       $this->entityTypeManager->getStorage('ab_task')->resetCache([(int) $task->id()]);
       $this->cacheTagsInvalidator->invalidateTags([
         'ab_workspace_tasks:' . $workspace->id(),
+        'ab_agent_signal:' . $agent->id(),
       ]);
       return $claimed;
     }

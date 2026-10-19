@@ -25,6 +25,9 @@ final class LeaseCommand {
     public readonly string $secretHash,
     public readonly int $generation,
     public readonly string $failureCode,
+    public readonly string $note = '',
+    public readonly string $summary = '',
+    public readonly array $links = [],
   ) {}
 
 }

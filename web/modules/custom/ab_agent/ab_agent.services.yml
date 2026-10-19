@@ -56,6 +56,16 @@ services:
       - '@Drupal\ab_agent\ExecutionWriter'
       - '@Drupal\ab_agent\AgentOperationGate'
       - '@cache_tags.invalidator'
+  Drupal\ab_agent\TaskReview:
+    arguments:
+      - '@database'
+      - '@entity_type.manager'
+      - '@current_user'
+      - '@Drupal\ab_core\Authorization\MembershipScope'
+      - '@Drupal\ab_core\Authorization\HumanActorContextFactory'
+      - '@Drupal\ab_event\EventStoreInterface'
+      - '@datetime.time'
+      - '@cache_tags.invalidator'
   Drupal\ab_agent\AgentActorContextFactory: ~
   Drupal\ab_agent\AgentOperationGate:
     arguments:

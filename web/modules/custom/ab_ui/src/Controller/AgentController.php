@@ -17,6 +17,7 @@ use Drupal\ab_ui\Form\AgentTokenForm;
 use Drupal\ab_ui\WorkspaceContext;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Cache\CacheableMetadata;
+use Drupal\Core\Database\Connection;
 use Drupal\Core\DependencyInjection\AutowireTrait;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -29,8 +30,8 @@ use Drupal\Core\Url;
 /**
  * Lists agents of the selected workspace and opens one by UUID.
  *
- * The screen shows enabled or disabled. It does not claim the agent is
- * online, because execution and heartbeat do not exist yet.
+ * The screen shows enabled or disabled. A live execution can show the
+ * last heartbeat. It does not call the agent online.
  */
 final class AgentController implements ContainerInjectionInterface {
 
@@ -47,6 +48,7 @@ final class AgentController implements ContainerInjectionInterface {
     private readonly FormBuilderInterface $formBuilder,
     private readonly AccountInterface $currentUser,
     private readonly TimeInterface $time,
+    private readonly Connection $database,
   ) {}
 
   /**
@@ -117,7 +119,7 @@ final class AgentController implements ContainerInjectionInterface {
       '#capabilities' => $agent->get('capabilities')->getString(),
       '#status' => $this->statusLabel($agent),
       '#limit' => $agent->get('concurrency_limit')->getString(),
-      '#signal' => (string) $this->t('Não há sinal de execução.'),
+      '#signal' => $this->signalLabel($agent, $workspace),
       '#grants' => $this->grantLabels($agent),
       '#tokens' => $can_credentials ? $this->tokenLines($agent, $workspace) : [],
       '#back_url' => Url::fromRoute('ab_ui.agents')->toString(),
@@ -127,6 +129,7 @@ final class AgentController implements ContainerInjectionInterface {
       '#cache' => $this->cacheMeta($workspace),
     ];
     $build['#cache']['tags'][] = 'ab_agent_tokens:' . $agent->id();
+    $build['#cache']['tags'][] = 'ab_agent_signal:' . $agent->id();
     if ($can_manage) {
       $build['#edit_form'] = $this->formBuilder->getForm(AgentEditForm::class, $agent->uuid());
       $build['#grant_form'] = $this->formBuilder->getForm(AgentGrantForm::class, $agent->uuid());
@@ -157,6 +160,39 @@ final class AgentController implements ContainerInjectionInterface {
   private function workspaceOf(Agent $agent): ?Workspace {
     $workspace = $this->entityTypeManager->getStorage('ab_workspace')->load($agent->get('workspace')->getString());
     return $workspace instanceof Workspace ? $workspace : NULL;
+  }
+
+  /**
+   * Shows a live execution without calling the agent online.
+   */
+  private function signalLabel(Agent $agent, ?Workspace $workspace): string {
+    $query = $this->database->select('ab_execution', 'e');
+    $query->addExpression('COUNT(*)');
+    $query->condition('agent', (int) $agent->id());
+    $query->condition('status', ['running', 'waiting_input'], 'IN');
+    $running = (int) $query->execute()->fetchField();
+    if ($running === 0) {
+      return (string) $this->t('Não há sinal de execução.');
+    }
+    $heartbeat_query = $this->database->select('ab_execution', 'e');
+    $heartbeat_query->addExpression('MAX(heartbeat_at)');
+    $heartbeat_query->condition('agent', (int) $agent->id());
+    $heartbeat_query->condition('status', ['running', 'waiting_input'], 'IN');
+    $heartbeat = $heartbeat_query->execute()->fetchField();
+    if ($heartbeat === FALSE || $heartbeat === NULL || (int) $heartbeat <= 0) {
+      return (string) $this->t('Execução em andamento.');
+    }
+    $timezone = $workspace instanceof Workspace ? $workspace->get('timezone')->getString() : '';
+    try {
+      $zone = new \DateTimeZone($timezone === '' ? 'America/Sao_Paulo' : $timezone);
+    }
+    catch (\Exception) {
+      $zone = new \DateTimeZone('America/Sao_Paulo');
+    }
+    $when = (new \DateTimeImmutable('@' . (int) $heartbeat))->setTimezone($zone);
+    return (string) $this->t('Último sinal: @time', [
+      '@time' => $when->format('d/m/Y H:i'),
+    ]);
   }
 
   /**

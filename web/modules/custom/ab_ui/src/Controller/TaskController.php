@@ -16,10 +16,12 @@ use Drupal\ab_core\Authorization\WorkspacePermission;
 use Drupal\ab_core\Entity\Workspace;
 use Drupal\ab_ui\Form\TaskDependencyForm;
 use Drupal\ab_ui\Form\TaskReorderForm;
+use Drupal\ab_ui\Form\TaskReviewForm;
 use Drupal\ab_ui\Form\TaskTransitionForm;
 use Drupal\ab_ui\TaskMarkdown;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Cache\CacheableMetadata;
+use Drupal\Core\Database\Connection;
 use Drupal\Core\DependencyInjection\AutowireTrait;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -60,6 +62,7 @@ final class TaskController implements ContainerInjectionInterface {
     private readonly FormBuilderInterface $formBuilder,
     private readonly AccountInterface $currentUser,
     private readonly TimeInterface $time,
+    private readonly Connection $database,
   ) {}
 
   /**
@@ -178,6 +181,8 @@ final class TaskController implements ContainerInjectionInterface {
       '#blocked' => $this->dependencies->isBlocked($task),
       '#dependencies' => $this->dependencyItems($task),
       '#dependency_form' => NULL,
+      '#attempts' => $this->attempts($task),
+      '#review_form' => NULL,
       '#back_url' => $back,
       '#cache' => $this->cacheMeta($workspace),
     ];
@@ -193,7 +198,96 @@ final class TaskController implements ContainerInjectionInterface {
         $task->uuid(),
       );
     }
+    $status = $task->get('status')->getString();
+    $can_review = $workspace instanceof Workspace && $this->scope->allows(
+      $this->currentUser,
+      $workspace,
+      WorkspacePermission::REVIEW,
+    );
+    $needs_review = $status === 'in_review' && $can_review;
+    $needs_cancel = in_array($status, ['in_progress', 'in_review'], TRUE) && $can_write;
+    if ($needs_review || $needs_cancel) {
+      $build['#review_form'] = $this->formBuilder->getForm(
+        TaskReviewForm::class,
+        $task->uuid(),
+      );
+    }
     return $build;
+  }
+
+  /**
+   * Lists attempts, notes and result links for one visible task.
+   *
+   * @return array<int, array<string, mixed>>
+   *   One item per stored execution.
+   */
+  private function attempts(Task $task): array {
+    $rows = $this->database->select('ab_execution', 'e')
+      ->fields('e', ['id', 'attempt', 'status', 'result_summary', 'failure_code'])
+      ->condition('task', $task->id())
+      ->orderBy('attempt')
+      ->execute()
+      ->fetchAll();
+    $ids = [];
+    foreach ($rows as $row) {
+      $ids[] = (int) $row->id;
+    }
+    $notes = [];
+    $links = [];
+    if ($ids !== []) {
+      $note_rows = $this->database->select('ab_execution_progress', 'p')
+        ->fields('p', ['execution_id', 'body'])
+        ->condition('execution_id', $ids, 'IN')
+        ->orderBy('sequence')
+        ->execute();
+      foreach ($note_rows as $note) {
+        $notes[(int) $note->execution_id][] = (string) $note->body;
+      }
+      $link_rows = $this->database->select('ab_execution_link', 'l')
+        ->fields('l', ['execution_id', 'url', 'label'])
+        ->condition('execution_id', $ids, 'IN')
+        ->orderBy('delta')
+        ->execute();
+      foreach ($link_rows as $link) {
+        $url = (string) $link->url;
+        if (preg_match('#^https?://[^\s<>]+$#i', $url) !== 1) {
+          continue;
+        }
+        $label = (string) $link->label;
+        $links[(int) $link->execution_id][] = [
+          'url' => $url,
+          'label' => $label === '' ? $url : $label,
+        ];
+      }
+    }
+    $items = [];
+    foreach ($rows as $row) {
+      $id = (int) $row->id;
+      $items[] = [
+        'number' => (string) $row->attempt,
+        'status' => $this->executionLabel((string) $row->status),
+        'summary' => $this->markup((string) $row->result_summary),
+        'failure' => (string) $row->failure_code,
+        'notes' => $notes[$id] ?? [],
+        'links' => $links[$id] ?? [],
+      ];
+    }
+    return $items;
+  }
+
+  /**
+   * Returns the Portuguese label of an execution status.
+   */
+  private function executionLabel(string $status): string {
+    return match ($status) {
+      'running' => (string) $this->t('Em andamento'),
+      'waiting_input' => (string) $this->t('Aguardando'),
+      'submitted' => (string) $this->t('Enviada'),
+      'failed' => (string) $this->t('Falhou'),
+      'interrupted' => (string) $this->t('Interrompida'),
+      'cancelled' => (string) $this->t('Cancelada'),
+      default => (string) $this->t('Em andamento'),
+    };
   }
 
   /**

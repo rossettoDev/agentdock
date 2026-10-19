@@ -12,13 +12,33 @@ use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Database\Connection;
 
 /**
- * Renews or closes one lease inside the caller's transaction.
+ * Renews, notes or closes one lease inside the caller's transaction.
  *
  * Locks the agent, then the task, the execution and the lease. The
  * event is recorded only after those rows are held. Heartbeat does
  * not record an event.
  */
 class ExecutionWriter {
+
+  /**
+   * Maximum progress notes stored for one execution.
+   */
+  public const PROGRESS_LIMIT = 20;
+
+  /**
+   * Maximum characters in one progress note.
+   */
+  public const PROGRESS_LENGTH = 500;
+
+  /**
+   * Maximum characters in a result summary.
+   */
+  public const SUMMARY_LENGTH = 2000;
+
+  /**
+   * Maximum result links accepted with one delivery.
+   */
+  public const LINK_LIMIT = 5;
 
   public function __construct(
     private readonly Connection $database,
@@ -27,7 +47,7 @@ class ExecutionWriter {
   ) {}
 
   /**
-   * Applies heartbeat, fail, release or the lease check before delivery.
+   * Applies heartbeat, progress, fail, release or delivery.
    *
    * An expired lease that still matches the holder is interrupted here,
    * so the caller does not wait for the recovery command.
@@ -96,6 +116,12 @@ class ExecutionWriter {
         $now,
       );
       return new LeaseMutation(LeaseMutation::RELEASED, NULL, $command->workspaceId, $command->taskId, $command->executionId);
+    }
+    if ($operation === 'progress') {
+      return $this->recordProgress($command, $now);
+    }
+    if ($operation === 'submit') {
+      return $this->deliver($command, $task, $execution, $now);
     }
     return new LeaseMutation(LeaseMutation::READY);
   }
@@ -322,7 +348,7 @@ class ExecutionWriter {
    */
   private function lockExecution(LeaseCommand $command): array {
     $execution = $this->database->query(
-      'SELECT id, uuid, status, version, task, workspace, agent FROM {ab_execution} WHERE id = :id FOR UPDATE',
+      'SELECT id, uuid, status, version, attempt, task, workspace, agent FROM {ab_execution} WHERE id = :id FOR UPDATE',
       [':id' => $command->executionId],
     )->fetchAssoc();
     $sameTask = is_array($execution) && (int) $execution['task'] === $command->taskId;
@@ -374,7 +400,7 @@ class ExecutionWriter {
   }
 
   /**
-   * Ends the execution, drops the lease and returns the task to ready.
+   * Ends the execution, drops the lease and moves the task.
    */
   private function close(
     LeaseCommand $command,
@@ -387,29 +413,39 @@ class ExecutionWriter {
     string $actorType,
     string $actorId,
     int $now,
+    string $taskStatus = 'ready',
+    bool $keepAssignment = FALSE,
+    string $resultSummary = '',
   ): bool {
+    $executionFields = [
+      'status' => $executionStatus,
+      'ended_at' => $now,
+      'failure_code' => $failureCode,
+      'changed' => $now,
+      'version' => ((int) $execution['version']) + 1,
+    ];
+    if ($resultSummary !== '') {
+      $executionFields['result_summary'] = $resultSummary;
+    }
     $executionUpdated = $this->database->update('ab_execution')
-      ->fields([
-        'status' => $executionStatus,
-        'ended_at' => $now,
-        'failure_code' => $failureCode,
-        'changed' => $now,
-        'version' => ((int) $execution['version']) + 1,
-      ])
+      ->fields($executionFields)
       ->condition('id', $command->executionId)
       ->condition('status', ['running', 'waiting_input'], 'IN')
       ->execute();
     if ((int) $executionUpdated !== 1) {
       return FALSE;
     }
+    $taskFields = [
+      'status' => $taskStatus,
+      'version' => ((int) $task['version']) + 1,
+      'changed' => $now,
+    ];
+    if (!$keepAssignment) {
+      $taskFields['assigned_agent'] = NULL;
+      $taskFields['active_execution'] = NULL;
+    }
     $taskUpdated = $this->database->update('ab_task')
-      ->fields([
-        'status' => 'ready',
-        'version' => ((int) $task['version']) + 1,
-        'assigned_agent' => NULL,
-        'active_execution' => NULL,
-        'changed' => $now,
-      ])
+      ->fields($taskFields)
       ->condition('id', $command->taskId)
       ->condition('active_execution', $command->executionId)
       ->execute();
@@ -424,11 +460,15 @@ class ExecutionWriter {
       'execution_id' => $command->executionUuid,
       'task_id' => $command->taskUuid,
       'reason' => $reason,
-      'status' => 'ready',
+      'status' => $taskStatus,
       'version' => ((int) $task['version']) + 1,
     ];
     if ($failureCode !== '') {
       $payload['failure_code'] = $failureCode;
+    }
+    if ($resultSummary !== '') {
+      $payload['summary'] = $resultSummary;
+      $payload['attempt'] = (int) ($execution['attempt'] ?? 0);
     }
     $this->events->record(new EventDraft(
       $command->workspaceUuid,
@@ -439,6 +479,128 @@ class ExecutionWriter {
       $payload,
     ));
     return TRUE;
+  }
+
+  /**
+   * Stores one plain note without ending the lease.
+   */
+  private function recordProgress(LeaseCommand $command, int $now): LeaseMutation {
+    $note = trim($command->note);
+    $tooLong = mb_strlen($note) > self::PROGRESS_LENGTH;
+    if ($note === '' || $tooLong || preg_match('/[<>\r\n]/', $note) === 1) {
+      throw new \InvalidArgumentException('Progress note is invalid.');
+    }
+    $count = (int) $this->database->query(
+      'SELECT COUNT(*) FROM {ab_execution_progress} WHERE execution_id = :id',
+      [':id' => $command->executionId],
+    )->fetchField();
+    if ($count >= self::PROGRESS_LIMIT) {
+      throw new ExecutionRejectedException(ExecutionRejectedException::PROGRESS);
+    }
+    $this->database->insert('ab_execution_progress')
+      ->fields([
+        'execution_id' => $command->executionId,
+        'sequence' => $count + 1,
+        'workspace' => $command->workspaceId,
+        'body' => $note,
+        'created' => $now,
+      ])
+      ->execute();
+    $this->events->record(new EventDraft(
+      $command->workspaceUuid,
+      'execution.progressed',
+      $command->taskUuid,
+      ActorContext::TYPE_AGENT,
+      $command->agentUuid,
+      [
+        'execution_id' => $command->executionUuid,
+        'task_id' => $command->taskUuid,
+        'note' => $note,
+      ],
+    ));
+    return new LeaseMutation(
+      LeaseMutation::PROGRESSED,
+      NULL,
+      $command->workspaceId,
+      $command->taskId,
+      $command->executionId,
+    );
+  }
+
+  /**
+   * Stores the result, ends the lease and moves the task to review.
+   */
+  private function deliver(LeaseCommand $command, array $task, array $execution, int $now): LeaseMutation {
+    $summary = trim($command->summary);
+    if ($summary === '' || mb_strlen($summary) > self::SUMMARY_LENGTH) {
+      throw new \InvalidArgumentException('Result summary is invalid.');
+    }
+    $links = $this->acceptedLinks($command->links);
+    $closed = $this->close(
+      $command,
+      $task,
+      $execution,
+      'submitted',
+      '',
+      'submitted',
+      'execution.submitted',
+      ActorContext::TYPE_AGENT,
+      $command->agentUuid,
+      $now,
+      'in_review',
+      TRUE,
+      $summary,
+    );
+    if (!$closed) {
+      throw new LeaseRejectedException(LeaseRejectedException::STATE);
+    }
+    foreach ($links as $delta => $link) {
+      $this->database->insert('ab_execution_link')
+        ->fields([
+          'execution_id' => $command->executionId,
+          'delta' => $delta,
+          'workspace' => $command->workspaceId,
+          'url' => $link['url'],
+          'label' => $link['label'],
+        ])
+        ->execute();
+    }
+    return new LeaseMutation(
+      LeaseMutation::SUBMITTED,
+      NULL,
+      $command->workspaceId,
+      $command->taskId,
+      $command->executionId,
+    );
+  }
+
+  /**
+   * Keeps only http and https links, and only a short list.
+   *
+   * @param array<mixed> $links
+   *   Links offered with the result.
+   *
+   * @return array<int, array{url: string, label: string}>
+   *   Links safe to store.
+   */
+  private function acceptedLinks(array $links): array {
+    if (count($links) > self::LINK_LIMIT) {
+      throw new \InvalidArgumentException('Result links are invalid.');
+    }
+    $clean = [];
+    foreach ($links as $link) {
+      if (!is_array($link)) {
+        throw new \InvalidArgumentException('Result links are invalid.');
+      }
+      $url = isset($link['url']) && is_string($link['url']) ? trim($link['url']) : '';
+      $label = isset($link['label']) && is_string($link['label']) ? trim($link['label']) : '';
+      $shape = preg_match('#^https?://[^\s<>]+$#i', $url) === 1;
+      if (!$shape || strlen($url) > 500 || mb_strlen($label) > 80) {
+        throw new \InvalidArgumentException('Result links are invalid.');
+      }
+      $clean[] = ['url' => $url, 'label' => $label];
+    }
+    return $clean;
   }
 
 }

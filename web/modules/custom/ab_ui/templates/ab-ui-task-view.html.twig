@@ -42,5 +42,38 @@
   {% if dependency_form %}
     {{ dependency_form }}
   {% endif %}
+  {% if attempts %}
+    <h2>{{ 'Execução'|t }}</h2>
+    <ol class="ab-task-attempts">
+      {% for attempt in attempts %}
+        <li>
+          <p>{{ 'Tentativa @n'|t({'@n': attempt.number}) }} — {{ attempt.status }}</p>
+          {% if attempt.summary %}
+            <div class="ab-task-result">{{ attempt.summary }}</div>
+          {% endif %}
+          {% if attempt.links %}
+            <ul class="ab-task-links">
+              {% for link in attempt.links %}
+                <li><a href="{{ link.url }}">{{ link.label }}</a></li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+          {% if attempt.notes %}
+            <ul class="ab-task-progress">
+              {% for note in attempt.notes %}
+                <li>{{ note }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+          {% if attempt.failure %}
+            <p>{{ attempt.failure }}</p>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ol>
+  {% endif %}
+  {% if review_form %}
+    {{ review_form }}
+  {% endif %}
   <p><a href="{{ back_url }}">{{ 'Tarefas'|t }}</a></p>
 </div>

@@ -113,6 +113,8 @@ final class AbUiHooks {
           'blocked' => FALSE,
           'dependencies' => [],
           'dependency_form' => NULL,
+          'attempts' => [],
+          'review_form' => NULL,
           'back_url' => '',
         ],
       ],

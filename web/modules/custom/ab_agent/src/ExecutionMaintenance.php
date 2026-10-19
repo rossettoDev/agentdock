@@ -16,10 +16,10 @@ use Drupal\Core\Database\Connection;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 
 /**
- * Heartbeat, failure, release and expiry for one execution.
+ * Heartbeat, progress, delivery, failure, release and expiry.
  *
  * The actor comes from the token. A second recovery does not record
- * another event. Result delivery stays in the review story.
+ * another event. Delivery ends the lease and waits for a human.
  */
 class ExecutionMaintenance {
 
@@ -73,13 +73,22 @@ class ExecutionMaintenance {
   }
 
   /**
-   * Rejects a stale lease before any result is stored.
+   * Stores one plain note while the lease is still valid.
    *
-   * A current lease is not delivered here. That write is the review story.
+   * The task status and the lease expiry stay as they are.
    */
-  public function submit(ActorContext $actor, string $executionUuid, string $leaseToken, int $generation): void {
-    $mutation = $this->mutate($actor, $executionUuid, $leaseToken, $generation, 'submit', '');
-    if ($mutation->kind === LeaseMutation::READY) {
+  public function progress(ActorContext $actor, string $executionUuid, string $leaseToken, int $generation, string $note): void {
+    $this->mutate($actor, $executionUuid, $leaseToken, $generation, 'progress', '', $note);
+  }
+
+  /**
+   * Ends the lease and moves the task to review.
+   *
+   * A stale lease writes nothing. The agent does not mark the task done.
+   */
+  public function submit(ActorContext $actor, string $executionUuid, string $leaseToken, int $generation, string $summary = '', array $links = []): void {
+    $mutation = $this->mutate($actor, $executionUuid, $leaseToken, $generation, 'submit', '', '', $summary, $links);
+    if ($mutation->kind !== LeaseMutation::SUBMITTED) {
       throw new ExecutionRejectedException(ExecutionRejectedException::DELIVERY);
     }
   }
@@ -107,7 +116,7 @@ class ExecutionMaintenance {
   /**
    * Checks the lease and applies one operation.
    */
-  private function mutate(ActorContext $actor, string $executionUuid, string $leaseToken, int $generation, string $operation, string $failureCode): LeaseMutation {
+  private function mutate(ActorContext $actor, string $executionUuid, string $leaseToken, int $generation, string $operation, string $failureCode, string $note = '', string $summary = '', array $links = []): LeaseMutation {
     $execution = $this->loadExecution($executionUuid);
     $task = $this->taskOf($execution);
     $workspace = $this->workspaceOf($task);
@@ -140,11 +149,17 @@ class ExecutionMaintenance {
         $this->secretHash($leaseToken),
         $generation,
         $failureCode,
+        $note,
+        $summary,
+        $links,
       ), $operation);
       $this->afterRecord($mutation);
       if ($mutation->kind !== LeaseMutation::RENEWED && $mutation->kind !== LeaseMutation::READY) {
         $this->forget($mutation);
       }
+      $this->cacheTagsInvalidator->invalidateTags([
+        'ab_agent_signal:' . $agent->id(),
+      ]);
       if ($mutation->kind === LeaseMutation::EXPIRED) {
         throw new LeaseRejectedException(LeaseRejectedException::EXPIRED);
       }

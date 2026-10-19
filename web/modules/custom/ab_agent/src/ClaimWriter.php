@@ -86,6 +86,7 @@ class ClaimWriter {
       $secret,
       $expires,
       $version,
+      1,
     );
   }
 

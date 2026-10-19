@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-16  
-**Marco atual:** M3 — US-14 concluída. US-15 segue todo.
+**Marco atual:** M3 — US-15 concluída. US-16 segue todo.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -1885,19 +1885,82 @@ No site local, `lando drush updb` rodou `ab_agent_update_11003` e criou `ab_exec
 
 ---
 
+## US-15 — Manter e recuperar execução
+
+**Status:** done  
+**Dependências:** US-14 done.  
+**Objetivo:** Renovar a lease com o relógio do servidor e devolver a tarefa a ready quando a reserva vence, sem duplicar o evento.
+
+#### US-15/T01 — Heartbeat e validação da lease
+
+**Status:** done  
+**Entrega:** Cada mutação confere o agente, o hash da lease, a generation, o estado e o prazo. O relógio é o `TimeInterface` injetado.
+
+**Contrato:**
+- o intervalo sugerido é 30 segundos e a lease dura 120. Um heartbeat mais cedo ainda vale. Ele estende o prazo e grava `heartbeat_at`. Não grava evento
+- o token do agente precisa de `executions:write` e de grant `write`. A generation e o hash têm de ser os da linha atual. Outro agente, humano ou execução de outro workspace não passam
+- lease vencida não espera o comando de recuperação: a própria chamada interrompe a execução, apaga a lease e devolve a tarefa a `ready`. O segredo não volta na mensagem
+
+#### US-15/T02 — Fail, release e expiração
+
+**Status:** done  
+**Entrega:** Falha e liberação encerram a execução, apagam a lease e devolvem a tarefa a `ready`. `drush ab-agent:recover-leases` faz o mesmo para leases vencidas que ninguém tocou.
+
+**Contrato:**
+- `fail` grava `failed` e o código `runner_stopped` no formato pedido. `release` grava `interrupted`. Os dois limpam `active_execution` e `assigned_agent`. A dependência continua na tabela
+- o worker usa o ator `system` / `lease-recovery`. A chamada do próprio agente usa o UUID dele. Os eventos são `execution.failed` e `execution.interrupted`, sem segredo
+- a segunda passagem não acha lease e não grava outro evento. A ordem de lock continua agente, tarefa, lease e execução, e só então o evento
+- o limite de tentativas da arquitetura não entra aqui: não há um número configurado para bloquear a tarefa
+
+#### US-15/T03 — Executor obsoleto
+
+**Status:** done  
+**Entrega:** Depois da recuperação, um novo claim cria outra execução. Heartbeat e submit com a lease antiga não alteram essa tarefa.
+
+**Contrato:**
+- `submit` só recusa a lease obsoleta. A entrega que leva a tarefa para revisão continua na US-16. Uma lease válida ainda não grava resultado
+- a execução antiga permanece `interrupted`. A nova segue `running` até o heartbeat correto
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_agent/tests/src/Kernel/LeaseKernelTest.php
+OK (4 tests, 245 assertions)
+```
+
+`testHeartbeatFollowsTheClock` avança o relógio, recusa generation, token e agente errados, e interrompe a lease vencida antes do worker. `testFailAndReleaseKeepBlockers` falha e libera uma vez, deixa outro agente assumir, conserva a dependência e desfaz um heartbeat que não fecha. `testRecoveryRunsOnce` mostra o comando Drush repetido sem segundo evento. `testStaleExecutorCannotChangeTheNewExecution` recusa heartbeat e submit da lease antiga. As deprecações do PHPUnit são o aviso de metadata `@group`.
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,yml \
+    web/modules/custom/ab_agent
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse --memory-limit=1G
+PHPStan: exit 0
+```
+
+No site local não houve update de schema. `lando drush ab-agent:recover-leases` respondeu `Recovered 0 expired leases.` "Tema revisado" continua `ready` na versão 3 e "Preparar o material" continua `backlog` na versão 2. Não há tela nova.
+
+**Bloqueios:** nenhum nesta história.
+
+**Próxima ação:** —
+
+---
+
 ## Estatísticas
 
 - **Total de tasks:** 83 (conforme backlog)
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
-- **M3:** US-12 done; US-13 done; US-14 done
+- **M3:** US-12 done; US-13 done; US-14 done; US-15 done
 
 ---
 
 ## Próximos Passos
 
-1. US-15/T01 — heartbeat e validação da lease
+1. US-16/T01 — progresso e submit da execução
 
 ---
 

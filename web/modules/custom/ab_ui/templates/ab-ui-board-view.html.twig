@@ -17,6 +17,11 @@
       <a href="{{ tasks_url }}">{{ 'Tarefas'|t }}</a>
     </p>
   {% endif %}
+  {% if conversation_url %}
+    <p>
+      <a href="{{ conversation_url }}">{{ 'Conversa'|t }}</a>
+    </p>
+  {% endif %}
   {% if archive_form %}
     {{ archive_form }}
   {% endif %}

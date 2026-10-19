@@ -75,5 +75,8 @@
   {% if review_form %}
     {{ review_form }}
   {% endif %}
+  {% if conversation_url %}
+    <p><a href="{{ conversation_url }}">{{ 'Conversa'|t }}</a></p>
+  {% endif %}
   <p><a href="{{ back_url }}">{{ 'Tarefas'|t }}</a></p>
 </div>

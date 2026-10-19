@@ -1,0 +1,36 @@
+{#
+/**
+ * @file
+ * Shows one board or task conversation.
+ */
+#}
+<div class="ab-conversation">
+  <p class="ab-conversation-title">{{ label }}</p>
+  {% if context_url %}
+    <p><a href="{{ context_url }}">{{ context_label }}</a></p>
+  {% endif %}
+  {% if older_url %}
+    <p><a href="{{ older_url }}">{{ 'Mensagens anteriores'|t }}</a></p>
+  {% endif %}
+  {% if messages %}
+    <ol class="ab-messages">
+      {% for message in messages %}
+        <li>
+          <p>{{ message.author }} — {{ message.kind }}</p>
+          {% if message.reply %}
+            <p>{{ 'Em resposta a uma mensagem.'|t }}</p>
+          {% endif %}
+          {% if message.body %}
+            <div class="ab-message-body">{{ message.body }}</div>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ol>
+  {% else %}
+    <p>{{ empty }}</p>
+  {% endif %}
+  {% if form %}
+    {{ form }}
+  {% endif %}
+  <p><a href="{{ back_url }}">{{ 'Conversas'|t }}</a></p>
+</div>

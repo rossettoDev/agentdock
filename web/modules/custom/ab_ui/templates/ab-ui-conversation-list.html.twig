@@ -1,0 +1,28 @@
+{#
+/**
+ * @file
+ * Lists board and task conversations of the selected workspace.
+ */
+#}
+<div class="ab-conversation-list">
+  {% if workspace_label %}
+    <p>{{ workspace_label }}</p>
+  {% endif %}
+  {% if items %}
+    <ul class="ab-conversations">
+      {% for item in items %}
+        <li>
+          <a href="{{ item.url }}">{{ item.label }}</a>
+          {% if item.excerpt %}
+            <p>{{ item.excerpt }}</p>
+          {% endif %}
+          {% if item.context_url %}
+            <a href="{{ item.context_url }}">{{ item.context_label }}</a>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>{{ empty }}</p>
+  {% endif %}
+</div>

@@ -437,23 +437,23 @@ Como humano, quero aprovar o trabalho executado.
 
 Como humano ou agente, quero registrar mensagens de board e tarefa.
 
-**Dependências:** US-16. **Status:** todo.
+**Dependências:** US-16. **Status:** done.
 
 ### US-17/T01 — Criar threads e mensagens
 
-- [ ] **Entrega:** Thread único por board/tarefa; autor derivado do contexto; reply_to no mesmo thread; limites de body.
+- [x] **Entrega:** Thread único por board/tarefa; autor derivado do contexto; reply_to no mesmo thread; limites de body.
 - **Aceite:** Retries de criação estrutural não duplicam threads.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-17/T02 — Implementar MessageService
 
-- [ ] **Entrega:** Tipos permitidos, Markdown sanitizado, imutabilidade e evento transacional.
+- [x] **Entrega:** Tipos permitidos, Markdown sanitizado, imutabilidade e evento transacional.
 - **Aceite:** Agente não cria mensagens system/answer humanas por payload forjado.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-17/T03 — Criar Central de Mensagens
 
-- [ ] **Entrega:** Consultar screens; listar conversas autorizadas e abrir contexto da tarefa; composer e paginação.
+- [x] **Entrega:** Consultar screens; listar conversas autorizadas e abrir contexto da tarefa; composer e paginação.
 - **Aceite:** Não apresenta DM privada como recurso funcional do MVP.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

@@ -183,6 +183,9 @@ final class TaskController implements ContainerInjectionInterface {
       '#dependency_form' => NULL,
       '#attempts' => $this->attempts($task),
       '#review_form' => NULL,
+      '#conversation_url' => Url::fromRoute('ab_ui.task_conversation', [
+        'uuid' => $task->uuid(),
+      ])->toString(),
       '#back_url' => $back,
       '#cache' => $this->cacheMeta($workspace),
     ];

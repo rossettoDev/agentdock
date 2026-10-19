@@ -109,6 +109,41 @@ ab_ui.agent_view:
     _user_is_logged_in: 'TRUE'
     uuid: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
 
+ab_ui.conversations:
+  path: '/conversations'
+  defaults:
+    _controller: '\Drupal\ab_ui\Controller\ConversationController::listing'
+    _title: 'Conversas'
+  requirements:
+    _user_is_logged_in: 'TRUE'
+
+ab_ui.conversation:
+  path: '/conversations/{uuid}'
+  defaults:
+    _controller: '\Drupal\ab_ui\Controller\ConversationController::open'
+    _title: 'Conversa'
+  requirements:
+    _user_is_logged_in: 'TRUE'
+    uuid: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+
+ab_ui.board_conversation:
+  path: '/boards/{uuid}/conversation'
+  defaults:
+    _controller: '\Drupal\ab_ui\Controller\ConversationController::board'
+    _title: 'Conversa'
+  requirements:
+    _user_is_logged_in: 'TRUE'
+    uuid: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+
+ab_ui.task_conversation:
+  path: '/tasks/{uuid}/conversation'
+  defaults:
+    _controller: '\Drupal\ab_ui\Controller\ConversationController::task'
+    _title: 'Conversa'
+  requirements:
+    _user_is_logged_in: 'TRUE'
+    uuid: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+
 ab_ui.task_edit:
   path: '/tasks/{uuid}/edit'
   defaults:

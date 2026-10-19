@@ -56,6 +56,7 @@ final class WorkspaceController implements ContainerInjectionInterface {
         ])->toString(),
         'boards_url' => Url::fromRoute('ab_ui.boards')->toString(),
         'agents_url' => Url::fromRoute('ab_ui.agents')->toString(),
+        'conversations_url' => Url::fromRoute('ab_ui.conversations')->toString(),
       ];
     }
     $form = $items === [] ? NULL : $this->formBuilder->getForm(WorkspaceSelectForm::class);

@@ -65,23 +65,23 @@ Para tarefas com lease ativa, remoção de membro, grant, desativação de agent
 
 Como desenvolvedor, quero instalar o projeto sem ajustes manuais ocultos.
 
-**Dependências:** —. **Status:** todo.
+**Dependências:** —. **Status:** done.
 
 ### US-01/T01 — Inspecionar repositório e registrar decisões
 
-- [ ] **Entrega:** Ler AGENTS.md, arquitetura e estrutura existente; registrar versões compatíveis em ADR, sem recriar projeto existente.
+- [x] **Entrega:** Ler AGENTS.md, arquitetura e estrutura existente; registrar versões compatíveis em ADR, sem recriar projeto existente.
 - **Aceite:** ADR identifica stack resolvida, comandos e decisões pendentes.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-01/T02 — Configurar Composer e Lando
 
-- [ ] **Entrega:** Preparar Drupal, PostgreSQL, PHP, Drush, lockfile e exemplo de variáveis sem segredos.
+- [x] **Entrega:** Preparar Drupal, PostgreSQL, PHP, Drush, lockfile e exemplo de variáveis sem segredos.
 - **Aceite:** Instalação sobe e Drush conecta ao banco.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-01/T03 — Documentar instalação e configuração
 
-- [ ] **Entrega:** Documentar instalação, export/import de config e comandos locais.
+- [x] **Entrega:** Documentar instalação, export/import de config e comandos locais.
 - **Aceite:** Checkout limpo reproduz a instalação pelas instruções.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
@@ -89,23 +89,23 @@ Como desenvolvedor, quero instalar o projeto sem ajustes manuais ocultos.
 
 Como desenvolvedor, quero uma base consistente para os módulos e telas.
 
-**Dependências:** US-01. **Status:** todo.
+**Dependências:** US-01. **Status:** done.
 
 ### US-02/T01 — Criar módulos e tema vazios
 
-- [ ] **Entrega:** Criar ab_core, ab_board, ab_agent, ab_communication, ab_event, ab_api, ab_ui e tema agent_board com dependências válidas.
+- [x] **Entrega:** Criar ab_core, ab_board, ab_agent, ab_communication, ab_event, ab_api, ab_ui e tema agent_board com dependências válidas.
 - **Aceite:** Módulos habilitam sem ciclos e tema renderiza.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-02/T02 — Inventariar docs/screens
 
-- [ ] **Entrega:** Listar arquivos reais e criar docs/screens/README.md com tela, finalidade e escopo; registrar referência no documento de arquitetura.
+- [x] **Entrega:** Listar arquivos reais e criar docs/screens/README.md com tela, finalidade e escopo; registrar referência no documento de arquitetura.
 - **Aceite:** Nenhum nome de imagem é inventado; divergências com MVP ficam explícitas.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-02/T03 — Criar shell visual
 
-- [ ] **Entrega:** Implementar navegação, seletor de workspace e estrutura responsiva conforme telas disponíveis.
+- [x] **Entrega:** Implementar navegação, seletor de workspace e estrutura responsiva conforme telas disponíveis.
 - **Aceite:** Componentes compartilhados evitam duplicação; navegação funciona por teclado.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
@@ -113,17 +113,17 @@ Como desenvolvedor, quero uma base consistente para os módulos e telas.
 
 Como desenvolvedor, quero validar cada incremento.
 
-**Dependências:** US-01. **Status:** todo.
+**Dependências:** US-01. **Status:** done.
 
 ### US-03/T01 — Configurar ferramentas e CI
 
-- [ ] **Entrega:** Composer validate, padrões Drupal, análise estática e suíte PHPUnit mínima funcional.
+- [x] **Entrega:** Composer validate, padrões Drupal, análise estática e suíte PHPUnit mínima funcional.
 - **Aceite:** Pipeline executa comandos reais e falha em erro demonstrável.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-03/T02 — Criar registro de implementação
 
-- [ ] **Entrega:** Criar docs/implementation-status.md por ID com status, evidências, bloqueios e próximo passo.
+- [x] **Entrega:** Criar docs/implementation-status.md por ID com status, evidências, bloqueios e próximo passo.
 - **Aceite:** Todos os itens iniciam como todo; nada é declarado implementado por existir no backlog.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

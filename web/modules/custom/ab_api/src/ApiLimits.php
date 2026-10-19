@@ -34,4 +34,24 @@ final class ApiLimits {
    */
   public const RETENTION = 86400;
 
+  /**
+   * Requests one credential may make in a minute.
+   *
+   * Heartbeat every 30 seconds and a poll fit in this budget.
+   */
+  public const RATE_MAX = 120;
+
+  /**
+   * Message creates one credential may make in a minute.
+   *
+   * Kept apart from the general budget so a message loop cannot
+   * spend the heartbeat allowance.
+   */
+  public const MESSAGE_RATE_MAX = 20;
+
+  /**
+   * Length of one rate window, in seconds.
+   */
+  public const RATE_WINDOW = 60;
+
 }

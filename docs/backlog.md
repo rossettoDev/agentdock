@@ -557,23 +557,23 @@ Como cliente autorizado, quero consultar e atualizar trabalho.
 
 Como runner, quero realizar todo o ciclo por HTTP.
 
-**Dependências:** US-21. **Status:** todo.
+**Dependências:** US-21. **Status:** done.
 
 ### US-22/T01 — Expor comandos de execução
 
-- [ ] **Entrega:** Claim, heartbeat, progress, submit, fail e release com idempotência e lease.
+- [x] **Entrega:** Claim, heartbeat, progress, submit, fail e release com idempotência e lease.
 - **Aceite:** Repetir operação não duplica efeitos; lease inválida é recusada.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-22/T02 — Expor conversas e revisão
 
-- [ ] **Entrega:** Mensagens, request-input, answer, approve e reject com roles corretos.
+- [x] **Entrega:** Mensagens, request-input, answer, approve e reject com roles corretos.
 - **Aceite:** Agente não responde como humano nem aprova resultado.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-22/T03 — Aplicar rate limit e retenção idempotente
 
-- [ ] **Entrega:** Storage compartilhado, Retry-After, limites específicos de mensagens e limpeza dos replays secretos.
+- [x] **Entrega:** Storage compartilhado, Retry-After, limites específicos de mensagens e limpeza dos replays secretos.
 - **Aceite:** Orçamento permite polling/heartbeat e expurgo remove segredos encerrados.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

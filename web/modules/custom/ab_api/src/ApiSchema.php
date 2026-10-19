@@ -130,6 +130,41 @@ final class ApiSchema {
   }
 
   /**
+   * Schema for the shared per-minute request budget.
+   *
+   * The count lives in the database so two app servers share it.
+   *
+   * @return array<string, mixed>
+   *   A hook_schema table definition.
+   */
+  public static function rateTable(): array {
+    return [
+      'description' => 'Shared per-minute request counts.',
+      'fields' => [
+        'bucket' => [
+          'description' => 'Token or user the count belongs to.',
+          'type' => 'varchar',
+          'length' => 128,
+          'not null' => TRUE,
+        ],
+        'window_start' => [
+          'description' => 'UTC timestamp when this minute began.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'hits' => [
+          'description' => 'Requests already counted in this minute.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+      ],
+      'primary key' => ['bucket', 'window_start'],
+    ];
+  }
+
+  /**
    * Creates the idempotency table on an existing site.
    */
   public static function install(): string {
@@ -139,6 +174,18 @@ final class ApiSchema {
     }
     $schema->createTable('ab_idempotency', self::idempotencyTable());
     return 'Created the idempotency table.';
+  }
+
+  /**
+   * Creates the rate table on an existing site.
+   */
+  public static function installRate(): string {
+    $schema = \Drupal::database()->schema();
+    if ($schema->tableExists('ab_api_rate')) {
+      return 'Rate schema already present.';
+    }
+    $schema->createTable('ab_api_rate', self::rateTable());
+    return 'Created the rate table.';
   }
 
 }

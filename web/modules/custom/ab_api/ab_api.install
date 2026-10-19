@@ -14,6 +14,7 @@ use Drupal\ab_api\ApiSchema;
  */
 function ab_api_schema(): array {
   $schema['ab_idempotency'] = ApiSchema::idempotencyTable();
+  $schema['ab_api_rate'] = ApiSchema::rateTable();
   return $schema;
 }
 
@@ -22,4 +23,11 @@ function ab_api_schema(): array {
  */
 function ab_api_update_11001(): string {
   return ApiSchema::install();
+}
+
+/**
+ * Installs the shared rate table on existing sites.
+ */
+function ab_api_update_11002(): string {
+  return ApiSchema::installRate();
 }

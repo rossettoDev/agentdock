@@ -7,6 +7,7 @@ namespace Drupal\ab_api\EventSubscriber;
 use Drupal\ab_api\ApiLimits;
 use Drupal\ab_api\ApiPath;
 use Drupal\ab_api\ProblemDetails;
+use Drupal\ab_api\RateLimiter;
 use Drupal\Component\Uuid\UuidInterface;
 use Drupal\Core\Session\AccountProxyInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -23,6 +24,7 @@ final class ApiRequestSubscriber implements EventSubscriberInterface {
   public function __construct(
     private readonly UuidInterface $uuid,
     private readonly AccountProxyInterface $currentUser,
+    private readonly RateLimiter $rates,
   ) {}
 
   /**
@@ -50,6 +52,13 @@ final class ApiRequestSubscriber implements EventSubscriberInterface {
     }
     if ($this->credentialRejected($request)) {
       $event->setResponse($this->problem($request, 401, 'invalid_credential'));
+      return;
+    }
+    $retry = $this->rates->retryAfter($request);
+    if ($retry !== NULL) {
+      $response = $this->problem($request, 429, 'rate_limited');
+      $response->headers->set('Retry-After', (string) $retry);
+      $event->setResponse($response);
     }
   }
 

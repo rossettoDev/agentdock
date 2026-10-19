@@ -533,23 +533,23 @@ Como integrador, quero uma API previsível.
 
 Como cliente autorizado, quero consultar e atualizar trabalho.
 
-**Dependências:** US-20. **Status:** todo.
+**Dependências:** US-20. **Status:** done.
 
 ### US-21/T01 — Implementar endpoints de consulta
 
-- [ ] **Entrega:** Workspaces, boards, tasks, detalhe e execução; filtros e paginação por cursor estável.
+- [x] **Entrega:** Workspaces, boards, tasks, detalhe e execução; filtros e paginação por cursor estável.
 - **Aceite:** Filtros não ampliam grants; limite máximo 100.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-21/T02 — Implementar criação/PATCH/transição
 
-- [ ] **Entrega:** Whitelist, If-Match/ETag, sessão com CSRF ou Bearer com scopes; chamar serviços existentes.
+- [x] **Entrega:** Whitelist, If-Match/ETag, sessão com CSRF ou Bearer com scopes; chamar serviços existentes.
 - **Aceite:** 412 para versão antiga; 428 para precondição ausente; status não muda via PATCH.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-21/T03 — Testar transporte e autenticação cruzada
 
-- [ ] **Entrega:** Testes HTTP de isolamento, CSRF, scope, campos proibidos e paginação.
+- [x] **Entrega:** Testes HTTP de isolamento, CSRF, scope, campos proibidos e paginação.
 - **Aceite:** API genérica Drupal não oferece caminho alternativo de escrita.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

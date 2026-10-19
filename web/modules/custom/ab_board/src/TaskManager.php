@@ -6,6 +6,7 @@ namespace Drupal\ab_board;
 
 use Drupal\ab_board\Entity\Board;
 use Drupal\ab_board\Entity\Task;
+use Drupal\ab_core\Authorization\ActorContext;
 use Drupal\ab_core\Authorization\HumanActorContextFactory;
 use Drupal\ab_core\Authorization\MembershipScope;
 use Drupal\ab_core\Authorization\ScopedOperationDeniedException;
@@ -64,6 +65,8 @@ class TaskManager {
    *   Board that owns the new task.
    * @param array<string, mixed> $fields
    *   Whitelist values. Title is required.
+   * @param \Drupal\ab_core\Authorization\ActorContext|null $actor
+   *   Agent actor already checked by the API, or NULL for the session.
    *
    * @throws \InvalidArgumentException
    *   A field is missing, unknown, or not writable here.
@@ -72,9 +75,9 @@ class TaskManager {
    * @throws \Drupal\ab_core\Authorization\ScopedOperationDeniedException
    *   The caller can see the workspace but cannot edit tasks.
    */
-  public function create(Board $board, array $fields): Task {
+  public function create(Board $board, array $fields, ?ActorContext $actor = NULL): Task {
     $workspace = $this->workspaceOfBoard($board);
-    $this->assertWrite($workspace);
+    $this->assertWrite($workspace, $actor);
     $changes = $this->changes($fields, TRUE);
     $transaction = $this->database->startTransaction();
     try {
@@ -97,7 +100,7 @@ class TaskManager {
       if (!$created instanceof Task || $created->uuid() === NULL || $created->uuid() === '') {
         throw new \RuntimeException('The task was not stored.');
       }
-      $this->record($workspace, $created, 'task.created');
+      $this->record($workspace, $created, 'task.created', NULL, NULL, $actor);
       $this->afterRecord($created);
       return $created;
     }
@@ -118,6 +121,8 @@ class TaskManager {
    *   Whitelist values to replace.
    * @param int $expectedVersion
    *   Version the caller read. A mismatch is a conflict.
+   * @param \Drupal\ab_core\Authorization\ActorContext|null $actor
+   *   Agent actor already checked by the API, or NULL for the session.
    *
    * @throws \InvalidArgumentException
    *   A field is unknown or not writable here.
@@ -128,9 +133,9 @@ class TaskManager {
    * @throws \Drupal\ab_core\Authorization\ScopedOperationDeniedException
    *   The caller can see the workspace but cannot edit tasks.
    */
-  public function update(Task $task, array $fields, int $expectedVersion): Task {
+  public function update(Task $task, array $fields, int $expectedVersion, ?ActorContext $actor = NULL): Task {
     $workspace = $this->workspaceOfTask($task);
-    $this->assertWrite($workspace);
+    $this->assertWrite($workspace, $actor);
     $changes = $this->changes($fields, FALSE);
     $transaction = $this->database->startTransaction();
     try {
@@ -148,7 +153,7 @@ class TaskManager {
       }
       $current->set('version', $version + 1);
       $current->save();
-      $this->record($workspace, $current, 'task.updated');
+      $this->record($workspace, $current, 'task.updated', NULL, NULL, $actor);
       $this->afterRecord($current);
       return $current;
     }
@@ -289,7 +294,13 @@ class TaskManager {
   /**
    * Requires permission to edit tasks in a visible workspace.
    */
-  private function assertWrite(Workspace $workspace): void {
+  private function assertWrite(Workspace $workspace, ?ActorContext $actor = NULL): void {
+    if ($actor instanceof ActorContext && $actor->actorType === ActorContext::TYPE_AGENT) {
+      if ($actor->workspaceId !== (string) $workspace->uuid()) {
+        throw new ScopedResourceNotFoundException('Workspace was not found.');
+      }
+      return;
+    }
     $account = $this->currentUser->getAccount();
     $can_read = $this->scope->allows($account, $workspace, WorkspacePermission::READ);
     if (!$can_read) {
@@ -732,8 +743,11 @@ class TaskManager {
     string $type,
     ?string $from = NULL,
     ?int $position = NULL,
+    ?ActorContext $actor = NULL,
   ): void {
-    $actor = $this->actors->create($workspace);
+    if (!$actor instanceof ActorContext || $actor->actorType !== ActorContext::TYPE_AGENT) {
+      $actor = $this->actors->create($workspace);
+    }
     $payload = [
       'title' => (string) $task->label(),
       'status' => $task->get('status')->getString(),

@@ -19,3 +19,34 @@ services:
   Drupal\ab_api\EventSubscriber\ApiResponseSubscriber:
     tags:
       - { name: event_subscriber }
+  Drupal\ab_api\Http\ApiCaller:
+    arguments:
+      - '@Drupal\ab_agent\AgentActorContextFactory'
+      - '@Drupal\ab_core\Authorization\HumanActorContextFactory'
+      - '@Drupal\ab_agent\AgentTokenManager'
+      - '@Drupal\ab_core\UuidLookup'
+      - '@current_user'
+      - '@csrf_token'
+      - '@datetime.time'
+  Drupal\ab_api\Http\TaskDocument:
+    arguments:
+      - '@database'
+  Drupal\ab_api\Http\Catalog:
+    arguments:
+      - '@database'
+      - '@Drupal\ab_api\Http\ApiCaller'
+      - '@Drupal\ab_api\Http\TaskDocument'
+      - '@Drupal\ab_core\WorkspaceRepository'
+      - '@Drupal\ab_board\BoardRepository'
+      - '@Drupal\ab_core\UuidLookup'
+      - '@Drupal\ab_agent\AgentOperationGate'
+  Drupal\ab_api\Http\TaskCommands:
+    arguments:
+      - '@Drupal\ab_api\Http\ApiCaller'
+      - '@Drupal\ab_api\Http\Catalog'
+      - '@Drupal\ab_api\Http\TaskDocument'
+      - '@Drupal\ab_api\IdempotencyService'
+      - '@Drupal\ab_board\BoardManager'
+      - '@Drupal\ab_board\TaskManager'
+      - '@Drupal\ab_agent\AgentOperationGate'
+      - '@database'

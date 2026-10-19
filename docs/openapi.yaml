@@ -150,6 +150,9 @@ paths:
       responses:
         '201':
           description: The created task.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
           content:
             application/json:
               schema:
@@ -179,6 +182,9 @@ paths:
       responses:
         '200':
           description: The task.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
           content:
             application/json:
               schema:
@@ -198,6 +204,7 @@ paths:
         - $ref: '#/components/parameters/WorkspaceId'
         - $ref: '#/components/parameters/TaskId'
         - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/IfMatch'
       requestBody:
         required: true
         content:
@@ -207,6 +214,9 @@ paths:
       responses:
         '200':
           description: The updated task.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
           content:
             application/json:
               schema:
@@ -236,6 +246,7 @@ paths:
         - $ref: '#/components/parameters/WorkspaceId'
         - $ref: '#/components/parameters/TaskId'
         - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/IfMatch'
       requestBody:
         required: true
         content:
@@ -245,6 +256,9 @@ paths:
       responses:
         '200':
           description: The task after the transition.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
           content:
             application/json:
               schema:
@@ -809,6 +823,10 @@ components:
       schema:
         type: integer
         minimum: 1
+    ETag:
+      description: Quoted task version the caller must send back as If-Match.
+      schema:
+        type: string
   parameters:
     WorkspaceId:
       name: workspace_id
@@ -894,6 +912,16 @@ components:
       required: false
       schema:
         $ref: '#/components/schemas/Priority'
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      description: >
+        Quoted task version the client last read. A missing or weak header
+        is 428. A version that is not the stored one is 412. The body
+        version must be the same integer.
+      schema:
+        type: string
     IdempotencyKey:
       name: Idempotency-Key
       in: header

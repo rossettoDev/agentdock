@@ -1,0 +1,80 @@
+ab_api.workspaces:
+  path: '/api/agent-board/v1/workspaces'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\ApiController::workspaces'
+  methods: [GET]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+
+ab_api.boards:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/boards'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\ApiController::boards'
+  methods: [GET]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+
+ab_api.boards.create:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/boards'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\ApiController::createBoard'
+  methods: [POST]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+
+ab_api.tasks:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/boards/{board_id}/tasks'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\ApiController::tasks'
+  methods: [GET]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+
+ab_api.tasks.create:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/boards/{board_id}/tasks'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\ApiController::createTask'
+  methods: [POST]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+
+ab_api.task:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/tasks/{task_id}'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\ApiController::task'
+  methods: [GET]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+
+ab_api.task.update:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/tasks/{task_id}'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\ApiController::updateTask'
+  methods: [PATCH]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+
+ab_api.task.transition:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/tasks/{task_id}/transition'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\ApiController::transition'
+  methods: [POST]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+
+ab_api.execution:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/executions/{execution_id}'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\ApiController::execution'
+  methods: [GET]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'

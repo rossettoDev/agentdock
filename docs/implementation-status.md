@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-19  
-**Marco atual:** M5 — US-20 concluída. US-21 segue todo.
+**Marco atual:** M5 — US-21 concluída. US-22 segue todo.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -2354,7 +2354,100 @@ $ lando php vendor/bin/phpstan analyse --memory-limit=1G
 PHPStan: exit 0
 ```
 
-`ab_api` foi instalado e o schema local ficou em 11001. A tabela `ab_idempotency` existe. As rotas de tarefa, execução e mensagem continuam só no contrato; a US-21 implementa as leituras.
+`ab_api` foi instalado e o schema local ficou em 11001. A tabela `ab_idempotency` existe. A US-21 liga as leituras e a edição de tarefa. Claim, mensagem e revisão continuam só no contrato.
+
+**Bloqueios:** nenhum nesta história.
+
+**Próxima ação:** —
+
+---
+
+## US-21 — Expor leituras e edição de tarefas
+
+**Status:** done  
+**Dependências:** US-20 done.  
+**Objetivo:** O cliente autorizado consulta e edita trabalho pelo contrato. O filtro não amplia o grant. O PATCH não muda o status.
+
+#### US-21/T01 — Implementar endpoints de consulta
+
+**Status:** done  
+**Entrega:** Listas de workspace, board e tarefa, detalhe da tarefa e GET da execução. Cursor estável e filtros.
+
+**Contrato:**
+- o humano lê pela membership. O agente lê só o workspace do token e os boards com grant `read`. Sem grant de leitura o board é 404, mesmo que o token tenha escopo de escrita
+- filtros inválidos respondem 422. `limit` acima de 100 também. O padrão continua 50. O cursor da tarefa é `position` e `id`
+- o GET da execução devolve os campos do contrato e não seleciona `ab_execution_lease`
+
+#### US-21/T02 — Implementar criação/PATCH/transição
+
+**Status:** done  
+**Entrega:** Criação de board e tarefa, PATCH na whitelist e transição humana. If-Match, ETag, CSRF de sessão ou scopes do bearer.
+
+**Contrato:**
+- If-Match ausente ou fraco é 428. Versão diferente da armazenada, ou diferente da versão do body, é 412. A resposta de tarefa traz o ETag com a versão entre aspas
+- o PATCH aceita título, descrição, critério, prioridade, dono humano e prazo. `status` e os outros campos de fora da whitelist respondem 422 e não gravam
+- a sessão humana manda `X-CSRF-Token`. O bearer não manda. O ator do evento é o agente quando o token passou pelo gate. A transição continua só humana
+- a mesma Idempotency-Key com o mesmo body devolve a resposta guardada e não cria outra tarefa
+
+#### US-21/T03 — Testar transporte e autenticação cruzada
+
+**Status:** done  
+**Entrega:** Teste HTTP de isolamento, CSRF, scope, campo proibido e página.
+
+**Contrato:**
+- `jsonapi` e `rest` não estão instalados. `GET /jsonapi` responde 404 e não é caminho de escrita
+- o token sem `tasks:write` não cria tarefa. O viewer lê e não altera. Quem está fora do workspace recebe 404 sem o título
+
+**Evidências:**
+```bash
+$ npx --yes @redocly/cli@1.25.11 lint docs/openapi.yaml
+Woohoo! Your API description is valid.
+```
+
+O `updateTask` e o `transitionTask` exigem `If-Match`. As respostas de tarefa declaram `ETag`.
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_api/tests/src/Unit/OpenApiContractTest.php
+OK (1 test, 22 assertions)
+```
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_api/tests/src/Functional/ApiTaskTest.php
+OK (1 test, 181 assertions)
+```
+
+O agente com grant só no quadro visível lista as duas tarefas dele, recebe a página seguinte pelo cursor e não vê o título do outro quadro. `limit=101` e status desconhecido respondem 422. O token sem `tasks:write` responde 403 e não cria. A mesma chave cria uma tarefa só, e o evento `task.created` traz o UUID do agente. Sem CSRF a sessão responde 403 `csrf`. Sem If-Match é 428. If-Match velho é 412. PATCH com `status` é 422 e a coluna continua `backlog`. O viewer não altera. O de fora recebe 404 sem o título. O GET da execução não tem `lease_token` nem o hash da lease. `jsonapi` e `rest` estão desligados.
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_board/tests/src/Kernel/TaskManagerKernelTest.php
+OK (4 tests, 114 assertions)
+```
+
+O ator opcional do agente não mudou o caminho humano do `TaskManager`.
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_api/tests/src/Functional/ApiProblemTest.php
+OK (1 test, 113 assertions)
+```
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,yml \
+    web/modules/custom/ab_api web/modules/custom/ab_board/src/TaskManager.php
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse --memory-limit=1G
+PHPStan: exit 0
+```
+
+O ETag é escrito no subscriber de resposta, depois do `FinishResponseSubscriber`, que remove um ETag de resposta não cacheável. Não houve schema novo. A verificação foi o teste HTTP. A tela não mudou.
 
 **Bloqueios:** nenhum nesta história.
 
@@ -2370,13 +2463,13 @@ PHPStan: exit 0
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
 - **M3:** US-12 done; US-13 done; US-14 done; US-15 done; US-16 done
 - **M4:** US-17 done; US-18 done; US-19 done
-- **M5:** US-20 done
+- **M5:** US-20 done; US-21 done
 
 ---
 
 ## Próximos Passos
 
-1. US-21/T01 — consultas HTTP de workspace, board, tarefa e execução
+1. US-22/T01 — comandos HTTP de execução
 
 ---
 

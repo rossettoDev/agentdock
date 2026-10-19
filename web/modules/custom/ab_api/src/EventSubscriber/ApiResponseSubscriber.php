@@ -7,6 +7,7 @@ namespace Drupal\ab_api\EventSubscriber;
 use Drupal\ab_api\ApiPath;
 use Drupal\ab_api\ProblemDetails;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 
@@ -19,7 +20,8 @@ final class ApiResponseSubscriber implements EventSubscriberInterface {
    * {@inheritdoc}
    */
   public static function getSubscribedEvents(): array {
-    return [KernelEvents::RESPONSE => ['onResponse', 0]];
+    // After FinishResponseSubscriber, which drops an ETag it did not set.
+    return [KernelEvents::RESPONSE => ['onResponse', -10]];
   }
 
   /**
@@ -36,6 +38,26 @@ final class ApiResponseSubscriber implements EventSubscriberInterface {
     $response = $event->getResponse();
     $response->headers->set('Cache-Control', 'private, no-store');
     $response->headers->set('X-Request-Id', ProblemDetails::requestId($request));
+    $this->etag($response);
+  }
+
+  /**
+   * Quotes the task version after Drupal's cache subscriber.
+   */
+  private function etag(Response $response): void {
+    $content = $response->getContent();
+    if (!is_string($content)) {
+      return;
+    }
+    $decoded = json_decode($content, TRUE);
+    if (!is_array($decoded) || !is_array($decoded['data'] ?? NULL)) {
+      return;
+    }
+    $version = $decoded['data']['version'] ?? NULL;
+    if (!is_int($version)) {
+      return;
+    }
+    $response->headers->set('ETag', '"' . $version . '"');
   }
 
 }

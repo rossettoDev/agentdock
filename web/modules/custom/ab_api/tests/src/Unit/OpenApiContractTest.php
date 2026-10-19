@@ -61,6 +61,14 @@ class OpenApiContractTest extends UnitTestCase {
     $this->assertIsArray($limit);
     $this->assertSame(50, $limit['default']);
     $this->assertSame(100, $limit['maximum']);
+    $update = $paths['/workspaces/{workspace_id}/tasks/{task_id}']['patch'];
+    $this->assertIsArray($update);
+    $this->assertIsArray($update['parameters']);
+    $this->assertContains(
+      ['$ref' => '#/components/parameters/IfMatch'],
+      $update['parameters'],
+    );
+    $this->assertArrayHasKey('ETag', $this->document['components']['headers']);
     $this->assertStringContainsString('256 KiB', (string) $this->document['info']['description']);
     $this->assertStringContainsString('16 KiB', (string) $this->document['info']['description']);
   }

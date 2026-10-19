@@ -8,3 +8,14 @@ services:
       - '@uuid'
       - '@datetime.time'
       - '@cache_tags.invalidator'
+  Drupal\ab_communication\InputRequestService:
+    arguments:
+      - '@database'
+      - '@entity_type.manager'
+      - '@Drupal\ab_communication\MessageService'
+      - '@Drupal\ab_agent\ExecutionWriter'
+      - '@Drupal\ab_event\EventStoreInterface'
+      - '@Drupal\ab_agent\AgentOperationGate'
+      - '@uuid'
+      - '@datetime.time'
+      - '@cache_tags.invalidator'

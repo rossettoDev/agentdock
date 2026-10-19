@@ -169,6 +169,95 @@ final class CommunicationSchema {
   }
 
   /**
+   * Schema for one structured question tied to an execution.
+   *
+   * @return array<string, mixed>
+   *   A hook_schema table definition.
+   */
+  public static function inputTable(): array {
+    return [
+      'description' => 'A question that holds an execution until a human answers.',
+      'fields' => [
+        'id' => [
+          'description' => 'Primary identifier.',
+          'type' => 'serial',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'size' => 'big',
+        ],
+        'uuid' => [
+          'description' => 'Public identifier.',
+          'type' => 'varchar',
+          'length' => 128,
+          'not null' => TRUE,
+        ],
+        'workspace' => [
+          'description' => 'Workspace that owns the request.',
+          'type' => 'int',
+          'size' => 'big',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'task_id' => [
+          'description' => 'Task the question belongs to.',
+          'type' => 'int',
+          'size' => 'big',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'execution_id' => [
+          'description' => 'Execution that asked the question.',
+          'type' => 'int',
+          'size' => 'big',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'question_message_id' => [
+          'description' => 'Message that carries the question.',
+          'type' => 'int',
+          'size' => 'big',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'status' => [
+          'description' => 'open or answered.',
+          'type' => 'varchar',
+          'length' => 16,
+          'not null' => TRUE,
+        ],
+        'answer_message_id' => [
+          'description' => 'Message that resolved the question.',
+          'type' => 'int',
+          'size' => 'big',
+          'unsigned' => TRUE,
+          'not null' => FALSE,
+        ],
+        'created' => [
+          'description' => 'UTC timestamp when the request was stored.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'resolved_at' => [
+          'description' => 'UTC timestamp when a human answered.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => FALSE,
+        ],
+      ],
+      'primary key' => ['id'],
+      'unique keys' => [
+        'uuid' => ['uuid'],
+        'question_message' => ['question_message_id'],
+      ],
+      'indexes' => [
+        'execution_status' => ['execution_id', 'status'],
+        'task' => ['task_id'],
+      ],
+    ];
+  }
+
+  /**
    * Creates the thread and message tables.
    */
   public static function install(): string {
@@ -186,6 +275,18 @@ final class CommunicationSchema {
       return 'Conversation schema already present.';
     }
     return implode(' ', $messages);
+  }
+
+  /**
+   * Creates the input request table on an existing site.
+   */
+  public static function installInput(): string {
+    $schema = \Drupal::database()->schema();
+    if ($schema->tableExists('ab_input_request')) {
+      return 'Input request schema already present.';
+    }
+    $schema->createTable('ab_input_request', self::inputTable());
+    return 'Created the input request table.';
   }
 
 }

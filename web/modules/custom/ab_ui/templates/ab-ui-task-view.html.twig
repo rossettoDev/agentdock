@@ -72,6 +72,26 @@
       {% endfor %}
     </ol>
   {% endif %}
+  {% if questions %}
+    <h2>{{ 'Dúvidas'|t }}</h2>
+    <ul class="ab-task-questions">
+      {% for item in questions %}
+        <li>
+          <p>{{ item.status }}</p>
+          {% if item.question %}
+            <div class="ab-task-question">{{ item.question }}</div>
+          {% endif %}
+          {% if item.answer %}
+            <p>{{ item.author }}</p>
+            <div class="ab-task-answer">{{ item.answer }}</div>
+          {% endif %}
+          {% if item.form %}
+            {{ item.form }}
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
   {% if review_form %}
     {{ review_form }}
   {% endif %}

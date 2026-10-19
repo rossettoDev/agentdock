@@ -461,23 +461,23 @@ Como humano ou agente, quero registrar mensagens de board e tarefa.
 
 Como agente, quero interromper meu trabalho para esclarecer uma dúvida.
 
-**Dependências:** US-17. **Status:** todo.
+**Dependências:** US-17. **Status:** done.
 
 ### US-18/T01 — Criar input request transacional
 
-- [ ] **Entrega:** Pergunta + solicitação + estado de espera + evento; manter lease com heartbeat.
+- [x] **Entrega:** Pergunta + solicitação + estado de espera + evento; manter lease com heartbeat.
 - **Aceite:** Várias dúvidas abertas mantêm waiting_input até resolução de todas.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-18/T02 — Implementar resposta humana
 
-- [ ] **Entrega:** Vincular resposta à solicitação e resolver; preservar respostas tardias no histórico.
+- [x] **Entrega:** Vincular resposta à solicitação e resolver; preservar respostas tardias no histórico.
 - **Aceite:** Execução expirada não revive; nova execução pode consultar resposta.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-18/T03 — Adicionar ações de pergunta/resposta na UI
 
-- [ ] **Entrega:** Detalhe da tarefa mostra pendências e autor da resposta.
+- [x] **Entrega:** Detalhe da tarefa mostra pendências e autor da resposta.
 - **Aceite:** Humano responde sem manipular manualmente status de execução.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

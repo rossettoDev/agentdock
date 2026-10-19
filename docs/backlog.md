@@ -581,23 +581,23 @@ Como runner, quero realizar todo o ciclo por HTTP.
 
 Como desenvolvedor, quero testar integração sem depender de LLM.
 
-**Dependências:** US-22. **Status:** todo.
+**Dependências:** US-22. **Status:** done.
 
 ### US-23/T01 — Criar cliente CLI determinístico
 
-- [ ] **Entrega:** Config via env, HTTP tipado, timeouts e escolha de tarefa elegível.
+- [x] **Entrega:** Config via env, HTTP tipado, timeouts e escolha de tarefa elegível.
 - **Aceite:** Executa claim/progress/submit sem ler o banco.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-23/T02 — Adicionar heartbeat e recuperação
 
-- [ ] **Entrega:** Manter heartbeat independente da execução; persistir cursor/chaves; parar ao perder lease.
+- [x] **Entrega:** Manter heartbeat independente da execução; persistir cursor/chaves; parar ao perder lease.
 - **Aceite:** Reinício valida lease antes de continuar; retry não duplica efeitos.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-23/T03 — Criar cenário interativo completo
 
-- [ ] **Entrega:** Runner pede ajuda, humano responde e aprova; segundo runner revisa por tarefa dependente separada.
+- [x] **Entrega:** Runner pede ajuda, humano responde e aprova; segundo runner revisa por tarefa dependente separada.
 - **Aceite:** Dois agentes usam tokens distintos; aprovação final segue humana.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

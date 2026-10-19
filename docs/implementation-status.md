@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-19  
-**Marco atual:** M5 — US-22 concluída. US-23 segue todo.
+**Marco atual:** M5 — US-23 concluída. US-24 segue todo.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -2541,6 +2541,69 @@ O schema local sobe para 11002 com `ab_api_update_11002`. A tela não mudou. A v
 
 ---
 
+## US-23 — Validar runner de referência
+
+**Status:** done  
+**Dependências:** US-22 done.  
+**Objetivo:** Um CLI determinístico fecha o ciclo por HTTP, sem LLM e sem ler o banco. A aprovação continua humana.
+
+#### US-23/T01 — Criar cliente CLI determinístico
+
+**Status:** done  
+**Entrega:** CLI PHP em `tools/agent-runner`. A linguagem ficou para este marco: o teste de integração roda no PHP do appserver.
+
+**Contrato:**
+- a configuração é `AGENT_BOARD_URL`, `AGENT_BOARD_TOKEN`, `AGENT_BOARD_WORKSPACE`, `AGENT_BOARD_STATE`, `AGENT_BOARD_INTERVAL` (30 segundos) e `AGENT_BOARD_TIMEOUT` (10 segundos). Sem uma variável obrigatória, o processo sai antes de qualquer pedido
+- cada chamada tem timeout. O processo não abre banco
+- a tarefa elegível é a primeira com status `ready` cujo claim não responde 409. Predecessor aberto entra nessa recusa e o runner segue para a próxima
+
+#### US-23/T02 — Adicionar heartbeat e recuperação
+
+**Status:** done  
+**Entrega:** Comando `heartbeat` separado, estado local e parada quando a lease se perde.
+
+**Contrato:**
+- `heartbeat` só renova a lease guardada. Não envia progresso nem entrega
+- o arquivo de estado guarda o cursor, a execução ativa e as chaves. A lease fica só nele, com permissão 0600, fora do repositório
+- o reinício lê a execução antes de continuar. Se o status não é `running` nem `waiting_input`, ou se o heartbeat responde 409, o runner apaga a execução local e sai com código 2, sem entregar
+- a chave é gravada antes do pedido. Repetir o ciclo reutiliza a mesma chave e não abre outra execução nem outra nota
+
+#### US-23/T03 — Criar cenário interativo completo
+
+**Status:** done  
+**Entrega:** O runner pede uma decisão, a sessão responde e aprova, e um segundo token trabalha a tarefa dependente.
+
+**Contrato:**
+- depois da pergunta o runner para em `waiting`. A sessão humana responde. O `run` seguinte entrega
+- o runner não chama approve nem reject. A tarefa fica `in_review` até a sessão aprovar
+- o segundo token usa outro arquivo de estado. Enquanto a primeira tarefa não está `done`, o claim da dependente responde 409 e esse runner fica ocioso. Depois da aprovação humana, ele faz o próprio ciclo e a sessão aprova de novo
+- os dois tokens pertencem a agentes diferentes
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_api/tests/src/Functional/AgentRunnerTest.php
+OK (1 test, 114 assertions)
+```
+
+O processo do runner recebe só a URL, o token, o workspace e o arquivo de estado. O primeiro `run` reivindica, anota o progresso e pergunta. O segundo `run` reutiliza a chave do claim e continua com uma execução e uma nota. O `heartbeat` não cria outra nota. Uma cópia do estado com a lease trocada sai com código 2 e não entrega; o estado original não muda. O segundo agente não abre execução enquanto a predecessora está aberta. A sessão responde e aprova as duas. Os atores das duas execuções são distintos.
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php \
+    web/modules/custom/ab_api/tests/src/Functional/AgentRunnerTest.php \
+    tools/agent-runner
+PHPCS: exit 0
+```
+
+Não houve rota nova nem mudança de schema. O PHPStan do projeto não inclui `tools/`. A tela não mudou. A verificação foi o teste do CLI.
+
+**Bloqueios:** nenhum nesta história.
+
+**Próxima ação:** —
+
+---
+
 ## Estatísticas
 
 - **Total de tasks:** 83 (conforme backlog)
@@ -2549,13 +2612,13 @@ O schema local sobe para 11002 com `ab_api_update_11002`. A tela não mudou. A v
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
 - **M3:** US-12 done; US-13 done; US-14 done; US-15 done; US-16 done
 - **M4:** US-17 done; US-18 done; US-19 done
-- **M5:** US-20 done; US-21 done; US-22 done
+- **M5:** US-20 done; US-21 done; US-22 done; US-23 done
 
 ---
 
 ## Próximos Passos
 
-1. US-23/T01 — cliente CLI determinístico
+1. US-24/T01 — snapshot consistente
 
 ---
 

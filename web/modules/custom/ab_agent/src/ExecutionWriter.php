@@ -123,6 +123,9 @@ class ExecutionWriter {
     if ($operation === 'submit') {
       return $this->deliver($command, $task, $execution, $now);
     }
+    if ($operation === 'ask') {
+      return $this->pause($command, $execution, $now);
+    }
     return new LeaseMutation(LeaseMutation::READY);
   }
 
@@ -236,6 +239,34 @@ class ExecutionWriter {
       $transaction->rollBack();
       throw $exception;
     }
+  }
+
+  /**
+   * Marks the execution as waiting without releasing the lease.
+   *
+   * The task stays in progress. Heartbeat remains the way to extend
+   * the reservation.
+   */
+  private function pause(LeaseCommand $command, array $execution, int $now): LeaseMutation {
+    $updated = $this->database->update('ab_execution')
+      ->fields([
+        'status' => 'waiting_input',
+        'version' => ((int) $execution['version']) + 1,
+        'changed' => $now,
+      ])
+      ->condition('id', $command->executionId)
+      ->condition('status', ['running', 'waiting_input'], 'IN')
+      ->execute();
+    if ((int) $updated !== 1) {
+      throw new LeaseRejectedException(LeaseRejectedException::STATE);
+    }
+    return new LeaseMutation(
+      LeaseMutation::WAITING,
+      NULL,
+      $command->workspaceId,
+      $command->taskId,
+      $command->executionId,
+    );
   }
 
   /**

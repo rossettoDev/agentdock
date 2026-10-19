@@ -15,6 +15,7 @@ use Drupal\ab_communication\CommunicationSchema;
 function ab_communication_schema(): array {
   $schema['ab_thread'] = CommunicationSchema::threadTable();
   $schema['ab_message'] = CommunicationSchema::messageTable();
+  $schema['ab_input_request'] = CommunicationSchema::inputTable();
   return $schema;
 }
 
@@ -23,4 +24,11 @@ function ab_communication_schema(): array {
  */
 function ab_communication_update_11001(): string {
   return CommunicationSchema::install();
+}
+
+/**
+ * Installs the input request table on existing sites.
+ */
+function ab_communication_update_11002(): string {
+  return CommunicationSchema::installInput();
 }

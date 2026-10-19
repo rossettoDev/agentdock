@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\ab_ui\Controller;
 
+use Drupal\ab_agent\Entity\Agent;
 use Drupal\ab_board\BoardRepository;
 use Drupal\ab_board\Entity\Board;
 use Drupal\ab_board\Entity\Task;
@@ -11,9 +12,13 @@ use Drupal\ab_board\TaskDayWindow;
 use Drupal\ab_board\TaskDependencyManager;
 use Drupal\ab_board\TaskRepository;
 use Drupal\ab_board\TaskTransitionPolicy;
+use Drupal\ab_communication\InputRequestService;
+use Drupal\ab_core\Authorization\ActorContext;
+use Drupal\ab_core\Authorization\HumanActorContextFactory;
 use Drupal\ab_core\Authorization\MembershipScope;
 use Drupal\ab_core\Authorization\WorkspacePermission;
 use Drupal\ab_core\Entity\Workspace;
+use Drupal\ab_ui\Form\InputAnswerForm;
 use Drupal\ab_ui\Form\TaskDependencyForm;
 use Drupal\ab_ui\Form\TaskReorderForm;
 use Drupal\ab_ui\Form\TaskReviewForm;
@@ -63,6 +68,8 @@ final class TaskController implements ContainerInjectionInterface {
     private readonly AccountInterface $currentUser,
     private readonly TimeInterface $time,
     private readonly Connection $database,
+    private readonly InputRequestService $requests,
+    private readonly HumanActorContextFactory $actors,
   ) {}
 
   /**
@@ -183,12 +190,16 @@ final class TaskController implements ContainerInjectionInterface {
       '#dependency_form' => NULL,
       '#attempts' => $this->attempts($task),
       '#review_form' => NULL,
+      '#questions' => $workspace instanceof Workspace ? $this->questions($task, $workspace, $can_write) : [],
       '#conversation_url' => Url::fromRoute('ab_ui.task_conversation', [
         'uuid' => $task->uuid(),
       ])->toString(),
       '#back_url' => $back,
       '#cache' => $this->cacheMeta($workspace),
     ];
+    if ($workspace instanceof Workspace && $workspace->id() !== NULL) {
+      $build['#cache']['tags'][] = 'ab_workspace_messages:' . $workspace->id();
+    }
     if ($can_write && $targets !== []) {
       $build['#transition_form'] = $this->formBuilder->getForm(
         TaskTransitionForm::class,
@@ -308,6 +319,49 @@ final class TaskController implements ContainerInjectionInterface {
       ];
     }
     return $items;
+  }
+
+  /**
+   * Lists questions and the human answer form when writing is allowed.
+   *
+   * @return array<int, array<string, mixed>>
+   *   Status, text and the optional answer form.
+   */
+  private function questions(Task $task, Workspace $workspace, bool $canWrite): array {
+    $items = [];
+    foreach ($this->requests->forTask($this->actors->create($workspace), $task) as $request) {
+      $open = $request->status === 'open';
+      $items[] = [
+        'status' => $open ? (string) $this->t('Pendente') : (string) $this->t('Respondida'),
+        'question' => $this->markup($request->question),
+        'answer' => $request->answer === NULL ? [] : $this->markup($request->answer),
+        'author' => $request->answer === NULL ? '' : (string) $this->t('Resposta de @name', [
+          '@name' => $this->participant($workspace, $request->authorType, $request->authorId),
+        ]),
+        'form' => $open && $canWrite ? $this->formBuilder->getForm(InputAnswerForm::class, $request->uuid) : NULL,
+      ];
+    }
+    return $items;
+  }
+
+  /**
+   * Returns a display name for the person who answered.
+   */
+  private function participant(Workspace $workspace, ?string $type, ?string $id): string {
+    if ($type === ActorContext::TYPE_AGENT && is_string($id) && $id !== '') {
+      $ids = $this->entityTypeManager->getStorage('ab_agent')->getQuery()
+        ->accessCheck(FALSE)
+        ->condition('uuid', $id)
+        ->condition('workspace', $workspace->id())
+        ->execute();
+      $agent = $this->entityTypeManager->getStorage('ab_agent')->load(reset($ids) ?: 0);
+      return $agent instanceof Agent ? (string) $agent->label() : (string) $this->t('Participante');
+    }
+    if ($type === ActorContext::TYPE_HUMAN && is_string($id) && $id !== '') {
+      $user = $this->entityTypeManager->getStorage('user')->load($id);
+      return $user instanceof UserInterface ? $user->getAccountName() : (string) $this->t('Participante');
+    }
+    return (string) $this->t('Participante');
   }
 
   /**

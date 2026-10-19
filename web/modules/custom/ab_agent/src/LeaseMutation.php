@@ -23,6 +23,8 @@ final class LeaseMutation {
 
   public const SUBMITTED = 'submitted';
 
+  public const WAITING = 'waiting';
+
   public function __construct(
     public readonly string $kind,
     public readonly ?RenewedLease $renewed = NULL,

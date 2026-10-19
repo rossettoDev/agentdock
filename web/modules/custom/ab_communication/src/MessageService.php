@@ -145,6 +145,81 @@ class MessageService {
   }
 
   /**
+   * Inserts one message while the caller holds the transaction.
+   *
+   * The caller locks the agent, the board and the task first, then
+   * records the event after every domain row for this operation.
+   */
+  public function append(
+    ActorContext $actor,
+    int $workspaceId,
+    int $boardId,
+    int $taskId,
+    string $kind,
+    string $body,
+    ?string $replyTo = NULL,
+    ?int $executionId = NULL,
+  ): AppendedMessage {
+    if (!$this->database->inTransaction()) {
+      throw new \RuntimeException('A message append needs an open transaction.');
+    }
+    $body = trim(str_replace(["\r\n", "\r"], "\n", $body));
+    if ($body === '' || strlen($body) > self::BODY_LIMIT) {
+      throw new \InvalidArgumentException('Message body is invalid.');
+    }
+    $this->assertKind($actor, $kind);
+    $thread = $this->ensureThread([
+      'workspaceId' => $workspaceId,
+      'boardId' => $boardId,
+      'taskId' => $taskId,
+    ]);
+    $messageUuid = $this->uuid->generate();
+    $id = $this->database->insert('ab_message')
+      ->fields([
+        'uuid' => $messageUuid,
+        'workspace' => $workspaceId,
+        'thread_id' => $thread['id'],
+        'actor_type' => $actor->actorType,
+        'actor_id' => $actor->actorId,
+        'kind' => $kind,
+        'body' => $body,
+        'reply_to' => $this->replyId($thread['id'], $replyTo),
+        'execution_id' => $executionId,
+        'created' => $this->time->getRequestTime(),
+      ])
+      ->execute();
+    return new AppendedMessage((int) $id, $messageUuid, $thread['uuid'], $kind);
+  }
+
+  /**
+   * Records message.created without the body.
+   */
+  public function recordCreated(
+    ActorContext $actor,
+    string $workspaceUuid,
+    string $boardUuid,
+    string $taskUuid,
+    AppendedMessage $message,
+  ): void {
+    $payload = [
+      'thread_id' => $message->threadUuid,
+      'kind' => $message->kind,
+      'board_id' => $boardUuid,
+    ];
+    if ($taskUuid !== '') {
+      $payload['task_id'] = $taskUuid;
+    }
+    $this->events->record(new EventDraft(
+      $workspaceUuid,
+      'message.created',
+      $message->messageUuid,
+      $actor->actorType,
+      $actor->actorId,
+      $payload,
+    ));
+  }
+
+  /**
    * Returns the thread uuid when one already exists.
    */
   public function findThreadUuid(ActorContext $actor, string $scope, string $scopeUuid): ?string {

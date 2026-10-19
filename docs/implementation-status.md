@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-19  
-**Marco atual:** M4 — US-17 concluída. US-18 segue todo.
+**Marco atual:** M4 — US-18 concluída. US-19 segue todo.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -2106,6 +2106,86 @@ No navegador, na Casa Grace, a conversa dessa tarefa abriu vazia, com o campo Me
 
 ---
 
+## US-18 — Pedir e responder informação
+
+**Status:** done  
+**Dependências:** US-17 done.  
+**Objetivo:** O agente abre uma dúvida sem soltar a reserva. A resposta humana resolve a solicitação. A execução vencida não volta a andar.
+
+#### US-18/T01 — Pedido transacional
+
+**Status:** done  
+**Entrega:** A pergunta, a solicitação, o estado `waiting_input` e os eventos entram na mesma transação. A lease continua e aceita heartbeat.
+
+**Contrato:**
+- a tabela é `ab_input_request`. O agente precisa de `executions:write` e `messages:write`, com a lease ainda válida. A mensagem fica `question` na conversa da tarefa. O evento `input.requested` leva execução, tarefa e mensagem, sem o texto
+- várias dúvidas abertas mantêm `waiting_input`. A tarefa continua `in_progress`, com a mesma versão, e a lease não é apagada
+- lease vencida interrompe a execução, devolve a tarefa a `ready` e não grava outra pergunta. Geração errada também não grava
+
+#### US-18/T02 — Resposta humana
+
+**Status:** done  
+**Entrega:** A resposta vincula a solicitação e a resolve. A resposta tardia fica no histórico.
+
+**Contrato:**
+- só o humano com escrita responde. Agente, leitor e quem está fora não gravam. A segunda resposta da mesma dúvida não grava outra mensagem
+- a execução volta a `running` só quando não resta dúvida aberta e a lease ainda vale. A tarefa não muda de status
+- se a execução já foi interrompida, a resposta não recria a lease nem muda o status. Um claim novo lê a resposta no histórico
+
+#### US-18/T03 — Dúvidas no detalhe
+
+**Status:** done  
+**Entrega:** O detalhe lista a pendência e, depois, o autor da resposta. O formulário só envia o texto.
+
+**Contrato:**
+- a pendência aparece como "Pendente" e a execução como "Aguardando". Quem só lê não vê Responder
+- o texto passa pelo mesmo filtro da descrição. A tela não oferece mensagem direta nem um campo para mudar o status da execução
+- depois da resposta, a linha fica "Respondida" com "Resposta de @name"
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_communication/tests/src/Kernel/InputRequestKernelTest.php
+OK (3 tests, 135 assertions)
+```
+
+`testWaitingStaysUntilEveryQuestionIsAnswered` mantém a espera com duas dúvidas, aceita heartbeat e só volta a `running` na última resposta. `testExpiredExecutionDoesNotRevive` interrompe a lease vencida, guarda a resposta tardia e permite um claim novo. `testOutsidersCannotForgeTheRequest` recusa humano, token sem mensagem, geração errada, agente, leitor e visitante, e desfaz a pergunta quando o evento falha.
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_ui/tests/src/Functional/InputRequestUiTest.php
+OK (1 test, 41 assertions)
+```
+
+Quem só lê vê a pergunta e o script escapado, sem o botão Responder. O dono responde e a página mostra o autor. A execução volta a `running`. Quem está fora recebe 404 sem o texto. As deprecações do PHPUnit são o aviso de metadata `@group`.
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,yml \
+    web/modules/custom/ab_communication \
+    web/modules/custom/ab_agent/src/ExecutionWriter.php \
+    web/modules/custom/ab_agent/src/LeaseMutation.php \
+    web/modules/custom/ab_ui/src/Controller/TaskController.php \
+    web/modules/custom/ab_ui/src/Form/InputAnswerForm.php \
+    web/modules/custom/ab_ui/src/Hook/AbUiHooks.php \
+    web/modules/custom/ab_ui/tests/src/Functional/InputRequestUiTest.php
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse --memory-limit=1G
+PHPStan: exit 0
+```
+
+`ab_communication_update_11002` criou `ab_input_request`. O schema local ficou em 11002. "Tema revisado" continua `ready` na versão 3 e "Preparar o material" continua `backlog` na versão 2.
+
+No navegador, na Casa Grace, a tarefa "Duvida da verificacao" abriu em andamento com a tentativa aguardando e a pergunta pendente. A resposta de grace gravou "Respondida" e a execução voltou a em andamento. A lease continuou. Os eventos `input.requested` e `input.answered` não levaram o texto.
+
+**Bloqueios:** nenhum nesta história.
+
+**Próxima ação:** —
+
+---
+
 ## Estatísticas
 
 - **Total de tasks:** 83 (conforme backlog)
@@ -2113,13 +2193,13 @@ No navegador, na Casa Grace, a conversa dessa tarefa abriu vazia, com o campo Me
 - **M1:** US-04 done; US-05 done; US-06 done
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
 - **M3:** US-12 done; US-13 done; US-14 done; US-15 done; US-16 done
-- **M4:** US-17 done
+- **M4:** US-17 done; US-18 done
 
 ---
 
 ## Próximos Passos
 
-1. US-18/T01 — pedido de informação transacional
+1. US-19/T01 — menções validadas
 
 ---
 

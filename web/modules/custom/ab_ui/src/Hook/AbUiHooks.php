@@ -116,6 +116,7 @@ final class AbUiHooks {
           'dependency_form' => NULL,
           'attempts' => [],
           'review_form' => NULL,
+          'questions' => [],
           'conversation_url' => '',
           'back_url' => '',
         ],

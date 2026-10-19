@@ -1,0 +1,26 @@
+<?php
+
+/**
+ * @file
+ * Install and update hooks for conversation threads.
+ */
+
+declare(strict_types=1);
+
+use Drupal\ab_communication\CommunicationSchema;
+
+/**
+ * Implements hook_schema().
+ */
+function ab_communication_schema(): array {
+  $schema['ab_thread'] = CommunicationSchema::threadTable();
+  $schema['ab_message'] = CommunicationSchema::messageTable();
+  return $schema;
+}
+
+/**
+ * Installs the thread and message tables on existing sites.
+ */
+function ab_communication_update_11001(): string {
+  return CommunicationSchema::install();
+}

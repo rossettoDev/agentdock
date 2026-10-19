@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-19  
-**Marco atual:** M3 — US-16 concluída. US-17 segue todo.
+**Marco atual:** M4 — US-17 concluída. US-18 segue todo.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -2027,6 +2027,85 @@ No navegador, na Casa Grace, a tarefa nova "Entrega da verificacao" abriu em rev
 
 ---
 
+## US-17 — Conversar com contexto
+
+**Status:** done  
+**Dependências:** US-16 done.  
+**Objetivo:** Humano e agente registram mensagens no board e na tarefa. A conversa não vira mensagem direta nem pedido de informação.
+
+#### US-17/T01 — Threads e mensagens
+
+**Status:** done  
+**Entrega:** Uma thread por board e uma por tarefa. O autor sai do ator autenticado. A resposta precisa estar na mesma thread. O corpo aceita até 16 KiB.
+
+**Contrato:**
+- as tabelas são internas, `ab_thread` e `ab_message`. A thread do board usa `task_id` 0, para o índice único valer no PostgreSQL. A leitura não cria a thread; a primeira mensagem cria
+- duas gravações no mesmo board ou na mesma tarefa deixam uma thread e duas mensagens. O corpo da primeira não muda. Corpo vazio ou acima de 16 KiB não grava
+- `reply_to` de outra thread é recusado e não abre thread nova. Não há evento `thread.created`. O evento é `message.created`
+
+#### US-17/T02 — MessageService
+
+**Status:** done  
+**Entrega:** Tipos por ator, corpo sanitizado na tela, mensagem imutável e evento na mesma transação.
+
+**Contrato:**
+- humano escreve `comment` e `answer`. Agente escreve `comment`, `progress`, `question` e `result`. Só o ator `system` escreve `system`. Agente não grava `answer` nem `system`. Humano não grava `system`. Não existe argumento de autor no payload
+- a pergunta não muda o status nem a versão da tarefa e não cria pedido de entrada. Quem só lê vê a conversa e não grava. Quem está fora do workspace não encontra a tarefa. O texto da recusa não devolve o corpo
+- a execução só entra na mensagem quando o agente escreve na thread daquela tarefa e a execução é dele. Humano e thread de board não vinculam execução
+- o evento leva `thread_id`, `kind`, `board_id` e, na tarefa, `task_id`. O corpo fica fora. Uma falha depois do evento desfaz a mensagem e o evento. A ordem de lock do agente é agente, board, tarefa, thread e só então o evento
+
+#### US-17/T03 — Central de mensagens
+
+**Status:** done  
+**Entrega:** A lista segue o workspace da sessão. A conversa da tarefa e a do board abrem pelo próprio registro. O formulário envia um comentário humano quando há permissão de escrita.
+
+**Contrato:**
+- a lista vazia diz "Nenhuma conversa neste workspace." A conversa vazia diz "Nenhuma mensagem nesta conversa." A página anterior usa `before`. O corpo passa pelo mesmo filtro da descrição
+- quem só lê não vê Enviar. Visitante de fora recebe 404 sem o texto. A tela não oferece mensagem direta. Menção, anexo, checklist e pedido de informação ficam fora
+- abrir a conversa não troca o workspace selecionado. O detalhe da tarefa e o board apontam para a conversa
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_communication/tests/src/Kernel/MessageKernelTest.php
+OK (2 tests, 123 assertions)
+```
+
+`testThreadIsCreatedOnce` repete a criação, conserva o primeiro corpo, recusa corpo vazio e acima de 16 KiB, recusa resposta de outra thread e pagina com limite 2. `testActorCannotForgeKind` impede o agente de gravar `answer` e `system`, impede o humano de gravar `system` e de vincular execução, mantém a tarefa `in_progress` depois da pergunta, deixa o ator `system` registrar a nota, esconde o board sem grant e desfaz a mensagem quando o evento falha.
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_ui/tests/src/Functional/ConversationUiTest.php
+OK (1 test, 49 assertions)
+```
+
+O dono envia o comentário, vê o negrito e o script escapado, responde à mensagem e encontra a conversa na lista. Quem só lê não vê Enviar. Quem está fora recebe 404 sem o texto. A página não oferece mensagem direta. As deprecações do PHPUnit são o aviso de metadata `@group`.
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,yml \
+    web/modules/custom/ab_communication \
+    web/modules/custom/ab_ui/src \
+    web/modules/custom/ab_ui/ab_ui.routing.yml \
+    web/modules/custom/ab_ui/tests/src/Functional/ConversationUiTest.php \
+    web/modules/custom/ab_communication/tests/src/Kernel/MessageKernelTest.php
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse --memory-limit=1G
+PHPStan: exit 0
+```
+
+`ab_communication_update_11001` criou `ab_thread` e `ab_message`. O schema local ficou em 11001. "Tema revisado" continua `ready` na versão 3 e "Preparar o material" continua `backlog` na versão 2. "Entrega da verificacao" continua `done` na versão 5.
+
+No navegador, na Casa Grace, a conversa dessa tarefa abriu vazia, com o campo Mensagem e o botão Enviar. A nota gravou como comentário de grace. A lista Conversas mostrou a tarefa. O evento `message.created` levou a thread, o tipo, o board e a tarefa, sem o corpo.
+
+**Bloqueios:** nenhum nesta história.
+
+**Próxima ação:** —
+
+---
+
 ## Estatísticas
 
 - **Total de tasks:** 83 (conforme backlog)
@@ -2034,12 +2113,13 @@ No navegador, na Casa Grace, a tarefa nova "Entrega da verificacao" abriu em rev
 - **M1:** US-04 done; US-05 done; US-06 done
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
 - **M3:** US-12 done; US-13 done; US-14 done; US-15 done; US-16 done
+- **M4:** US-17 done
 
 ---
 
 ## Próximos Passos
 
-1. US-17/T01 — conversa de board e tarefa
+1. US-18/T01 — pedido de informação transacional
 
 ---
 

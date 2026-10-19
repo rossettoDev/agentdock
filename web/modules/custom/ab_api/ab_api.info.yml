@@ -4,8 +4,8 @@ description: 'Rotas HTTP, DTOs, validação, OpenAPI e rate limit'
 package: 'AgentDock'
 core_version_requirement: ^11
 dependencies:
-  - ab_core
-  - ab_board
-  - ab_agent
-  - ab_communication
-  - ab_event
+  - ab_core:ab_core
+  - ab_board:ab_board
+  - ab_agent:ab_agent
+  - ab_communication:ab_communication
+  - ab_event:ab_event

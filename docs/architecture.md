@@ -156,7 +156,7 @@ Alterações humanas usam `If-Match` com ETag derivada de `version`; versão obs
 
 ## 8. API HTTP
 
-Base: `/api/agent-board/v1`. Contrato OpenAPI deve ser escrito e validado no marco da API. Datas ISO 8601 UTC; paginação por cursor com limite padrão 50 e máximo 100. Tamanho máximo de body: 256 KiB; mensagens: 16 KiB. Descrições e mensagens usam Markdown restrito, renderizado com sanitização e sem HTML arbitrário.
+Base: `/api/agent-board/v1`. Contrato OpenAPI deve ser escrito e validado no marco da API. Datas ISO 8601 UTC; paginação por cursor com limite padrão 50 e máximo 100. Tamanho máximo de body: 256 KiB; acima disso a API responde 413. Mensagens: 16 KiB. Descrições e mensagens usam Markdown restrito, renderizado com sanitização e sem HTML arbitrário.
 
 | Método / caminho relativo | Função |
 | --- | --- |
@@ -173,6 +173,7 @@ Base: `/api/agent-board/v1`. Contrato OpenAPI deve ser escrito e validado no mar
 | POST `/workspaces/{w}/executions/{e}/submit` | Entregar resultado e links |
 | POST `/workspaces/{w}/executions/{e}/fail` | Registrar falha e liberar |
 | POST `/workspaces/{w}/executions/{e}/release` | Interromper voluntariamente |
+| GET `/workspaces/{w}/executions/{e}` | Consultar a execução atual, sem o segredo da reserva |
 | POST `/workspaces/{w}/tasks/{t}/approve` | Aprovar entrega |
 | POST `/workspaces/{w}/tasks/{t}/reject` | Rejeitar com motivo e devolver a ready |
 | GET/POST `/workspaces/{w}/threads/{th}/messages` | Conversar |
@@ -209,7 +210,7 @@ Content-Type: application/json
 
 Heartbeat, progress, submit e release usam `X-Execution-Lease` e `Idempotency-Key` além de Bearer. Tokens nunca aparecem em eventos, logs ou URLs. A resposta de claim armazenada para replay idempotente contém segredo: criptografar esse campo com chave fora do banco, TTL limitado, e removê-lo quando a lease encerrar. Alternativamente retornar conflito de recuperação e exigir nova reserva; escolher e documentar antes da implementação. Decisão inicial: replay criptografado pelo prazo da lease.
 
-Mutações de agentes exigem chave idempotente, com escopo workspace/ator/operação; mesmo payload repete resposta, payload diferente com mesma chave retorna 409. Default de retenção: 24h para resultados sem segredo. Idempotência não substitui checagem de lease nas novas operações.
+Mutações exigem chave idempotente, com escopo ator/token, workspace, operação e recurso; mesmo payload repete resposta, payload diferente com mesma chave retorna 409. Default de retenção: 24h para resultados sem segredo. Idempotência não substitui checagem de lease nas novas operações.
 
 Erros no formato `application/problem+json`, com `type`, `title`, `status`, `detail`, `code`, `request_id`; sem stack trace. Códigos: 401 credencial inválida; 403 sem permissão; 404 fora de escopo/inexistente; 409 claim ou transição conflitante; 412 versão obsoleta; 422 regra inválida; 428 precondição ausente; 429 limite excedido com Retry-After. Claim bem-sucedido: 201; nenhuma tarefa disponível em listagem: 200 com lista vazia.
 

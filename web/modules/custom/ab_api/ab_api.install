@@ -1,0 +1,25 @@
+<?php
+
+/**
+ * @file
+ * Install and update hooks for the HTTP API.
+ */
+
+declare(strict_types=1);
+
+use Drupal\ab_api\ApiSchema;
+
+/**
+ * Implements hook_schema().
+ */
+function ab_api_schema(): array {
+  $schema['ab_idempotency'] = ApiSchema::idempotencyTable();
+  return $schema;
+}
+
+/**
+ * Installs the idempotency table on existing sites.
+ */
+function ab_api_update_11001(): string {
+  return ApiSchema::install();
+}

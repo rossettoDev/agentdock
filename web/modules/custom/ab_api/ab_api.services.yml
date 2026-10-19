@@ -1,0 +1,21 @@
+services:
+  Drupal\ab_api\IdempotencySeal: ~
+  Drupal\ab_api\IdempotencyService:
+    arguments:
+      - '@database'
+      - '@datetime.time'
+      - '@Drupal\ab_api\IdempotencySeal'
+  Drupal\ab_api\EventSubscriber\ApiRequestSubscriber:
+    arguments:
+      - '@uuid'
+      - '@current_user'
+    tags:
+      - { name: event_subscriber }
+  Drupal\ab_api\EventSubscriber\ApiExceptionSubscriber:
+    arguments:
+      - '@logger.channel.default'
+    tags:
+      - { name: event_subscriber }
+  Drupal\ab_api\EventSubscriber\ApiResponseSubscriber:
+    tags:
+      - { name: event_subscriber }

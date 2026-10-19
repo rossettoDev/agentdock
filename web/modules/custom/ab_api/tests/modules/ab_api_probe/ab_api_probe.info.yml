@@ -1,0 +1,7 @@
+name: 'API probe'
+type: module
+description: 'Throws API exceptions for the HTTP infrastructure test.'
+package: Testing
+core_version_requirement: ^11
+dependencies:
+  - ab_api:ab_api

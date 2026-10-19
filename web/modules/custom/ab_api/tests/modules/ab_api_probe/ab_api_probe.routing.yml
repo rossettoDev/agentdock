@@ -1,0 +1,31 @@
+ab_api_probe.missing:
+  path: '/api/agent-board/v1/probe/missing'
+  defaults:
+    _controller: '\Drupal\ab_api_probe\ProbeController::missing'
+  requirements:
+    # Test double. It is not installed on the site.
+    _access: 'TRUE'
+
+ab_api_probe.denied:
+  path: '/api/agent-board/v1/probe/denied'
+  defaults:
+    _controller: '\Drupal\ab_api_probe\ProbeController::denied'
+  requirements:
+    # Test double. It is not installed on the site.
+    _access: 'TRUE'
+
+ab_api_probe.boom:
+  path: '/api/agent-board/v1/probe/boom'
+  defaults:
+    _controller: '\Drupal\ab_api_probe\ProbeController::boom'
+  requirements:
+    # Test double. It is not installed on the site.
+    _access: 'TRUE'
+
+ab_api_probe.ok:
+  path: '/api/agent-board/v1/probe/ok'
+  defaults:
+    _controller: '\Drupal\ab_api_probe\ProbeController::ok'
+  requirements:
+    # Test double. It is not installed on the site.
+    _access: 'TRUE'

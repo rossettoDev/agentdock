@@ -415,11 +415,11 @@ paths:
               $ref: '#/components/schemas/Progress'
       responses:
         '201':
-          description: The progress note was stored.
+          description: The progress note was stored. It is not a conversation message.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MessageEnvelope'
+                $ref: '#/components/schemas/ProgressEnvelope'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -1309,6 +1309,27 @@ components:
         note:
           type: string
           maxLength: 500
+    ProgressNote:
+      type: object
+      required: [execution_id, sequence, body, created_at]
+      properties:
+        execution_id:
+          type: string
+          format: uuid
+        sequence:
+          type: integer
+        body:
+          type: string
+          maxLength: 500
+        created_at:
+          type: string
+          format: date-time
+    ProgressEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/ProgressNote'
     Question:
       type: object
       additionalProperties: false

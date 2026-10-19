@@ -5,10 +5,16 @@ services:
       - '@database'
       - '@datetime.time'
       - '@Drupal\ab_api\IdempotencySeal'
+  Drupal\ab_api\RateLimiter:
+    arguments:
+      - '@database'
+      - '@datetime.time'
+      - '@current_user'
   Drupal\ab_api\EventSubscriber\ApiRequestSubscriber:
     arguments:
       - '@uuid'
       - '@current_user'
+      - '@Drupal\ab_api\RateLimiter'
     tags:
       - { name: event_subscriber }
   Drupal\ab_api\EventSubscriber\ApiExceptionSubscriber:
@@ -40,6 +46,19 @@ services:
       - '@Drupal\ab_board\BoardRepository'
       - '@Drupal\ab_core\UuidLookup'
       - '@Drupal\ab_agent\AgentOperationGate'
+  Drupal\ab_api\Http\ExecutionCommands:
+    arguments:
+      - '@Drupal\ab_api\Http\ApiCaller'
+      - '@Drupal\ab_api\IdempotencyService'
+      - '@Drupal\ab_api\Http\TaskDocument'
+      - '@Drupal\ab_agent\TaskClaim'
+      - '@Drupal\ab_agent\ExecutionMaintenance'
+      - '@Drupal\ab_communication\InputRequestService'
+      - '@Drupal\ab_communication\MessageService'
+      - '@Drupal\ab_agent\TaskReview'
+      - '@Drupal\ab_core\UuidLookup'
+      - '@database'
+      - '@datetime.time'
   Drupal\ab_api\Http\TaskCommands:
     arguments:
       - '@Drupal\ab_api\Http\ApiCaller'

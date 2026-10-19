@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-19  
-**Marco atual:** M5 — US-21 concluída. US-22 segue todo.
+**Marco atual:** M5 — US-22 concluída. US-23 segue todo.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -2354,7 +2354,7 @@ $ lando php vendor/bin/phpstan analyse --memory-limit=1G
 PHPStan: exit 0
 ```
 
-`ab_api` foi instalado e o schema local ficou em 11001. A tabela `ab_idempotency` existe. A US-21 liga as leituras e a edição de tarefa. Claim, mensagem e revisão continuam só no contrato.
+`ab_api` foi instalado e o schema local ficou em 11001. A tabela `ab_idempotency` existe. A US-21 liga as leituras e a edição de tarefa. A US-22 liga o ciclo do runner.
 
 **Bloqueios:** nenhum nesta história.
 
@@ -2455,6 +2455,92 @@ O ETag é escrito no subscriber de resposta, depois do `FinishResponseSubscriber
 
 ---
 
+## US-22 — Expor execução e conversas
+
+**Status:** done  
+**Dependências:** US-21 done.  
+**Objetivo:** O runner faz o ciclo por HTTP. Repetir o comando não duplica o efeito. A lease inválida é recusada. O agente não revisa nem responde como humano.
+
+#### US-22/T01 — Expor comandos de execução
+
+**Status:** done  
+**Entrega:** Claim, heartbeat, progress, submit, fail e release. A lease vai no header `X-Execution-Lease`.
+
+**Contrato:**
+- o claim devolve o segredo uma vez e guarda o replay cifrado até o fim da lease. A mesma chave devolve o mesmo segredo e não abre outra execução. Outro body na mesma chave é 409
+- heartbeat, progress, submit, fail e release exigem a lease. Sem o header é 428. Lease que não confere é 409 e não muda a execução
+- o progresso é uma nota em `ab_execution_progress`, não uma mensagem da conversa. O contrato chama isso de `ProgressNote`
+- submit, fail e release apagam o replay cifrado do claim
+
+#### US-22/T02 — Expor conversas e revisão
+
+**Status:** done  
+**Entrega:** Lista e criação de mensagem, request-input, answer, approve e reject.
+
+**Contrato:**
+- o agente pode comentar e pedir informação. Não pode `answer` nem aprovar. Isso responde 403
+- a resposta e a revisão são da sessão humana, com CSRF. A versão velha da revisão é 412
+- a menção humana entra como UUID e é gravada como a conta interna. O texto `@nome` não vira menção
+
+#### US-22/T03 — Aplicar rate limit e retenção idempotente
+
+**Status:** done  
+**Entrega:** Contagem por minuto na tabela `ab_api_rate`, `Retry-After` e limite separado para criar mensagem.
+
+**Contrato:**
+- o padrão é 120 requisições por minuto por token ou sessão, e 20 criações de mensagem. `ab_api_rate_limit` e `ab_api_message_rate_limit` mudam os dois. O contador é uma linha no banco, compartilhada entre processos
+- estourar o limite responde 429 com `Retry-After` em segundos, no máximo 60
+- o replay cifrado sai quando a lease termina, não só quando o prazo do claim vence
+
+**Evidências:**
+```bash
+$ npx --yes @redocly/cli@1.25.11 lint docs/openapi.yaml
+Woohoo! Your API description is valid.
+```
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_api/tests/src/Functional/ApiCycleTest.php
+OK (1 test, 131 assertions)
+```
+
+O segundo claim com a mesma chave não cria execução. O body guardado não contém o segredo. Heartbeat sem lease é 428 e com lease trocada é 409. O progresso repetido grava uma nota. O agente recebe 403 ao responder e ao aprovar. A sessão responde, entrega e aprova. O GET da execução não tem `lease_token`. O release devolve a tarefa para `ready` e zera o replay cifrado.
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_api/tests/src/Functional/ApiRateTest.php
+OK (1 test, 23 assertions)
+```
+
+A segunda mensagem no mesmo minuto responde 429. Com o teto geral em 2, a leitura seguinte também responde 429 e traz `Retry-After`.
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_api/tests/src/Functional/ApiProblemTest.php \
+    web/modules/custom/ab_api/tests/src/Unit/OpenApiContractTest.php
+OK (2 tests, 135 assertions)
+```
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,yml \
+    web/modules/custom/ab_api
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse --memory-limit=1G
+PHPStan: exit 0
+```
+
+O schema local sobe para 11002 com `ab_api_update_11002`. A tela não mudou. A verificação foi o teste HTTP.
+
+**Bloqueios:** nenhum nesta história.
+
+**Próxima ação:** —
+
+---
+
 ## Estatísticas
 
 - **Total de tasks:** 83 (conforme backlog)
@@ -2463,13 +2549,13 @@ O ETag é escrito no subscriber de resposta, depois do `FinishResponseSubscriber
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
 - **M3:** US-12 done; US-13 done; US-14 done; US-15 done; US-16 done
 - **M4:** US-17 done; US-18 done; US-19 done
-- **M5:** US-20 done; US-21 done
+- **M5:** US-20 done; US-21 done; US-22 done
 
 ---
 
 ## Próximos Passos
 
-1. US-22/T01 — comandos HTTP de execução
+1. US-23/T01 — cliente CLI determinístico
 
 ---
 

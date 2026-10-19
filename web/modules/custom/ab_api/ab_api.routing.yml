@@ -78,3 +78,111 @@ ab_api.execution:
   requirements:
     # The controller returns 401 when the caller has no credential.
     _access: 'TRUE'
+
+ab_api.task.claim:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/tasks/{task_id}/claim'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\ExecutionController::claim'
+  methods: [POST]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+
+ab_api.execution.heartbeat:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/executions/{execution_id}/heartbeat'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\ExecutionController::heartbeat'
+  methods: [POST]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+
+ab_api.execution.progress:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/executions/{execution_id}/progress'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\ExecutionController::progress'
+  methods: [POST]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+
+ab_api.execution.request_input:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/executions/{execution_id}/request-input'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\ExecutionController::requestInput'
+  methods: [POST]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+
+ab_api.input.answer:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/input-requests/{input_request_id}/answer'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\ExecutionController::answer'
+  methods: [POST]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+
+ab_api.execution.submit:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/executions/{execution_id}/submit'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\ExecutionController::submit'
+  methods: [POST]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+
+ab_api.execution.fail:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/executions/{execution_id}/fail'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\ExecutionController::fail'
+  methods: [POST]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+
+ab_api.execution.release:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/executions/{execution_id}/release'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\ExecutionController::release'
+  methods: [POST]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+
+ab_api.task.approve:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/tasks/{task_id}/approve'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\ExecutionController::approve'
+  methods: [POST]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+
+ab_api.task.reject:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/tasks/{task_id}/reject'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\ExecutionController::reject'
+  methods: [POST]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+
+ab_api.messages:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/threads/{thread_id}/messages'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\ExecutionController::messages'
+  methods: [GET]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+
+ab_api.messages.create:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/threads/{thread_id}/messages'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\ExecutionController::createMessage'
+  methods: [POST]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'

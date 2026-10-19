@@ -1,0 +1,1501 @@
+openapi: 3.0.3
+info:
+  title: AgentDock API
+  version: 1.0.0
+  license:
+    name: GPL-2.0-or-later
+    url: https://www.gnu.org/licenses/gpl-2.0.html
+  description: >
+    HTTP contract for AgentDock. Dates are ISO 8601 UTC. Page size defaults
+    to 50 and cannot exceed 100. A body above 256 KiB returns 413. A message
+    body cannot exceed 16 KiB. The actor comes from authentication, never
+    from the payload. A resource outside the workspace is 404. A forbidden
+    operation on a visible resource is 403. Errors are problem+json and do
+    not include a stack trace. Responses use Cache-Control private, no-store.
+servers:
+  - url: /api/agent-board/v1
+tags:
+  - name: workspaces
+    description: Workspaces the caller can read.
+  - name: boards
+    description: Boards and their snapshots.
+  - name: tasks
+    description: Tasks, transitions and human review.
+  - name: executions
+    description: Claim, lease and the current execution.
+  - name: messages
+    description: Conversations and structured mentions.
+  - name: events
+    description: Incremental events and the agent inbox.
+security:
+  - bearerAuth: []
+  - cookieAuth: []
+paths:
+  /workspaces:
+    get:
+      operationId: listWorkspaces
+      tags: [workspaces]
+      summary: List workspaces the caller can read.
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Accessible workspaces. An empty list is still 200.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspacePage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /workspaces/{workspace_id}/boards:
+    get:
+      operationId: listBoards
+      tags: [boards]
+      summary: List boards in one workspace.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Boards the caller can read.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: createBoard
+      tags: [boards]
+      summary: Create a board.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BoardWrite'
+      responses:
+        '201':
+          description: The created board.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+  /workspaces/{workspace_id}/boards/{board_id}/tasks:
+    get:
+      operationId: listTasks
+      tags: [tasks]
+      summary: List tasks on one board.
+      description: Filters never widen the caller's scope.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/BoardId'
+        - $ref: '#/components/parameters/Status'
+        - $ref: '#/components/parameters/AssignedAgent'
+        - $ref: '#/components/parameters/DueBefore'
+        - $ref: '#/components/parameters/Priority'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Tasks the caller can read. An empty list is still 200.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/Invalid'
+    post:
+      operationId: createTask
+      tags: [tasks]
+      summary: Create a task.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/BoardId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCreate'
+      responses:
+        '201':
+          description: The created task.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+  /workspaces/{workspace_id}/tasks/{task_id}:
+    get:
+      operationId: getTask
+      tags: [tasks]
+      summary: Read one task.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: The task.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      operationId: updateTask
+      tags: [tasks]
+      summary: Edit the fields a caller is allowed to change.
+      description: >
+        Rejects workspace, board, status, author, active_execution and
+        any lease field. Status changes go through the transition route.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/TaskId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskPatch'
+      responses:
+        '200':
+          description: The updated task.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+  /workspaces/{workspace_id}/tasks/{task_id}/transition:
+    post:
+      operationId: transitionTask
+      tags: [tasks]
+      summary: Move a task through a human transition.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/TaskId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Transition'
+      responses:
+        '200':
+          description: The task after the transition.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+  /workspaces/{workspace_id}/tasks/{task_id}/claim:
+    post:
+      operationId: claimTask
+      tags: [executions]
+      summary: Claim a ready task.
+      description: >
+        The lease token is returned once. A replay of this response is
+        stored encrypted, with the lease expiry as its TTL, using a key
+        that is not in the database.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/TaskId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+            example: {}
+      responses:
+        '201':
+          description: The new execution and its one-time lease token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimEnvelope'
+              example:
+                data:
+                  execution_id: 3f1c2c2e-6b2a-4d1e-9c3a-1b2c3d4e5f60
+                  task_id: 11111111-1111-4111-8111-111111111111
+                  lease_token: returned-once
+                  lease_expires_at: '2026-10-19T14:02:00Z'
+                  task_version: 4
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '429':
+          $ref: '#/components/responses/TooMany'
+  /workspaces/{workspace_id}/executions/{execution_id}:
+    get:
+      operationId: getExecution
+      tags: [executions]
+      summary: Read the current execution.
+      description: >
+        Runner and MCP use this route. The client does not open the
+        database. The response never includes the lease secret.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/ExecutionId'
+      responses:
+        '200':
+          description: The execution without a lease secret.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionEnvelope'
+              example:
+                data:
+                  id: 3f1c2c2e-6b2a-4d1e-9c3a-1b2c3d4e5f60
+                  task_id: 11111111-1111-4111-8111-111111111111
+                  agent_id: 22222222-2222-4222-8222-222222222222
+                  status: running
+                  attempt: 1
+                  version: 2
+                  started_at: '2026-10-19T14:00:00Z'
+                  lease_expires_at: '2026-10-19T14:02:00Z'
+                  heartbeat_at: '2026-10-19T14:00:30Z'
+                  ended_at: null
+                  result_summary: ''
+                  failure_code: ''
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /workspaces/{workspace_id}/executions/{execution_id}/heartbeat:
+    post:
+      operationId: heartbeatExecution
+      tags: [executions]
+      summary: Renew the lease.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/ExecutionId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/ExecutionLease'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+            example: {}
+      responses:
+        '200':
+          description: The renewed lease expiry.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaseEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+  /workspaces/{workspace_id}/executions/{execution_id}/progress:
+    post:
+      operationId: progressExecution
+      tags: [executions]
+      summary: Record a progress note.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/ExecutionId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/ExecutionLease'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Progress'
+      responses:
+        '201':
+          description: The progress note was stored.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+  /workspaces/{workspace_id}/executions/{execution_id}/request-input:
+    post:
+      operationId: requestInput
+      tags: [executions]
+      summary: Ask a human a question and keep the lease.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/ExecutionId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/ExecutionLease'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Question'
+      responses:
+        '201':
+          description: The open question.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InputRequestEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+  /workspaces/{workspace_id}/input-requests/{input_request_id}/answer:
+    post:
+      operationId: answerInput
+      tags: [executions]
+      summary: Answer an open question.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/InputRequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Answer'
+      responses:
+        '201':
+          description: The answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+  /workspaces/{workspace_id}/executions/{execution_id}/submit:
+    post:
+      operationId: submitExecution
+      tags: [executions]
+      summary: Deliver the result and release the lease.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/ExecutionId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/ExecutionLease'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Submit'
+      responses:
+        '200':
+          description: The execution was submitted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+  /workspaces/{workspace_id}/executions/{execution_id}/fail:
+    post:
+      operationId: failExecution
+      tags: [executions]
+      summary: Record a failure and release the lease.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/ExecutionId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/ExecutionLease'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Fail'
+      responses:
+        '200':
+          description: The execution failed and the task is ready.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+  /workspaces/{workspace_id}/executions/{execution_id}/release:
+    post:
+      operationId: releaseExecution
+      tags: [executions]
+      summary: Release the lease voluntarily.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/ExecutionId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/ExecutionLease'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+            example: {}
+      responses:
+        '200':
+          description: The lease was released.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+  /workspaces/{workspace_id}/tasks/{task_id}/approve:
+    post:
+      operationId: approveTask
+      tags: [tasks]
+      summary: Approve a delivery.
+      description: An agent cannot approve its own delivery.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/TaskId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Review'
+      responses:
+        '200':
+          description: The approved task.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+  /workspaces/{workspace_id}/tasks/{task_id}/reject:
+    post:
+      operationId: rejectTask
+      tags: [tasks]
+      summary: Reject a delivery and return the task to ready.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/TaskId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Reject'
+      responses:
+        '200':
+          description: The task is ready again.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+  /workspaces/{workspace_id}/threads/{thread_id}/messages:
+    get:
+      operationId: listMessages
+      tags: [messages]
+      summary: Read one conversation page.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/ThreadId'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Messages in chronological order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessagePage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: createMessage
+      tags: [messages]
+      summary: Append a message.
+      description: >
+        Mentions are structured recipients. Text such as @name does not
+        create a mention or start an execution.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/ThreadId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageCreate'
+      responses:
+        '201':
+          description: The stored message.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+  /workspaces/{workspace_id}/events:
+    get:
+      operationId: listEvents
+      tags: [events]
+      summary: Read events after a cursor.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Confirmed events the caller can read.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          $ref: '#/components/responses/Gone'
+  /workspaces/{workspace_id}/boards/{board_id}/snapshot:
+    get:
+      operationId: getBoardSnapshot
+      tags: [boards]
+      summary: Read a consistent board snapshot and its cursor.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/BoardId'
+      responses:
+        '200':
+          description: Tasks and the cursor to continue from.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Snapshot'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /workspaces/{workspace_id}/agent-inbox:
+    get:
+      operationId: getAgentInbox
+      tags: [events]
+      summary: Read mentions and signals for the authenticated agent.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Signals. A mention does not start an execution.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboxPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: ab_<public_id>.<secret>
+      description: Agent token. The query string is never accepted.
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: SESS
+      description: >
+        Human session cookie. Drupal prefixes the name. Cookie mutations
+        also require the CSRF token. A bearer token is not exposed to UI
+        JavaScript.
+  headers:
+    RequestId:
+      description: Request id echoed from X-Request-Id or generated.
+      schema:
+        type: string
+        format: uuid
+    RetryAfter:
+      description: Seconds to wait after a 429.
+      schema:
+        type: integer
+        minimum: 1
+  parameters:
+    WorkspaceId:
+      name: workspace_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    BoardId:
+      name: board_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    TaskId:
+      name: task_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ExecutionId:
+      name: execution_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ThreadId:
+      name: thread_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    InputRequestId:
+      name: input_request_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+        maxLength: 128
+    Status:
+      name: status
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/TaskStatus'
+    AssignedAgent:
+      name: assigned_agent
+      in: query
+      required: false
+      schema:
+        type: string
+        format: uuid
+    DueBefore:
+      name: due_before
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date-time
+    Priority:
+      name: priority
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/Priority'
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: >
+        UUID scoped to the actor, token, workspace, operation and resource.
+        The same body replays the stored response. A different body returns
+        409. Unsealed replays are kept for 24 hours.
+      schema:
+        type: string
+        format: uuid
+    ExecutionLease:
+      name: X-Execution-Lease
+      in: header
+      required: true
+      description: Lease token returned once by claim. It is not a bearer.
+      schema:
+        type: string
+        minLength: 32
+  responses:
+    Unauthorized:
+      description: The credential is invalid.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Forbidden:
+      description: The operation is not allowed on a visible resource.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    NotFound:
+      description: The resource is missing or outside the caller scope.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Conflict:
+      description: The claim, transition or idempotency key conflicts.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    PreconditionFailed:
+      description: The version is stale.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    PayloadTooLarge:
+      description: The body exceeds 256 KiB.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Invalid:
+      description: The request breaks a validation rule.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    PreconditionRequired:
+      description: Idempotency-Key or X-Execution-Lease is missing.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    TooMany:
+      description: The rate limit was exceeded.
+      headers:
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Gone:
+      description: The cursor is older than the retention window.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  schemas:
+    Problem:
+      type: object
+      additionalProperties: false
+      required: [type, title, status, detail, code, request_id]
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        code:
+          type: string
+        request_id:
+          type: string
+          format: uuid
+    Page:
+      type: object
+      required: [limit, next_cursor]
+      properties:
+        limit:
+          type: integer
+        next_cursor:
+          type: string
+          nullable: true
+    Workspace:
+      type: object
+      required: [id, name, timezone]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        timezone:
+          type: string
+    WorkspacePage:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Workspace'
+        page:
+          $ref: '#/components/schemas/Page'
+    Board:
+      type: object
+      required: [id, workspace_id, name, archived]
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        archived:
+          type: boolean
+    BoardWrite:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+    BoardEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Board'
+    BoardPage:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Board'
+        page:
+          $ref: '#/components/schemas/Page'
+    TaskStatus:
+      type: string
+      enum: [backlog, ready, in_progress, in_review, done, cancelled]
+    Priority:
+      type: string
+      enum: [low, normal, high, urgent]
+    Task:
+      type: object
+      required: [id, workspace_id, board_id, title, status, priority, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        board_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        acceptance_criteria:
+          type: string
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        priority:
+          $ref: '#/components/schemas/Priority'
+        human_owner:
+          type: string
+          nullable: true
+        assigned_agent:
+          type: string
+          format: uuid
+          nullable: true
+        due_at:
+          type: string
+          format: date-time
+          nullable: true
+        position:
+          type: integer
+        version:
+          type: integer
+        active_execution:
+          type: string
+          format: uuid
+          nullable: true
+    TaskCreate:
+      type: object
+      additionalProperties: false
+      required: [title]
+      properties:
+        title:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        acceptance_criteria:
+          type: string
+        priority:
+          $ref: '#/components/schemas/Priority'
+        human_owner:
+          type: string
+          nullable: true
+        due_at:
+          type: string
+          format: date-time
+          nullable: true
+    TaskPatch:
+      type: object
+      additionalProperties: false
+      required: [version]
+      properties:
+        title:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        acceptance_criteria:
+          type: string
+        priority:
+          $ref: '#/components/schemas/Priority'
+        human_owner:
+          type: string
+          nullable: true
+        due_at:
+          type: string
+          format: date-time
+          nullable: true
+        version:
+          type: integer
+          minimum: 1
+    TaskEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Task'
+    TaskPage:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+        page:
+          $ref: '#/components/schemas/Page'
+    Transition:
+      type: object
+      additionalProperties: false
+      required: [to, version]
+      properties:
+        to:
+          $ref: '#/components/schemas/TaskStatus'
+        version:
+          type: integer
+          minimum: 1
+    ExecutionStatus:
+      type: string
+      enum: [running, waiting_input, submitted, failed, interrupted, cancelled]
+    Execution:
+      type: object
+      description: Current attempt. This object has no lease secret.
+      required: [id, task_id, agent_id, status, attempt, version, started_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        task_id:
+          type: string
+          format: uuid
+        agent_id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/ExecutionStatus'
+        attempt:
+          type: integer
+        version:
+          type: integer
+        started_at:
+          type: string
+          format: date-time
+        lease_expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        heartbeat_at:
+          type: string
+          format: date-time
+          nullable: true
+        ended_at:
+          type: string
+          format: date-time
+          nullable: true
+        result_summary:
+          type: string
+        failure_code:
+          type: string
+          maxLength: 64
+    ExecutionEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Execution'
+    ClaimResult:
+      type: object
+      required: [execution_id, task_id, lease_token, lease_expires_at, task_version]
+      properties:
+        execution_id:
+          type: string
+          format: uuid
+        task_id:
+          type: string
+          format: uuid
+        lease_token:
+          type: string
+          description: Returned once. Replay stores it only as ciphertext.
+        lease_expires_at:
+          type: string
+          format: date-time
+        task_version:
+          type: integer
+    ClaimEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/ClaimResult'
+    LeaseEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [lease_expires_at]
+          properties:
+            lease_expires_at:
+              type: string
+              format: date-time
+    Progress:
+      type: object
+      additionalProperties: false
+      required: [note]
+      properties:
+        note:
+          type: string
+          maxLength: 500
+    Question:
+      type: object
+      additionalProperties: false
+      required: [body]
+      properties:
+        body:
+          type: string
+          minLength: 1
+          maxLength: 16384
+    Answer:
+      type: object
+      additionalProperties: false
+      required: [body]
+      properties:
+        body:
+          type: string
+          minLength: 1
+          maxLength: 16384
+    Submit:
+      type: object
+      additionalProperties: false
+      required: [summary]
+      properties:
+        summary:
+          type: string
+          maxLength: 16384
+        links:
+          type: array
+          items:
+            type: string
+            format: uri
+    Fail:
+      type: object
+      additionalProperties: false
+      required: [code]
+      properties:
+        code:
+          type: string
+          maxLength: 64
+        detail:
+          type: string
+          maxLength: 16384
+    Review:
+      type: object
+      additionalProperties: false
+      required: [version]
+      properties:
+        version:
+          type: integer
+          minimum: 1
+    Reject:
+      type: object
+      additionalProperties: false
+      required: [version, reason]
+      properties:
+        version:
+          type: integer
+          minimum: 1
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 16384
+    MessageKind:
+      type: string
+      enum: [comment, progress, question, answer, result, system]
+    Mention:
+      type: object
+      additionalProperties: false
+      required: [type, id]
+      properties:
+        type:
+          type: string
+          enum: [human, agent]
+        id:
+          type: string
+    Message:
+      type: object
+      required: [id, thread_id, kind, body, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        thread_id:
+          type: string
+          format: uuid
+        kind:
+          $ref: '#/components/schemas/MessageKind'
+        body:
+          type: string
+          maxLength: 16384
+        reply_to:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    MessageCreate:
+      type: object
+      additionalProperties: false
+      required: [kind, body]
+      properties:
+        kind:
+          $ref: '#/components/schemas/MessageKind'
+        body:
+          type: string
+          minLength: 1
+          maxLength: 16384
+        reply_to:
+          type: string
+          format: uuid
+          nullable: true
+        mentions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Mention'
+    MessageEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Message'
+    MessagePage:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+        page:
+          $ref: '#/components/schemas/Page'
+    InputRequest:
+      type: object
+      required: [id, execution_id, message_id, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        execution_id:
+          type: string
+          format: uuid
+        message_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [open, answered]
+    InputRequestEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/InputRequest'
+    Event:
+      type: object
+      required: [event_id, sequence, type, resource_id, created_at]
+      properties:
+        event_id:
+          type: string
+          format: uuid
+        sequence:
+          type: integer
+        type:
+          type: string
+        resource_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+    EventPage:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Event'
+        page:
+          $ref: '#/components/schemas/Page'
+    Snapshot:
+      type: object
+      required: [data, cursor]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+        cursor:
+          type: string
+    InboxItem:
+      type: object
+      required: [event_id, type, resource_id]
+      properties:
+        event_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+        resource_id:
+          type: string
+          format: uuid
+        recipient_type:
+          type: string
+          enum: [human, agent]
+        recipient_id:
+          type: string
+    InboxPage:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/InboxItem'
+        page:
+          $ref: '#/components/schemas/Page'

@@ -509,23 +509,23 @@ Como participante, quero descobrir mensagens que exigem minha atenção.
 
 Como integrador, quero uma API previsível.
 
-**Dependências:** US-13, US-19. **Status:** todo.
+**Dependências:** US-13, US-19. **Status:** done.
 
 ### US-20/T01 — Escrever OpenAPI de leitura e comandos
 
-- [ ] **Entrega:** Documentar rotas da arquitetura, schemas, autenticação, leases, erros e exemplos; incluir GET de execução para runner/MCP.
+- [x] **Entrega:** Documentar rotas da arquitetura, schemas, autenticação, leases, erros e exemplos; incluir GET de execução para runner/MCP.
 - **Aceite:** Contrato permite consultar execução atual sem banco e tem lint válido.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-20/T02 — Criar infraestrutura HTTP
 
-- [ ] **Entrega:** DTOs, validação, Problem Details, request_id, limites de body e cache private/no-store.
+- [x] **Entrega:** DTOs, validação, Problem Details, request_id, limites de body e cache private/no-store.
 - **Aceite:** Erros não incluem stack trace; 404/403 seguem regra de escopo.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-20/T03 — Implementar idempotência atômica
 
-- [ ] **Entrega:** Reservar key por ator/workspace/operação/recurso e hash; resolver concorrência; criptografar replay de claim com TTL e chave externa.
+- [x] **Entrega:** Reservar key por ator/workspace/operação/recurso e hash; resolver concorrência; criptografar replay de claim com TTL e chave externa.
 - **Aceite:** Mesma key simultânea não duplica efeito; payload divergente retorna 409.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

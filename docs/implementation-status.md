@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-19  
-**Marco atual:** M4 — US-19 concluída. US-20 segue todo.
+**Marco atual:** M5 — US-20 concluída. US-21 segue todo.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -2276,6 +2276,92 @@ No navegador, na Casa Grace, a conversa de "Entrega da verificacao" mencionou gr
 
 ---
 
+## US-20 — Definir contrato HTTP
+
+**Status:** done  
+**Dependências:** US-13 done, US-19 done.  
+**Objetivo:** O integrador lê um contrato estável. O erro não vaza segredo. A mesma chave não executa o comando duas vezes.
+
+#### US-20/T01 — Escrever OpenAPI de leitura e comandos
+
+**Status:** done  
+**Entrega:** `docs/openapi.yaml` cobre as rotas da arquitetura, inclusive `GET /workspaces/{w}/executions/{e}`.
+
+**Contrato:**
+- a base é `/api/agent-board/v1`. Datas em ISO 8601 UTC. Página padrão 50, máximo 100. Body máximo 256 KiB, mensagem 16 KiB
+- o GET da execução não tem `lease_token`. O claim devolve o segredo uma vez. Bearer não entra na query string
+- PATCH não aceita workspace, board, status, autor, execução ativa nem campo de lease
+
+#### US-20/T02 — Criar infraestrutura HTTP
+
+**Status:** done  
+**Entrega:** Problema RFC 9457, `request_id`, validação de JSON e página, limite de body e cache privado.
+
+**Contrato:**
+- o documento tem `type`, `title`, `status`, `detail`, `code` e `request_id`. Não vai stack, caminho de arquivo nem a mensagem da exceção de domínio
+- fora do escopo é 404. Operação proibida num recurso visível é 403. Credencial rejeitada é 401. Body acima de 256 KiB é 413
+- toda resposta da API leva `Cache-Control` com `private` e `no-store`. O Symfony emite a ordem `no-store, private`
+
+#### US-20/T03 — Implementar idempotência atômica
+
+**Status:** done  
+**Entrega:** A reserva é ator, token, workspace, operação, recurso e hash. O replay do claim fica cifrado.
+
+**Contrato:**
+- a tabela é `ab_idempotency`. O mesmo body devolve a resposta guardada e não roda o efeito. Outro body com a mesma chave devolve 409
+- uma segunda conexão não reserva a mesma chave enquanto a transação do efeito está aberta
+- o segredo do claim é cifrado com `sodium` e a chave `$settings['ab_api_idempotency_key']`, base64 de 32 bytes, fora do banco. O TTL é o da lease. Sem a chave o efeito não roda. `discardSealed()` apaga o replay quando a lease termina. Resposta sem segredo dura 24 horas
+
+**Evidências:**
+```bash
+$ npx --yes @redocly/cli@1.25.11 lint docs/openapi.yaml
+Woohoo! Your API description is valid.
+```
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_api/tests/src/Unit/OpenApiContractTest.php
+OK (1 test, 18 assertions)
+```
+
+O GET da execução existe e o schema `Execution` não tem `lease_token`. O `ClaimResult` tem. O problema exige os seis campos. O limite padrão é 50 e o máximo é 100.
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_api/tests/src/Kernel/ApiKernelTest.php
+OK (4 tests, 38 assertions)
+```
+
+`testReplayDoesNotRepeatTheEffect` repete a resposta e recusa outro body sem rodar de novo. `testConcurrentReservationBlocks` segura a segunda conexão no unique da reserva. `testSealedReplayHidesTheLeaseToken` guarda só o ciphertext, recupera o segredo no replay, apaga a linha e recusa o seal sem a chave externa.
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_api/tests/src/Functional/ApiProblemTest.php
+OK (1 test, 113 assertions)
+```
+
+Fora do escopo responde 404. Operação proibida responde 403. Exceção inesperada responde 500 sem o texto, o arquivo ou o stack. Caminho inexistente na API também é problem+json. Bearer malformado e token desconhecido respondem 401 sem ecoar a credencial. O body acima de 256 KiB responde 413. As depreciações do PHPUnit são o aviso de metadata `@group`.
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,yml \
+    web/modules/custom/ab_api
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse --memory-limit=1G
+PHPStan: exit 0
+```
+
+`ab_api` foi instalado e o schema local ficou em 11001. A tabela `ab_idempotency` existe. As rotas de tarefa, execução e mensagem continuam só no contrato; a US-21 implementa as leituras.
+
+**Bloqueios:** nenhum nesta história.
+
+**Próxima ação:** —
+
+---
+
 ## Estatísticas
 
 - **Total de tasks:** 83 (conforme backlog)
@@ -2284,12 +2370,13 @@ No navegador, na Casa Grace, a conversa de "Entrega da verificacao" mencionou gr
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
 - **M3:** US-12 done; US-13 done; US-14 done; US-15 done; US-16 done
 - **M4:** US-17 done; US-18 done; US-19 done
+- **M5:** US-20 done
 
 ---
 
 ## Próximos Passos
 
-1. US-20/T01 — contrato HTTP de leitura e comandos
+1. US-21/T01 — consultas HTTP de workspace, board, tarefa e execução
 
 ---
 

@@ -4,9 +4,14 @@ declare(strict_types=1);
 
 namespace Drupal\ab_ui\Hook;
 
+use Drupal\ab_board\BoardRepository;
+use Drupal\ab_core\Authorization\MembershipScope;
+use Drupal\ab_core\Authorization\WorkspacePermission;
+use Drupal\ab_core\Entity\Workspace;
 use Drupal\ab_ui\WorkspaceContext;
 use Drupal\Core\Database\Connection;
 use Drupal\Core\Hook\Attribute\Hook;
+use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\Url;
@@ -22,6 +27,9 @@ final class AbUiHooks {
     private readonly WorkspaceContext $context,
     private readonly AccountInterface $currentUser,
     private readonly Connection $database,
+    private readonly BoardRepository $boards,
+    private readonly MembershipScope $scope,
+    private readonly RouteMatchInterface $routeMatch,
   ) {}
 
   /**
@@ -225,16 +233,113 @@ final class AbUiHooks {
       return;
     }
     $workspace = $this->context->workspace();
+    $tags = ['ab_membership_list:' . $this->currentUser->id()];
+    if ($workspace instanceof Workspace && $workspace->id() !== NULL) {
+      $tags[] = 'ab_workspace_boards:' . $workspace->id();
+    }
     $variables['workspace_selector'] = [
       '#type' => 'link',
       '#title' => $workspace === NULL ? $this->t('Meus workspaces') : $workspace->label(),
       '#url' => Url::fromRoute('ab_ui.workspaces'),
       '#attributes' => ['class' => ['ab-workspace-selector__link']],
       '#cache' => [
-        'contexts' => ['user', 'ab_memberships', 'ab_workspace'],
-        'tags' => ['ab_membership_list:' . $this->currentUser->id()],
+        'contexts' => ['user', 'ab_memberships', 'ab_workspace', 'route'],
+        'tags' => $tags,
       ],
     ];
+    $variables['shell_account'] = $this->currentUser->getDisplayName();
+    $variables['shell_nav'] = $this->shellNav();
+    $variables['shell_boards'] = $this->shellBoards($workspace);
+    $variables['shell_add_board'] = $this->shellAddBoard($workspace);
+  }
+
+  /**
+   * Links the screens that already have a route.
+   *
+   * @return list<array{label: string, url: string, active: bool}>
+   *   Primary navigation.
+   */
+  private function shellNav(): array {
+    $route = (string) $this->routeMatch->getRouteName();
+    $items = [
+      ['ab_ui.boards', $this->t('Meus boards'), [
+        'ab_ui.boards',
+        'ab_ui.board_add',
+        'ab_ui.board_view',
+        'ab_ui.board_tasks',
+        'ab_ui.task_add',
+      ]],
+      ['ab_ui.conversations', $this->t('Conversas'), [
+        'ab_ui.conversations',
+        'ab_ui.conversation',
+        'ab_ui.board_conversation',
+        'ab_ui.task_conversation',
+      ]],
+      ['ab_ui.agents', $this->t('Agentes'), [
+        'ab_ui.agents',
+        'ab_ui.agent_add',
+        'ab_ui.agent_view',
+      ]],
+      ['ab_ui.notifications', $this->t('Notificações'), [
+        'ab_ui.notifications',
+      ]],
+    ];
+    $nav = [];
+    foreach ($items as $item) {
+      $nav[] = [
+        'label' => (string) $item[1],
+        'url' => Url::fromRoute($item[0])->toString(),
+        'active' => in_array($route, $item[2], TRUE),
+      ];
+    }
+    return $nav;
+  }
+
+  /**
+   * Lists the boards of the selected workspace.
+   *
+   * @return list<array{label: string, url: string, active: bool}>
+   *   Board links. Archived boards stay on the board list.
+   */
+  private function shellBoards(?Workspace $workspace): array {
+    if (!$workspace instanceof Workspace) {
+      return [];
+    }
+    $current = (string) $this->routeMatch->getRawParameter('uuid');
+    $route = (string) $this->routeMatch->getRouteName();
+    $on_board = in_array($route, [
+      'ab_ui.board_view',
+      'ab_ui.board_tasks',
+      'ab_ui.board_conversation',
+      'ab_ui.task_add',
+    ], TRUE);
+    $links = [];
+    foreach ($this->boards->accessibleBoards($workspace) as $board) {
+      if ((int) $board->get('archived')->getString() === 1) {
+        continue;
+      }
+      $links[] = [
+        'label' => (string) $board->label(),
+        'url' => Url::fromRoute('ab_ui.board_tasks', [
+          'uuid' => $board->uuid(),
+        ])->toString(),
+        'active' => $on_board && $current === $board->uuid(),
+      ];
+    }
+    return $links;
+  }
+
+  /**
+   * Returns the create link when the member may manage boards.
+   */
+  private function shellAddBoard(?Workspace $workspace): string {
+    if (!$workspace instanceof Workspace) {
+      return '';
+    }
+    if (!$this->scope->allows($this->currentUser, $workspace, WorkspacePermission::MANAGE_BOARDS)) {
+      return '';
+    }
+    return Url::fromRoute('ab_ui.board_add')->toString();
   }
 
 }

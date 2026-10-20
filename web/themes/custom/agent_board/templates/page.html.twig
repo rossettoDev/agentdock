@@ -1,60 +1,74 @@
 {#
 /**
  * @file
- * Agent Board theme template for the page.
+ * Dark application shell for the screens that already have routes.
  */
 #}
 <div class="ab-layout">
-  <header class="ab-header" role="banner">
-    <div class="ab-header__inner">
-      <div class="ab-logo">
-        <a href="{{ front_page }}" title="{{ 'Home'|t }}">
-          {{ site_name }}
-        </a>
-      </div>
-      
-      {% if workspace_selector %}
-        <div class="ab-workspace-selector">
-          {{ workspace_selector }}
+  {% if shell_nav %}
+    <div class="ab-app">
+      <aside class="ab-sidebar">
+        <div class="ab-logo">
+          <a href="{{ front_page }}">{{ site_name|default('AgentDock') }}</a>
         </div>
-      {% endif %}
-
-      {% if primary_menu %}
-        <nav class="ab-primary-menu" role="navigation">
-          {{ primary_menu }}
+        <nav class="ab-sidebar__nav" aria-label="{{ 'Principal'|t }}">
+          <ul>
+            {% for item in shell_nav %}
+              <li>
+                <a href="{{ item.url }}"{% if item.active %} class="is-active" aria-current="page"{% endif %}>{{ item.label }}</a>
+              </li>
+            {% endfor %}
+          </ul>
         </nav>
-      {% endif %}
-
-      {% if secondary_menu %}
-        <nav class="ab-secondary-menu" role="navigation">
-          {{ secondary_menu }}
-        </nav>
-      {% endif %}
-    </div>
-  </header>
-
-  {% if breadcrumb %}
-    <div class="ab-breadcrumb">
-      {{ breadcrumb }}
-    </div>
-  {% endif %}
-
-  <div class="ab-main">
-    {% if sidebar %}
-      <aside class="ab-sidebar" role="complementary">
-        {{ sidebar }}
+        {% if shell_boards %}
+          <p class="ab-sidebar__label">{{ 'Boards'|t }}</p>
+          <ul class="ab-sidebar__boards">
+            {% for board in shell_boards %}
+              <li>
+                <a href="{{ board.url }}"{% if board.active %} class="is-active" aria-current="page"{% endif %}>{{ board.label }}</a>
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+        {% if shell_add_board %}
+          <p class="ab-sidebar__add">
+            <a href="{{ shell_add_board }}">{{ 'Novo board'|t }}</a>
+          </p>
+        {% endif %}
       </aside>
-    {% endif %}
 
-    <main class="ab-content" role="main">
-      <a id="main-content" tabindex="-1"></a>
-      {{ page.content }}
-    </main>
-  </div>
-
-  {% if footer %}
-    <footer class="ab-footer" role="contentinfo">
-      {{ footer }}
-    </footer>
+      <div class="ab-main">
+        <header class="ab-header" role="banner">
+          <div class="ab-header__inner">
+            {% if workspace_selector %}
+              <div class="ab-workspace-selector">
+                {{ workspace_selector }}
+              </div>
+            {% endif %}
+            {% if shell_account %}
+              <p class="ab-account">{{ shell_account }}</p>
+            {% endif %}
+          </div>
+        </header>
+        <main class="ab-content" role="main">
+          <a id="main-content" tabindex="-1"></a>
+          {{ page.content }}
+        </main>
+      </div>
+    </div>
+  {% else %}
+    <header class="ab-header" role="banner">
+      <div class="ab-header__inner">
+        <div class="ab-logo">
+          <a href="{{ front_page }}">{{ site_name|default('AgentDock') }}</a>
+        </div>
+      </div>
+    </header>
+    <div class="ab-main">
+      <main class="ab-content" role="main">
+        <a id="main-content" tabindex="-1"></a>
+        {{ page.content }}
+      </main>
+    </div>
   {% endif %}
 </div>

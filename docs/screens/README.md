@@ -81,7 +81,7 @@ Em caso de conflito, preservar as regras da arquitetura e documentar o ajuste vi
 
 ## Conferência de 2026-10-20
 
-A tela em uso não copia o protótipo escuro. O tema `agent_board` empilha o kanban abaixo de 768px. Os testes funcionais de domínio usam o tema `stark`, então o CSS do tema não é a evidência deles.
+A tela em uso usa o shell escuro do protótipo: barra lateral com Meus boards, Conversas, Agentes e Notificações, e o kanban com a cor da coluna. Não copia métricas, mensagens diretas, anexos, checklist, tags nem status "online". O tema `agent_board` empilha a barra e o kanban abaixo de 768px. Os testes funcionais de domínio usam o tema `stark`, então o CSS do tema não é a evidência deles.
 
 O que a tela faz e o protótipo não pede como MVP:
 

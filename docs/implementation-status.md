@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-20  
-**Marco atual:** M8 — US-28/T01 e T02 concluídas. T03 segue todo.
+**Marco atual:** M8 — US-28 concluída.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -2927,7 +2927,7 @@ PHPCS: exit 0
 
 ## US-28 — Conectar por MCP após o MVP
 
-**Status:** in_progress  
+**Status:** done  
 **Dependências:** US-27 done.  
 **Objetivo:** Expor as ferramentas da arquitetura por stdio, chamando a API com a credencial do processo, sem tratar a sessão como execução.
 
@@ -2949,7 +2949,7 @@ PHPCS: exit 0
 **Contrato:**
 - `notifications/cancelled` e o fim da entrada não geram request
 - um claim seguido do encerramento do processo deixa a execução `running`. A release só ocorre na ferramenta `release_task`
-- não há cliente MCP de editor nesta história. A T03 continua todo
+- o cliente externo entrou na T03. O Inspector não existia ainda nesta task
 
 **Evidências:**
 ```bash
@@ -2972,12 +2972,34 @@ PHPCS: exit 0
 
 #### US-28/T03 — Integrar um cliente real
 
-**Status:** todo  
-**Entrega:** Ainda não há cliente externo.
+**Status:** done  
+**Entrega:** O MCP Inspector oficial (`@modelcontextprotocol/inspector` 2.11.0, modo CLI, Node 24.22.0) fala com `tools/mcp-adapter/adapter.php` por stdio no WSL, contra o site Lando local. O registro completo está em `docs/US-28-T03-evidencias.md`.
 
-**Bloqueios:** T03 depende de um cliente MCP real no ambiente. O ensaio acima fala o protocolo por stdio e não substitui esse cliente.
+**Contrato:**
+- cada chamada do Inspector é um processo novo. O fim do processo não libera a execução
+- a credencial fica em arquivo local, modo 600, fora do Git
+- o ciclo listou as doze ferramentas, reivindicou, leu a execução ainda `running` sem lease na resposta e liberou. A tarefa voltou a `ready`
 
-**Próxima ação:** US-28/T03 — integrar um cliente real.
+**Evidências:**
+```bash
+$ npx -y @modelcontextprotocol/inspector --cli php tools/mcp-adapter/adapter.php \
+    --method tools/list
+12 ferramentas
+
+$ ... --method tools/call --tool-name claim_task
+execução running após o processo encerrar; heartbeat_at null
+
+$ ... --tool-name release_task
+execução interrupted em 2026-10-20T13:36:20Z; tarefa ready
+```
+
+A linha no banco confere: execução `9c9b9540-d5fe-40ae-9805-dd235833b138`, tentativa 3, `ended_at` 1792503380. A tarefa `5992eac0-a2b5-4427-bde7-4109c689b5ef` está `ready`, versão 8.
+
+O PHP 8.1 do WSL precisou da extensão curl carregada por `PHP_INI_SCAN_DIR`. O claim usou `ab_api_idempotency_key` em `settings.local.php`, que não entra no repositório.
+
+**Bloqueios:** nenhum nesta história.
+
+**Próxima ação:** —
 
 ---
 
@@ -2992,13 +3014,13 @@ PHPCS: exit 0
 - **M5:** US-20 done; US-21 done; US-22 done; US-23 done
 - **M6:** US-24 done; US-25 done; US-26 done
 - **M7:** US-27 done
-- **M8:** US-28 in_progress (T01 e T02 done; T03 todo)
+- **M8:** US-28 done
 
 ---
 
 ## Próximos Passos
 
-1. US-28/T03 — cliente MCP real no ambiente testado
+1. Nenhuma história pendente no backlog. Itens posteriores ao MVP continuam fora.
 
 ---
 

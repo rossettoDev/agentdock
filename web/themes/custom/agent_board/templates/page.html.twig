@@ -7,7 +7,7 @@
 <div class="ab-layout">
   {% if shell_nav %}
     <div class="ab-app">
-      <aside class="ab-sidebar">
+      <aside id="ab-sidebar" class="ab-sidebar">
         <div class="ab-logo">
           <a href="{{ front_page }}">{{ site_name|default('AgentDock') }}</a>
         </div>
@@ -40,20 +40,48 @@
       <div class="ab-main">
         <header class="ab-header" role="banner">
           <div class="ab-header__inner">
+            <button type="button" class="ab-button ab-button--quiet" data-ab-nav-toggle aria-expanded="true" aria-controls="ab-sidebar">{{ 'Menu'|t }}</button>
             {% if workspace_selector %}
               <div class="ab-workspace-selector">
                 {{ workspace_selector }}
               </div>
             {% endif %}
+            <button type="button" class="ab-button ab-button--quiet ab-bell" data-ab-bell aria-expanded="false" aria-controls="ab-context">
+              {{ 'Notificações'|t }}
+              {% if shell_unread %}
+                <span class="ab-bell__count">{{ shell_unread }}</span>
+              {% endif %}
+            </button>
             {% if shell_account %}
-              <p class="ab-account">{{ shell_account }}</p>
+              <a class="ab-account" href="{{ shell_account_url }}">{{ shell_account }}</a>
             {% endif %}
           </div>
         </header>
-        <main class="ab-content" role="main">
-          <a id="main-content" tabindex="-1"></a>
-          {{ page.content }}
-        </main>
+        {% if shell_breadcrumb %}
+          {{ shell_breadcrumb }}
+        {% endif %}
+        <div class="ab-body">
+          <main class="ab-content" role="main">
+            <a id="main-content" tabindex="-1"></a>
+            {{ page.content }}
+          </main>
+          <aside id="ab-context" class="ab-context" hidden>
+            <button type="button" class="ab-button ab-button--quiet" data-ab-context-close>{{ 'Fechar'|t }}</button>
+            <h2>{{ 'Notificações'|t }}</h2>
+            {% if shell_notices.items %}
+              <ul class="ab-context__list">
+                {% for item in shell_notices.items %}
+                  <li>{{ item.label }} — {{ item.read }}</li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p>{{ shell_notices.empty }}</p>
+            {% endif %}
+            {% if notifications_url %}
+              <p><a href="{{ notifications_url }}">{{ 'Ver todas'|t }}</a></p>
+            {% endif %}
+          </aside>
+        </div>
       </div>
     </div>
   {% else %}

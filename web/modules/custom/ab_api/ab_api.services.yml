@@ -1,5 +1,11 @@
 services:
   Drupal\ab_api\IdempotencySeal: ~
+  Drupal\ab_api\ReplayCleaner:
+    arguments:
+      - '@database'
+      - '@datetime.time'
+    tags:
+      - { name: ab_event.maintenance }
   Drupal\ab_api\IdempotencyService:
     arguments:
       - '@database'

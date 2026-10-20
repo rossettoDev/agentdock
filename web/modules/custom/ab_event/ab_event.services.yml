@@ -5,3 +5,24 @@ services:
       - '@database'
       - '@uuid'
       - '@datetime.time'
+  Drupal\ab_event\SyncDestination:
+    arguments:
+      - '@database'
+    tags:
+      - { name: ab_event.outbox_destination }
+  Drupal\ab_event\OutboxProcessor:
+    arguments:
+      - '@database'
+      - !tagged_iterator ab_event.outbox_destination
+  Drupal\ab_event\EventCleaner:
+    arguments:
+      - '@database'
+  Drupal\ab_event\ClockSleeper: ~
+  Drupal\ab_event\OutboxWorker:
+    arguments:
+      - '@Drupal\ab_event\OutboxProcessor'
+      - '@Drupal\ab_event\EventCleaner'
+      - !tagged_iterator ab_event.maintenance
+      - '@Drupal\ab_event\ClockSleeper'
+      - '@datetime.time'
+      - '@logger.channel.default'

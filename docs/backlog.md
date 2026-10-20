@@ -653,23 +653,23 @@ Como humano, quero acompanhar agentes quase em tempo real.
 
 Como operador, quero processamento recuperável.
 
-**Dependências:** US-15, US-19, US-24. **Status:** todo.
+**Dependências:** US-15, US-19, US-24. **Status:** done.
 
 ### US-26/T01 — Criar worker Drush supervisionável
 
-- [ ] **Entrega:** Loop com shutdown gracioso, outbox e expiração a cada 15s; limites de recursos.
+- [x] **Entrega:** Loop com shutdown gracioso, outbox e expiração a cada 15s; limites de recursos.
 - **Aceite:** Reinício não perde trabalho confirmado nem deixa lease eterna.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-26/T02 — Implementar retries e fila de falhas
 
-- [ ] **Entrega:** Claim de outbox, timeout, backoff, tentativas máximas e reprocessamento.
+- [x] **Entrega:** Claim de outbox, timeout, backoff, tentativas máximas e reprocessamento.
 - **Aceite:** Dois workers não produzem projeções duplicadas.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-26/T03 — Criar limpeza e observabilidade
 
-- [ ] **Entrega:** Expurgar eventos 30 dias/replays expirados; logs sem secrets; métricas da outbox/leases.
+- [x] **Entrega:** Expurgar eventos 30 dias/replays expirados; logs sem secrets; métricas da outbox/leases.
 - **Aceite:** Limpeza respeita cursores e separa auditoria durável de feed transitório.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

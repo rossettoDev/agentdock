@@ -306,7 +306,30 @@ body {
 }
 
 .ab-kanban__column.is-drop-target {
-  outline: 2px solid var(--ab-primary);
+  outline: 2px solid var(--ab-focus);
+}
+
+.ab-kanban-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ab-space-2);
+  margin: 0 0 var(--ab-space-4);
+}
+
+.ab-kanban-filters a[aria-current="page"] {
+  color: var(--ab-text);
+  text-decoration: underline;
+}
+
+.ab-card.is-dragging,
+.ab-card.is-pending {
+  opacity: 0.65;
+}
+
+.ab-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ab-space-1);
 }
 
 .ab-card__move {

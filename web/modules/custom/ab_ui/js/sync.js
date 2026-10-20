@@ -232,7 +232,8 @@
       }
       const focused = node.contains(document.activeElement);
       const dirty = hasDraft(node);
-      if (!schedule.shouldReplace(focused, dirty)) {
+      const dragging = node.hasAttribute('data-ab-dragging');
+      if (!schedule.shouldReplace(focused, dirty) || dragging) {
         node.setAttribute('data-ab-sync-pending', 'true');
         return;
       }
@@ -319,6 +320,15 @@
           arm();
         });
         document.addEventListener('focusout', flushPending);
+        document.addEventListener('dragend', function () {
+          document.querySelectorAll('[data-ab-sync][data-ab-sync-pending]').forEach(function (region) {
+            if (region.hasAttribute('data-ab-dragging') || region.contains(document.activeElement) || hasDraft(region)) {
+              return;
+            }
+            region.removeAttribute('data-ab-sync-pending');
+            refreshRegions([region.getAttribute('data-ab-sync')]);
+          });
+        });
       });
       once('ab-ui-sync', '[data-ab-sync-root]', context).forEach(function () {
         state = schedule.attach(state);

@@ -45,11 +45,23 @@
             return;
           }
           dragged = card;
+          card.classList.add('is-dragging');
+          const region = board.closest('[data-ab-sync]');
+          if (region) {
+            region.setAttribute('data-ab-dragging', 'true');
+          }
           event.dataTransfer.effectAllowed = 'move';
           event.dataTransfer.setData('text/plain', card.getAttribute('data-uuid') || '');
         });
 
         board.addEventListener('dragend', function () {
+          if (dragged) {
+            dragged.classList.remove('is-dragging');
+          }
+          const region = board.closest('[data-ab-sync]');
+          if (region) {
+            region.removeAttribute('data-ab-dragging');
+          }
           dragged = null;
           board.querySelectorAll('.is-drop-target').forEach(function (column) {
             column.classList.remove('is-drop-target');
@@ -95,6 +107,7 @@
                 cards.appendChild(dragged);
                 input.value = '';
               }
+              dragged.classList.add('is-pending');
               button.click();
               dragged = null;
               return;
@@ -111,6 +124,7 @@
               return;
             }
             cards.appendChild(dragged);
+            dragged.classList.add('is-pending');
             button.click();
             dragged = null;
           });

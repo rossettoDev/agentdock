@@ -1,0 +1,22 @@
+uuid: 85de48ae-ad55-423f-a17c-3873b761a3f5
+langcode: pt-br
+status: true
+dependencies:
+  module:
+    - system
+  theme:
+    - agent_board
+_core:
+  default_config_hash: erQSEZF2XUjNmgTl0uNRBzmg18ZGXwUcw2FhApoeuHk
+id: agent_board_content
+theme: agent_board
+region: content
+weight: 0
+provider: null
+plugin: system_main_block
+settings:
+  id: system_main_block
+  label: 'Conteúdo da página principal'
+  label_display: '0'
+  provider: system
+visibility: {  }

@@ -1,0 +1,22 @@
+uuid: 0eeadef5-841b-43c8-bbab-a39a7ed5c276
+langcode: pt-br
+status: true
+dependencies:
+  theme:
+    - agent_board
+_core:
+  default_config_hash: nGE3EoPQQaQCuqTUtZgw0-KIzmrqdKDzdNQf2JyPUt4
+id: agent_board_primary_local_tasks
+theme: agent_board
+region: header
+weight: -4
+provider: null
+plugin: local_tasks_block
+settings:
+  id: local_tasks_block
+  label: 'Abas primárias'
+  label_display: '0'
+  provider: core
+  primary: true
+  secondary: false
+visibility: {  }

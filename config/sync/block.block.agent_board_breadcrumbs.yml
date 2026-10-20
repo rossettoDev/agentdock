@@ -1,0 +1,22 @@
+uuid: 89ea78ec-9ce4-4b8f-99d2-bc7a01da463e
+langcode: pt-br
+status: true
+dependencies:
+  module:
+    - system
+  theme:
+    - agent_board
+_core:
+  default_config_hash: VhBzWb7lMRtIOg9G7VSw_0uopi-7zXeHq4vXqqV1HFE
+id: agent_board_breadcrumbs
+theme: agent_board
+region: breadcrumb
+weight: 0
+provider: null
+plugin: system_breadcrumb_block
+settings:
+  id: system_breadcrumb_block
+  label: Breadcrumbs
+  label_display: '0'
+  provider: system
+visibility: {  }

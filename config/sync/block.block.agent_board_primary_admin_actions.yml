@@ -1,0 +1,20 @@
+uuid: be3aa18c-0ce2-4806-9349-e7bf9f235a1b
+langcode: pt-br
+status: true
+dependencies:
+  theme:
+    - agent_board
+_core:
+  default_config_hash: Q9_2whdOj1YIomfvsIfopROW4FT_X5pY0DjdOiOaQ5U
+id: agent_board_primary_admin_actions
+theme: agent_board
+region: header
+weight: -5
+provider: null
+plugin: local_actions_block
+settings:
+  id: local_actions_block
+  label: 'Ações primárias do administrador'
+  label_display: '0'
+  provider: core
+visibility: {  }

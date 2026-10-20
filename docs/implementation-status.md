@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-20  
-**Marco atual:** M6 — US-26 concluída. US-27 segue todo.
+**Marco atual:** M7 — US-27 concluída. US-28 segue todo.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -2834,6 +2834,97 @@ PHPStan: exit 0
 
 ---
 
+## US-27 — Validar piloto e produção
+
+**Status:** done  
+**Dependências:** US-23 done, US-25 done, US-26 done.  
+**Objetivo:** Registrar o que a regressão, as telas, o backup e a carga realmente mostraram, sem tratar o ensaio como capacidade de produção.
+
+#### US-27/T01 — Executar regressão de segurança e domínio
+
+**Status:** done  
+**Entrega:** Isolamento, token, concorrência, transição, sanitização, grant e idempotência nos testes já existentes.
+
+**Contrato:**
+- a suíte abaixo cobre workspace, board, agente, mensagem, evento e API. A falha registrada nessa rodada foi o relatório do ensaio de carga escrevendo em stderr, não uma regra de domínio
+- a classe do ensaio foi corrigida e passou sozinha. A suíte de telas não entrou junta: quando roda inteira, o login de alguns testes de workspace falha e passa isolado
+
+#### US-27/T02 — Validar telas e acessibilidade
+
+**Status:** done  
+**Entrega:** Conferência com `docs/screens` e uma sessão no site local.
+
+**Contrato:**
+- o painel de métricas, anexo, checklist e DM continuam fora do MVP
+- o kanban tem botão **Mover** com foco. Agente aparece habilitado, não "online". Conversa vazia avisa que não há mensagem. UUID desconhecido responde página não encontrada
+- não houve auditoria automática de acessibilidade. O tema empilha o kanban abaixo de 768px; isso não foi medido num viewport de telefone nesta rodada
+
+#### US-27/T03 — Criar runbooks e restaurar backup
+
+**Status:** done  
+**Entrega:** `docs/runbooks/operacao.md` e `tools/health-check.php`.
+
+**Contrato:**
+- o dump de `drupal11` foi restaurado em `agentdock_restore`. O health check nessa cópia respondeu `ok`, com 3 workspaces, 4 tarefas e schema `ab_event` 11002
+- a cópia e o arquivo de dump foram apagados. O banco de trabalho continuou respondendo os mesmos números
+
+#### US-27/T04 — Executar carga e piloto
+
+**Status:** done  
+**Entrega:** Um workspace de teste com 20 humanos, 10 agentes, 10 boards e 5.000 tarefas.
+
+**Contrato:**
+- o volume passa por `TaskManager`, `BoardManager` e `AgentManager` no PHPUnit kernel, com tabelas prefixadas. Não é HTTP e não são 20 pessoas ao mesmo tempo
+- p95 da criação: 14,14 ms. p95 da leitura de 50 tarefas de um board, na mesma ordem da listagem: 0,35 ms. Erros: 0. Isso não define capacidade de produção
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_core/tests \
+    web/modules/custom/ab_board/tests \
+    web/modules/custom/ab_agent/tests \
+    web/modules/custom/ab_communication/tests \
+    web/modules/custom/ab_event/tests \
+    web/modules/custom/ab_api/tests \
+    web/modules/custom/ab_ui/tests/src/Unit
+Tests: 134, Assertions: 3604, Errors: 1
+```
+
+O único erro foi `PilotLoadKernelTest` ao imprimir o relatório em stderr. A linha já trazia `humans=20 agents=10 boards=10 tasks=5000 errors=0`.
+
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_board/tests/src/Kernel/PilotLoadKernelTest.php
+OK (1 test, 5036 assertions)
+```
+
+`pilot humans=20 agents=10 boards=10 tasks=5000 errors=0 write_p95_ms=14.14 read_p95_ms=0.35`
+
+```bash
+$ lando exec appserver -- env DB_NAME=agentdock_restore php tools/health-check.php
+workspaces=3
+tasks=4
+schema_ab_event=11002
+ok
+```
+
+No Quadro Casa, o botão **Mover** ficou focado, a conversa do board mostrou "Nenhuma mensagem nesta conversa." e um UUID inexistente abriu "A página não foi encontrada". A lista de agentes mostra "Habilitado", não "online".
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php \
+    web/modules/custom/ab_board/tests/src/Kernel/PilotLoadKernelTest.php \
+    tools/health-check.php
+PHPCS: exit 0
+```
+
+**Bloqueios:** nenhum nesta história.
+
+**Próxima ação:** —
+
+---
+
 ## Estatísticas
 
 - **Total de tasks:** 83 (conforme backlog)
@@ -2844,12 +2935,13 @@ PHPStan: exit 0
 - **M4:** US-17 done; US-18 done; US-19 done
 - **M5:** US-20 done; US-21 done; US-22 done; US-23 done
 - **M6:** US-24 done; US-25 done; US-26 done
+- **M7:** US-27 done
 
 ---
 
 ## Próximos Passos
 
-1. US-27/T01 — regressão de segurança e domínio
+1. US-28/T01 — adaptador MCP sobre HTTP
 
 ---
 

@@ -677,29 +677,29 @@ Como operador, quero processamento recuperável.
 
 Como owner, quero usar o MVP com confiança.
 
-**Dependências:** US-23, US-25, US-26. **Status:** todo.
+**Dependências:** US-23, US-25, US-26. **Status:** done.
 
 ### US-27/T01 — Executar regressão de segurança e domínio
 
-- [ ] **Entrega:** Isolamento, tokens, concorrência, transições, sanitização, grants e idempotência.
+- [x] **Entrega:** Isolamento, tokens, concorrência, transições, sanitização, grants e idempotência.
 - **Aceite:** Checklist com comandos/evidências e falhas registradas.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-27/T02 — Validar telas e acessibilidade
 
-- [ ] **Entrega:** Comparar com docs/screens; mobile, teclado e estados vazio/loading/erro/negado.
+- [x] **Entrega:** Comparar com docs/screens; mobile, teclado e estados vazio/loading/erro/negado.
 - **Aceite:** Divergências e recursos fora do MVP documentados sem fingir implementação.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-27/T03 — Criar runbooks e restaurar backup
 
-- [ ] **Entrega:** Instalação, deploy, worker, rotação, rollback e restauração em ambiente de teste.
+- [x] **Entrega:** Instalação, deploy, worker, rotação, rollback e restauração em ambiente de teste.
 - **Aceite:** Backup restaurado de fato e health check confirma operação.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-27/T04 — Executar carga e piloto
 
-- [ ] **Entrega:** Meta de teste da arquitetura: 20 humanos, 10 agentes, 10 boards e 5.000 tasks; medir p95 e erros.
+- [x] **Entrega:** Meta de teste da arquitetura: 20 humanos, 10 agentes, 10 boards e 5.000 tasks; medir p95 e erros.
 - **Aceite:** Relatório declara ambiente, método, resultados e limitações; sem promessa de escala não medida.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

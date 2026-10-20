@@ -1,0 +1,8 @@
+<article class="ab-card">
+  {% if title %}
+    <h3 class="ab-card__title">{{ title }}</h3>
+  {% endif %}
+  <div class="ab-card__body">
+    {% block body %}{% endblock %}
+  </div>
+</article>

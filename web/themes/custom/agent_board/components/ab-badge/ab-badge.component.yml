@@ -1,0 +1,38 @@
+$schema: https://git.drupalcode.org/project/drupal/-/raw/HEAD/core/assets/schemas/v1/metadata.schema.json
+name: Badge
+status: stable
+description: 'Rótulo de um status ou condição que já existe no domínio.'
+libraryOverrides:
+  dependencies:
+    - agent_board/global
+props:
+  type: object
+  required:
+    - label
+    - tone
+  properties:
+    label:
+      type: string
+      title: Rótulo
+    tone:
+      type: string
+      title: Tom
+      enum:
+        - backlog
+        - ready
+        - in_progress
+        - in_review
+        - done
+        - cancelled
+        - blocked
+        - running
+        - waiting_input
+        - submitted
+        - failed
+        - interrupted
+        - enabled
+        - disabled
+        - low
+        - normal
+        - high
+        - urgent

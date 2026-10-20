@@ -1,0 +1,6 @@
+<div class="ab-skeleton" role="status">
+  <span class="visually-hidden">{{ 'Carregando'|t }}</span>
+  {% for line in 1..lines %}
+    <span class="ab-skeleton__line" aria-hidden="true"></span>
+  {% endfor %}
+</div>

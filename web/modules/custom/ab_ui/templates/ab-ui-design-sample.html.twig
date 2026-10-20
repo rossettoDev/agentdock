@@ -1,0 +1,40 @@
+{#
+/**
+ * @file
+ * Sample of the design-system components. Labels are fixed, not live data.
+ */
+#}
+<div class="ab-sample">
+  <section id="descricao">
+    <h2>{{ 'Botões'|t }}</h2>
+    <p>{{ primary }}</p>
+    <p>{{ quiet }}</p>
+    <p>{{ disabled }}</p>
+  </section>
+  <section>
+    <h2>{{ 'Estados'|t }}</h2>
+    <p>{{ badges }}</p>
+  </section>
+  <section>
+    <h2>{{ 'Abas'|t }}</h2>
+    {{ tabs }}
+  </section>
+  <section>
+    <h2>{{ 'Identidade'|t }}</h2>
+    <p>{{ human }}{{ agent }}</p>
+    {{ signal }}
+  </section>
+  <section>
+    <h2>{{ 'Carregando'|t }}</h2>
+    {{ skeleton }}
+  </section>
+  <section id="entrega">
+    <h2>{{ 'Cartão'|t }}</h2>
+    {{ card }}
+  </section>
+  <section>
+    <h2>{{ 'Vazio e erro'|t }}</h2>
+    {{ empty_state }}
+    {{ error }}
+  </section>
+</div>

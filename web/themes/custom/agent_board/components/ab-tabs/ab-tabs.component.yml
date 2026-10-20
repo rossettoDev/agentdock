@@ -1,0 +1,31 @@
+$schema: https://git.drupalcode.org/project/drupal/-/raw/HEAD/core/assets/schemas/v1/metadata.schema.json
+name: Tabs
+status: stable
+description: 'Links de seção. Um item current recebe aria-current. Não troca painel por script.'
+libraryOverrides:
+  dependencies:
+    - agent_board/global
+props:
+  type: object
+  required:
+    - label
+    - items
+  properties:
+    label:
+      type: string
+      title: Nome acessível da navegação
+    items:
+      type: array
+      title: Itens
+      items:
+        type: object
+        required:
+          - label
+          - url
+        properties:
+          label:
+            type: string
+          url:
+            type: string
+          current:
+            type: boolean

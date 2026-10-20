@@ -2973,7 +2973,7 @@ PHPCS: exit 0
 #### US-28/T03 — Integrar um cliente real
 
 **Status:** done  
-**Entrega:** O MCP Inspector oficial (`@modelcontextprotocol/inspector` 2.11.0, modo CLI, Node 24.22.0) fala com `tools/mcp-adapter/adapter.php` por stdio no WSL, contra o site Lando local. O registro completo está em `docs/US-28-T03-evidencias.md`.
+**Entrega:** Dois clientes reais falaram com `tools/mcp-adapter/adapter.php` por stdio, contra o site Lando local: o MCP Inspector e o ChatGPT de desktop. Os registros estão em `docs/US-28-T03-evidencias.md` e `docs/US-28-T03-evidencias-chatgpt.md`.
 
 **Contrato:**
 - cada chamada do Inspector é um processo novo. O fim do processo não libera a execução
@@ -2993,7 +2993,9 @@ $ ... --tool-name release_task
 execução interrupted em 2026-10-20T13:36:20Z; tarefa ready
 ```
 
-A linha no banco confere: execução `9c9b9540-d5fe-40ae-9805-dd235833b138`, tentativa 3, `ended_at` 1792503380. A tarefa `5992eac0-a2b5-4427-bde7-4109c689b5ef` está `ready`, versão 8.
+A linha do Inspector no banco confere: execução `9c9b9540-d5fe-40ae-9805-dd235833b138`, tentativa 3, `ended_at` 1792503380. Naquela conferência a tarefa `5992eac0-a2b5-4427-bde7-4109c689b5ef` estava `ready`, versão 8.
+
+O ChatGPT de desktop, no modo Codex, no Windows, inicia o adaptador por `wsl.exe` e um script local fora do repositório. O servidor só entrou numa conversa nova, aberta depois de reiniciar o app. O ciclo em linguagem natural reivindicou e liberou a mesma tarefa. A execução `728d8c07-76ae-448a-8437-47a8be87e253` está `interrupted`, tentativa 4, sem heartbeat, de 2026-10-20T14:08:19Z a 2026-10-20T14:08:26Z. A tarefa ficou `ready`, versão 10.
 
 O PHP 8.1 do WSL precisou da extensão curl carregada por `PHP_INI_SCAN_DIR`. O claim usou `ab_api_idempotency_key` em `settings.local.php`, que não entra no repositório.
 

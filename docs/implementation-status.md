@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
-**Última atualização:** 2026-10-19  
-**Marco atual:** M6 — US-25 concluída. US-26 segue todo.
+**Última atualização:** 2026-10-20  
+**Marco atual:** M6 — US-26 concluída. US-27 segue todo.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -2752,6 +2752,88 @@ No Quadro Casa, com a sessão aberta, a lista de tarefas fez três leituras de e
 
 ---
 
+## US-26 — Operar worker e manutenção
+
+**Status:** done  
+**Dependências:** US-15 done, US-19 done, US-24 done.  
+**Objetivo:** Um processo supervisionado publica a outbox, recupera leases vencidas e apaga o que expirou, sem repetir efeito nem apagar o contador.
+
+#### US-26/T01 — Criar worker Drush supervisionável
+
+**Status:** done  
+**Entrega:** `drush ab:work` em loop, com parada no fim do passe e teto de memória.
+
+**Contrato:**
+- o intervalo é 15 segundos. SIGTERM e SIGINT terminam o passe atual e não começam outro. Acima de 128 MiB o processo sai para o supervisor recomeçar
+- cada passe publica a outbox, recupera leases vencidas e limpa replay e eventos expirados. A recuperação de lease continua idempotente: o segundo passe não grava outro evento
+
+#### US-26/T02 — Implementar retries e fila de falhas
+
+**Status:** done  
+**Entrega:** Claim com `SKIP LOCKED`, timeout de 30s, backoff até 600s, cinco tentativas e `drush ab:outbox-requeue`.
+
+**Contrato:**
+- dois workers não pegam a mesma linha. A publicação fica em `ab_outbox_delivery`, com chave única por evento e destino
+- a falha grava só "Delivery failed." O texto da exceção, que pode carregar um segredo, não entra na linha nem no log
+- depois da quinta falha a linha espera o requeue. O efeito confirmado não volta para a fila
+
+#### US-26/T03 — Criar limpeza e observabilidade
+
+**Status:** done  
+**Entrega:** Prefixo de eventos com mais de 30 dias, outbox já processada e replays vencidos. O log do passe traz contagens e a idade da outbox.
+
+**Contrato:**
+- o contador do workspace não anda para trás. Um evento com outbox pendente segura o prefixo. O cursor atrás de `purged_sequence` recebe 410 `resync_required`
+- a outbox processada sai. O evento dentro da janela fica. O replay só sai quando `expires_at` já passou
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_event/tests/src/Kernel/WorkerKernelTest.php \
+    web/modules/custom/ab_api/tests/src/Kernel/ReplayCleanerKernelTest.php \
+    web/modules/custom/ab_api/tests/src/Functional/ApiSyncTest.php
+OK (6 tests, 220 assertions)
+```
+
+A segunda conexão não trava a linha já reivindicada e a publicação fica em uma linha. Cinco falhas escondem o segredo, o requeue publica uma vez e a repetição não cria outra. O expurgo remove o evento vencido, conserva o contador e o evento seguinte, e o cursor anterior à marca pede resync. O replay vencido sai; o que ainda está na janela fica.
+
+```bash
+$ lando drush updb -y
+[notice] Added outbox delivery and the purge watermark.
+
+$ lando drush ab:work --help
+Publishes the outbox and recovers expired leases until stopped.
+```
+
+O passe não rodou no site local: uma lease vencida da verificação seria interrompida.
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,yml \
+    web/modules/custom/ab_event/src \
+    web/modules/custom/ab_event/tests/src/Kernel/WorkerKernelTest.php \
+    web/modules/custom/ab_event/ab_event.install \
+    web/modules/custom/ab_event/ab_event.services.yml \
+    web/modules/custom/ab_agent/src/LeaseMaintenancePass.php \
+    web/modules/custom/ab_api/src/ReplayCleaner.php \
+    web/modules/custom/ab_api/src/Http/SyncReader.php \
+    web/modules/custom/ab_api/tests/src/Kernel/ReplayCleanerKernelTest.php
+PHPCS: exit 0
+
+$ lando php vendor/bin/phpstan analyse --memory-limit=1G \
+    web/modules/custom/ab_event \
+    web/modules/custom/ab_agent/src/LeaseMaintenancePass.php \
+    web/modules/custom/ab_api/src/ReplayCleaner.php \
+    web/modules/custom/ab_api/src/Http/SyncReader.php
+PHPStan: exit 0
+```
+
+**Bloqueios:** nenhum nesta história.
+
+**Próxima ação:** —
+
+---
+
 ## Estatísticas
 
 - **Total de tasks:** 83 (conforme backlog)
@@ -2761,13 +2843,13 @@ No Quadro Casa, com a sessão aberta, a lista de tarefas fez três leituras de e
 - **M3:** US-12 done; US-13 done; US-14 done; US-15 done; US-16 done
 - **M4:** US-17 done; US-18 done; US-19 done
 - **M5:** US-20 done; US-21 done; US-22 done; US-23 done
-- **M6:** US-24 done; US-25 done
+- **M6:** US-24 done; US-25 done; US-26 done
 
 ---
 
 ## Próximos Passos
 
-1. US-26/T01 — worker Drush supervisionável
+1. US-27/T01 — regressão de segurança e domínio
 
 ---
 

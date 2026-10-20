@@ -49,6 +49,11 @@ services:
       - '@database'
       - '@Drupal\ab_event\EventStoreInterface'
       - '@datetime.time'
+  Drupal\ab_agent\LeaseMaintenancePass:
+    arguments:
+      - '@Drupal\ab_agent\ExecutionMaintenance'
+    tags:
+      - { name: ab_event.maintenance }
   Drupal\ab_agent\ExecutionMaintenance:
     arguments:
       - '@database'

@@ -6,15 +6,15 @@ namespace Drupal\ab_api\Http;
 
 use Drupal\ab_agent\AgentTokenScope;
 use Drupal\ab_api\ApiException;
-use Drupal\ab_api\ApiLimits;
 use Drupal\ab_api\PageQuery;
 use Drupal\ab_api\ProblemDetails;
+use Drupal\ab_event\CursorWindow;
+use Drupal\ab_event\EventRetention;
 use Drupal\ab_core\Authorization\ActorContext;
 use Drupal\ab_core\Authorization\ScopedOperationDeniedException;
 use Drupal\ab_core\Entity\Workspace;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Database\Connection;
-use Drupal\Core\Site\Settings;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -425,6 +425,9 @@ final class SyncReader {
    * Rejects a cursor that would skip an expired event.
    */
   private function assertFresh(string $workspaceUuid, int $after): void {
+    if (CursorWindow::behind($this->database, $workspaceUuid, $after)) {
+      throw new ApiException(410, 'resync_required', ProblemDetails::fixedDetail(410));
+    }
     $cutoff = $this->time->getRequestTime() - $this->retention();
     if ($after === 0) {
       $expired = $this->database->query(
@@ -455,14 +458,7 @@ final class SyncReader {
    * Reads the retention window. A setting overrides the default of 30 days.
    */
   private function retention(): int {
-    $value = Settings::get('ab_event_retention', ApiLimits::EVENT_RETENTION);
-    if (is_int($value) && $value >= 0) {
-      return $value;
-    }
-    if (is_string($value) && preg_match('/^[0-9]+$/', $value) === 1) {
-      return (int) $value;
-    }
-    return ApiLimits::EVENT_RETENTION;
+    return EventRetention::seconds();
   }
 
   /**

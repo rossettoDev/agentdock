@@ -32,6 +32,14 @@ function ab_event_schema(): array {
         'not null' => TRUE,
         'default' => 0,
       ],
+      'purged_sequence' => [
+        'description' => 'Highest sequence removed by retention. A cursor behind it must resync.',
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ],
     ],
     'primary key' => ['workspace_id'],
   ];
@@ -157,6 +165,32 @@ function ab_event_schema(): array {
     ],
   ];
 
+  $schema['ab_outbox_delivery'] = [
+    'description' => 'One publication per event and destination.',
+    'fields' => [
+      'event_id' => [
+        'description' => 'Event UUID that was published.',
+        'type' => 'varchar_ascii',
+        'length' => 36,
+        'not null' => TRUE,
+      ],
+      'destination' => [
+        'description' => 'Destination that received the publication.',
+        'type' => 'varchar_ascii',
+        'length' => 64,
+        'not null' => TRUE,
+      ],
+      'delivered_at' => [
+        'description' => 'UTC unix time when the publication was stored.',
+        'type' => 'int',
+        'size' => 'big',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ],
+    ],
+    'primary key' => ['event_id', 'destination'],
+  ];
+
   return $schema;
 }
 
@@ -165,4 +199,26 @@ function ab_event_schema(): array {
  */
 function ab_event_update_11001(): string {
   return EventSchemaInstaller::installMissing();
+}
+
+/**
+ * Adds the publication table and the purge watermark.
+ */
+function ab_event_update_11002(): string {
+  $schema = \Drupal::database()->schema();
+  if (!$schema->fieldExists('ab_workspace_sequence', 'purged_sequence')) {
+    $schema->addField('ab_workspace_sequence', 'purged_sequence', [
+      'description' => 'Highest sequence removed by retention. A cursor behind it must resync.',
+      'type' => 'int',
+      'size' => 'big',
+      'unsigned' => TRUE,
+      'not null' => TRUE,
+      'default' => 0,
+    ]);
+  }
+  if (!$schema->tableExists('ab_outbox_delivery')) {
+    $tables = ab_event_schema();
+    $schema->createTable('ab_outbox_delivery', $tables['ab_outbox_delivery']);
+  }
+  return 'Added outbox delivery and the purge watermark.';
 }

@@ -92,6 +92,7 @@ class NotificationService {
         (string) $row->uuid,
         $row->read_at !== NULL && $row->read_at !== '',
         (string) $workspace->label(),
+        (string) $workspace->uuid(),
       );
     }
     return $items;

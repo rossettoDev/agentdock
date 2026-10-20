@@ -5,16 +5,28 @@ declare(strict_types=1);
 namespace Drupal\ab_ui\Hook;
 
 use Drupal\ab_board\BoardRepository;
+use Drupal\ab_board\Entity\Board;
+use Drupal\ab_board\Entity\Task;
+use Drupal\ab_board\TaskRepository;
+use Drupal\ab_communication\NotificationService;
 use Drupal\ab_core\Authorization\MembershipScope;
 use Drupal\ab_core\Authorization\WorkspacePermission;
 use Drupal\ab_core\Entity\Workspace;
+use Drupal\ab_core\WorkspaceRepository;
+use Drupal\ab_ui\Form\WorkspaceSelectForm;
 use Drupal\ab_ui\WorkspaceContext;
+use Drupal\Core\Breadcrumb\Breadcrumb;
 use Drupal\Core\Database\Connection;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Form\FormBuilderInterface;
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Hook\Attribute\Hook;
+use Drupal\Core\Link;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\Url;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
  * Theme and page variables for the workspace screens.
@@ -28,8 +40,14 @@ final class AbUiHooks {
     private readonly AccountInterface $currentUser,
     private readonly Connection $database,
     private readonly BoardRepository $boards,
+    private readonly TaskRepository $tasks,
+    private readonly WorkspaceRepository $workspaceList,
     private readonly MembershipScope $scope,
     private readonly RouteMatchInterface $routeMatch,
+    private readonly FormBuilderInterface $formBuilder,
+    private readonly NotificationService $notifications,
+    private readonly EntityTypeManagerInterface $entityTypeManager,
+    private readonly RequestStack $requestStack,
   ) {}
 
   /**
@@ -239,12 +257,33 @@ final class AbUiHooks {
   }
 
   /**
-   * Shows the selected workspace in the header.
-   *
-   * The link does not carry a workspace id.
+   * Tells the person to sign in again without repeating the destination.
+   */
+  #[Hook('form_user_login_form_alter')]
+  public function loginForm(array &$form, FormStateInterface $form_state, string $form_id): void {
+    if ($form_id !== 'user_login_form') {
+      return;
+    }
+    $form['#cache']['contexts'][] = 'url.query_args:destination';
+    $destination = $this->requestStack->getMainRequest()?->query->get('destination');
+    if (!is_string($destination) || $destination === '') {
+      return;
+    }
+    $form['ab_session'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'p',
+      '#attributes' => ['class' => ['ab-session-expired']],
+      '#value' => $this->t('Sua sessão não está ativa. Entre para continuar.'),
+      '#weight' => -50,
+    ];
+  }
+
+  /**
+   * Builds the shell variables for a logged-in page.
    */
   #[Hook('preprocess_page')]
   public function preprocessPage(array &$variables): void {
+    $this->statusPage($variables);
     if ((int) $this->currentUser->id() <= 0) {
       return;
     }
@@ -253,20 +292,47 @@ final class AbUiHooks {
     if ($workspace instanceof Workspace && $workspace->id() !== NULL) {
       $tags[] = 'ab_workspace_boards:' . $workspace->id();
     }
-    $variables['workspace_selector'] = [
-      '#type' => 'link',
-      '#title' => $workspace === NULL ? $this->t('Meus workspaces') : $workspace->label(),
-      '#url' => Url::fromRoute('ab_ui.workspaces'),
-      '#attributes' => ['class' => ['ab-workspace-selector__link']],
-      '#cache' => [
-        'contexts' => ['user', 'ab_memberships', 'ab_workspace', 'route'],
-        'tags' => $tags,
-      ],
-    ];
+    $variables['workspace_selector'] = $this->workspaceSelector($workspace, $tags);
     $variables['shell_account'] = $this->currentUser->getDisplayName();
+    $variables['shell_account_url'] = Url::fromRoute('user.page')->toString();
     $variables['shell_nav'] = $this->shellNav();
     $variables['shell_boards'] = $this->shellBoards($workspace);
     $variables['shell_add_board'] = $this->shellAddBoard($workspace);
+    $variables['shell_breadcrumb'] = $this->shellBreadcrumb();
+    $variables['shell_notices'] = $this->shellNotices($workspace);
+    $variables['shell_unread'] = $variables['shell_notices']['unread'];
+    $tags[] = 'ab_notifications:' . $this->currentUser->id();
+    $variables['#cache']['tags'] = array_merge($variables['#cache']['tags'] ?? [], $tags);
+    foreach (['user', 'route', 'ab_workspace', 'ab_memberships'] as $context) {
+      $variables['#cache']['contexts'][] = $context;
+    }
+    $variables['notifications_url'] = Url::fromRoute('ab_ui.notifications')->toString();
+  }
+
+  /**
+   * Replaces the generic error page with a message that names no resource.
+   */
+  private function statusPage(array &$variables): void {
+    $route = (string) $this->routeMatch->getRouteName();
+    if ($route === 'system.403') {
+      $title = $this->t('Acesso negado');
+      $message = $this->t('Você não tem acesso a esta operação.');
+    }
+    elseif ($route === 'system.404') {
+      $title = $this->t('Página não encontrada');
+      $message = $this->t('A página não foi encontrada.');
+    }
+    else {
+      return;
+    }
+    $variables['page']['content'] = [
+      '#type' => 'inline_template',
+      '#template' => '<h1>{{ title }}</h1><p>{{ message }}</p>',
+      '#context' => [
+        'title' => $title,
+        'message' => $message,
+      ],
+    ];
   }
 
   /**
@@ -277,38 +343,100 @@ final class AbUiHooks {
    */
   private function shellNav(): array {
     $route = (string) $this->routeMatch->getRouteName();
+    $tasks = $this->tasksUrl();
     $items = [
-      ['ab_ui.boards', $this->t('Meus boards'), [
-        'ab_ui.boards',
-        'ab_ui.board_add',
-        'ab_ui.board_view',
-        'ab_ui.board_tasks',
-        'ab_ui.task_add',
-      ]],
-      ['ab_ui.conversations', $this->t('Conversas'), [
+      [
+        'label' => (string) $this->t('Meus boards'),
+        'url' => Url::fromRoute('ab_ui.boards')->toString(),
+        'active' => in_array($route, [
+          'ab_ui.boards',
+          'ab_ui.board_add',
+          'ab_ui.board_view',
+        ], TRUE),
+      ],
+    ];
+    if ($tasks !== NULL) {
+      $items[] = [
+        'label' => (string) $this->t('Tarefas'),
+        'url' => $tasks,
+        'active' => in_array($route, [
+          'ab_ui.board_tasks',
+          'ab_ui.task_add',
+          'ab_ui.task_view',
+          'ab_ui.task_edit',
+        ], TRUE),
+      ];
+    }
+    $items[] = [
+      'label' => (string) $this->t('Conversas'),
+      'url' => Url::fromRoute('ab_ui.conversations')->toString(),
+      'active' => in_array($route, [
         'ab_ui.conversations',
         'ab_ui.conversation',
         'ab_ui.board_conversation',
         'ab_ui.task_conversation',
-      ]],
-      ['ab_ui.agents', $this->t('Agentes'), [
+      ], TRUE),
+    ];
+    $items[] = [
+      'label' => (string) $this->t('Agentes'),
+      'url' => Url::fromRoute('ab_ui.agents')->toString(),
+      'active' => in_array($route, [
         'ab_ui.agents',
         'ab_ui.agent_add',
         'ab_ui.agent_view',
-      ]],
-      ['ab_ui.notifications', $this->t('Notificações'), [
-        'ab_ui.notifications',
-      ]],
+      ], TRUE),
     ];
-    $nav = [];
-    foreach ($items as $item) {
-      $nav[] = [
-        'label' => (string) $item[1],
-        'url' => Url::fromRoute($item[0])->toString(),
-        'active' => in_array($route, $item[2], TRUE),
-      ];
+    return $items;
+  }
+
+  /**
+   * The kanban of the board in the current route, when that board is visible.
+   */
+  private function tasksUrl(): ?string {
+    $board = $this->contextBoard();
+    if (!$board instanceof Board) {
+      return NULL;
     }
-    return $nav;
+    return Url::fromRoute('ab_ui.board_tasks', [
+      'uuid' => $board->uuid(),
+    ])->toString();
+  }
+
+  /**
+   * Loads the board addressed by the route when the user can read it.
+   */
+  private function contextBoard(): ?Board {
+    $route = (string) $this->routeMatch->getRouteName();
+    $uuid = (string) $this->routeMatch->getRawParameter('uuid');
+    if ($uuid === '') {
+      return NULL;
+    }
+    $boardRoutes = [
+      'ab_ui.board_view',
+      'ab_ui.board_tasks',
+      'ab_ui.board_conversation',
+      'ab_ui.task_add',
+    ];
+    if (in_array($route, $boardRoutes, TRUE)) {
+      return $this->boards->loadAccessibleByUuid($uuid);
+    }
+    $taskRoutes = [
+      'ab_ui.task_view',
+      'ab_ui.task_edit',
+      'ab_ui.task_conversation',
+    ];
+    if (!in_array($route, $taskRoutes, TRUE)) {
+      return NULL;
+    }
+    $task = $this->tasks->loadAccessibleByUuid($uuid);
+    if (!$task instanceof Task) {
+      return NULL;
+    }
+    $board = $this->entityTypeManager->getStorage('ab_board')->load($task->get('board')->getString());
+    if (!$board instanceof Board) {
+      return NULL;
+    }
+    return $this->boards->loadAccessibleByUuid($board->uuid());
   }
 
   /**
@@ -321,14 +449,8 @@ final class AbUiHooks {
     if (!$workspace instanceof Workspace) {
       return [];
     }
-    $current = (string) $this->routeMatch->getRawParameter('uuid');
-    $route = (string) $this->routeMatch->getRouteName();
-    $on_board = in_array($route, [
-      'ab_ui.board_view',
-      'ab_ui.board_tasks',
-      'ab_ui.board_conversation',
-      'ab_ui.task_add',
-    ], TRUE);
+    $current = $this->contextBoard();
+    $currentUuid = $current instanceof Board ? $current->uuid() : '';
     $links = [];
     foreach ($this->boards->accessibleBoards($workspace) as $board) {
       if ((int) $board->get('archived')->getString() === 1) {
@@ -339,7 +461,7 @@ final class AbUiHooks {
         'url' => Url::fromRoute('ab_ui.board_tasks', [
           'uuid' => $board->uuid(),
         ])->toString(),
-        'active' => $on_board && $current === $board->uuid(),
+        'active' => $currentUuid !== '' && $currentUuid === $board->uuid(),
       ];
     }
     return $links;
@@ -356,6 +478,122 @@ final class AbUiHooks {
       return '';
     }
     return Url::fromRoute('ab_ui.board_add')->toString();
+  }
+
+  /**
+   * Puts the session selector in the header, except on its own page.
+   *
+   * @param \Drupal\ab_core\Entity\Workspace|null $workspace
+   *   The workspace stored in the session, when one is selected.
+   * @param string[] $tags
+   *   Cache tags already collected for the workspace.
+   *
+   * @return array<string, mixed>
+   *   A form, or a link when the person has no workspace.
+   */
+  private function workspaceSelector(?Workspace $workspace, array $tags): array {
+    $cache = [
+      'contexts' => ['user', 'ab_memberships', 'ab_workspace', 'route'],
+      'tags' => $tags,
+    ];
+    $route = (string) $this->routeMatch->getRouteName();
+    if ($route !== 'ab_ui.workspaces' && $this->workspaceList->accessibleWorkspaces() !== []) {
+      $form = $this->formBuilder->getForm(WorkspaceSelectForm::class);
+      $form['#cache'] = $cache;
+      return $form;
+    }
+    return [
+      '#type' => 'link',
+      '#title' => $workspace === NULL ? $this->t('Meus workspaces') : $workspace->label(),
+      '#url' => Url::fromRoute('ab_ui.workspaces'),
+      '#attributes' => ['class' => ['ab-workspace-selector__link']],
+      '#cache' => $cache,
+    ];
+  }
+
+  /**
+   * Parents of the current screen. The page title stays out of the trail.
+   *
+   * @return array<string, mixed>
+   *   A breadcrumb render array.
+   */
+  private function shellBreadcrumb(): array {
+    $route = (string) $this->routeMatch->getRouteName();
+    $links = [];
+    $board = $this->contextBoard();
+    $boardRoutes = [
+      'ab_ui.board_add',
+      'ab_ui.board_view',
+      'ab_ui.board_tasks',
+      'ab_ui.task_add',
+      'ab_ui.task_view',
+      'ab_ui.task_edit',
+      'ab_ui.board_conversation',
+    ];
+    if (in_array($route, $boardRoutes, TRUE) || $board instanceof Board) {
+      $links[] = Link::createFromRoute($this->t('Meus boards'), 'ab_ui.boards');
+    }
+    if ($board instanceof Board && !in_array($route, ['ab_ui.board_view'], TRUE)) {
+      $links[] = Link::createFromRoute($board->label(), 'ab_ui.board_view', [
+        'uuid' => $board->uuid(),
+      ]);
+    }
+    $conversation = [
+      'ab_ui.conversation',
+      'ab_ui.task_conversation',
+      'ab_ui.board_conversation',
+    ];
+    if (in_array($route, $conversation, TRUE)) {
+      $links = [Link::createFromRoute($this->t('Conversas'), 'ab_ui.conversations')];
+    }
+    if (in_array($route, ['ab_ui.agent_add', 'ab_ui.agent_view'], TRUE)) {
+      $links = [Link::createFromRoute($this->t('Agentes'), 'ab_ui.agents')];
+    }
+    if (in_array($route, ['ab_ui.workspace_add', 'ab_ui.workspace_view', 'ab_ui.workspace_members'], TRUE)) {
+      $links = [Link::createFromRoute($this->t('Meus workspaces'), 'ab_ui.workspaces')];
+    }
+    if ($links === []) {
+      return [];
+    }
+    $breadcrumb = new Breadcrumb();
+    $breadcrumb->setLinks($links);
+    $breadcrumb->addCacheContexts(['route', 'user', 'ab_memberships', 'ab_workspace']);
+    return $breadcrumb->toRenderable();
+  }
+
+  /**
+   * Unread mentions of the selected workspace only.
+   *
+   * @return array{unread: int, empty: string, items: list<array{label: string, read: string}>}
+   *   Count and lines without the message body.
+   */
+  private function shellNotices(?Workspace $workspace): array {
+    if (!$workspace instanceof Workspace) {
+      return [
+        'unread' => 0,
+        'empty' => (string) $this->t('Selecione um workspace para ver as menções.'),
+        'items' => [],
+      ];
+    }
+    $items = [];
+    $unread = 0;
+    foreach ($this->notifications->listFor($this->currentUser) as $notification) {
+      if ($notification->workspaceUuid !== $workspace->uuid()) {
+        continue;
+      }
+      if (!$notification->read) {
+        $unread++;
+      }
+      $items[] = [
+        'label' => (string) $this->t('Menção'),
+        'read' => $notification->read ? (string) $this->t('Lida') : (string) $this->t('Não lida'),
+      ];
+    }
+    return [
+      'unread' => $unread,
+      'empty' => (string) $this->t('Nenhuma menção neste workspace.'),
+      'items' => $items,
+    ];
   }
 
 }

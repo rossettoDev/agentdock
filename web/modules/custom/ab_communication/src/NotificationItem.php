@@ -15,6 +15,7 @@ final class NotificationItem {
     public readonly string $uuid,
     public readonly bool $read,
     public readonly string $workspaceLabel,
+    public readonly string $workspaceUuid,
   ) {}
 
 }

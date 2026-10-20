@@ -1,6 +1,6 @@
 # AgentDock — Backlog de evolução visual (M9)
 
-Versão 1.0 · 20/10/2026 · Status: **em execução** (US-29 done).
+Versão 1.0 · 20/10/2026 · Status: **em execução** (US-30 done).
 
 ## 1. Fontes e objetivo
 
@@ -27,7 +27,7 @@ Objetivo: transformar a interface funcional existente na experiência visual de 
 | História | Entrega | Dependências | Prioridade | Status |
 |---|---|---|---|---|
 | US-29 | Auditoria visual e design system | US-28 | P0 | done |
-| US-30 | Shell, navegação e componentes compartilhados | US-29 | P0 | todo |
+| US-30 | Shell, navegação e componentes compartilhados | US-29 | P0 | done |
 | US-31 | Kanban visual | US-30; US-11, US-25 existentes | P0 | todo |
 | US-32 | Detalhe da tarefa | US-30; US-16, US-18 existentes | P0 | todo |
 | US-33 | Central de Agentes | US-30; US-12, US-13, US-16 existentes | P1 | todo |
@@ -51,9 +51,9 @@ Executar **uma task por interação no Cursor**, seguindo o `Definition of Done`
 
 **História:** Como usuário, quero navegar entre as cinco áreas sem perder o contexto do workspace.
 
-- [ ] **US-30/T01 — Sidebar e header.** Ajustar `agent_board`/`ab_ui` para menu Dashboard, Meus Boards, Tarefas, Conversas, Agentes; breadcrumb, seletor real de workspace, conta e indicação da página ativa. **Aceite:** links conduzem a rotas reais e respeitam acesso; selecionar workspace usa mecanismo de sessão existente, nunca `?workspace=`.
-- [ ] **US-30/T02 — Layout responsivo de três áreas.** Definir largura de navegação, conteúdo fluido e painel contextual reutilizável. Em telas estreitas, navegação recolhível e painel contextual acessível. **Aceite:** nenhuma ação essencial depende exclusivamente de hover; sem overflow horizontal da página; foco restaurado ao fechar painel.
-- [ ] **US-30/T03 — Estados globais e notificações.** Padronizar loading/empty/error/forbidden/conflito/sessão expirada; ligar sino ao sistema real de notificações. Busca global só se suportada; senão restringir placeholder a busca existente ou omitir. **Aceite:** nenhuma falsa funcionalidade; mensagens de erro claras e sem vazamento de outro workspace.
+- [x] **US-30/T01 — Sidebar e header.** Ajustar `agent_board`/`ab_ui` para menu Dashboard, Meus Boards, Tarefas, Conversas, Agentes; breadcrumb, seletor real de workspace, conta e indicação da página ativa. **Aceite:** links conduzem a rotas reais e respeitam acesso; selecionar workspace usa mecanismo de sessão existente, nunca `?workspace=`. Dashboard omitido até existir rota. Tarefas só aparece com um board legível na rota.
+- [x] **US-30/T02 — Layout responsivo de três áreas.** Definir largura de navegação, conteúdo fluido e painel contextual reutilizável. Em telas estreitas, navegação recolhível e painel contextual acessível. **Aceite:** nenhuma ação essencial depende exclusivamente de hover; sem overflow horizontal da página; foco restaurado ao fechar painel.
+- [x] **US-30/T03 — Estados globais e notificações.** Padronizar loading/empty/error/forbidden/conflito/sessão expirada; ligar sino ao sistema real de notificações. Busca global só se suportada; senão restringir placeholder a busca existente ou omitir. **Aceite:** nenhuma falsa funcionalidade; mensagens de erro claras e sem vazamento de outro workspace. Busca global omitida.
 
 ### US-31 — Kanban visual
 

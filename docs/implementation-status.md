@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-20  
-**Marco atual:** M9 — US-29 concluída. US-30 é a próxima.
+**Marco atual:** M9 — US-30 concluída. US-31 é a próxima.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md` e `docs/backlog-ui-m9.md`. Os registros de US-01 a US-28 não são reescritos por esta fase.
 
@@ -3108,10 +3108,59 @@ Página aberta em `http://localhost:60654/ui/amostra` com o tema escuro, botão 
 
 ---
 
+### US-30 — Evoluir shell e navegação comum
+
+**Status:** done  
+**Objetivo:** Navegar entre as áreas reais sem perder o workspace da sessão e sem inventar atalhos.
+
+#### US-30/T01 — Sidebar e header
+
+**Status:** done  
+**Entrega:** Menu com Meus boards, Tarefas (só quando a rota resolve um board legível), Conversas e Agentes. Breadcrumb só com os pais. Seletor de workspace no header pelo `WorkspaceSelectForm` existente, exceto em `/workspaces`, onde o formulário continua no corpo. A conta aponta para `user.page`.
+
+Dashboard fica de fora: não há rota. Busca global também fica de fora.
+
+#### US-30/T02 — Layout de três áreas
+
+**Status:** done  
+**Entrega:** Conteúdo fluido, painel `#ab-context` e navegação recolhível abaixo de 768px por um botão, não por hover. Sem JavaScript a sidebar permanece visível. Fechar o painel devolve o foco ao sino. A trilha do Olivero não empurra mais a página para o lado.
+
+#### US-30/T03 — Estados globais e notificações
+
+**Status:** done  
+**Entrega:** 403 e 404 com texto genérico, sem nome de recurso. Login com `destination` avisa que a sessão não está ativa e não repete o caminho. O sino lista menções do workspace selecionado, sem corpo da mensagem; a lista completa continua em `/notifications`.
+
+**Evidências:**
+
+```bash
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice \
+  web/modules/custom/ab_ui/src/Hook/AbUiHooks.php \
+  web/modules/custom/ab_ui/tests/src/Functional/ShellNavigationUiTest.php \
+  web/themes/custom/agent_board/js/agent-board.js
+```
+
+```bash
+$ SIMPLETEST_DB=pgsql://postgres:@database:5432/drupal11 \
+  SIMPLETEST_BASE_URL=http://appserver \
+  php vendor/bin/phpunit \
+  web/modules/custom/ab_ui/tests/src/Functional/ShellNavigationUiTest.php \
+  web/modules/custom/ab_ui/tests/src/Functional/ShellVisualTest.php \
+  web/modules/custom/ab_ui/tests/src/Functional/NotificationUiTest.php
+OK (6 tests, 90 assertions)
+```
+
+No quadro `/boards/{uuid}/tasks` do workspace selecionado: Tarefas e o board ficam ativos, não há Dashboard nem campo de busca, o sino abre e o Escape devolve o foco. Em 390px a navegação começa recolhida e o Menu a reabre no primeiro link. A página não rola na horizontal.
+
+**Bloqueios:** nenhum.
+
+**Próxima ação:** US-31.
+
+---
+
 ## Estatísticas
 
 - **Total de tasks do backlog M0–M8:** 83, todas registradas como done no corpo histórico
-- **M9:** US-29 done; US-30 em diante todo
+- **M9:** US-29 done; US-30 done; US-31 em diante todo
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
@@ -3126,7 +3175,7 @@ Página aberta em `http://localhost:60654/ui/amostra` com o tema escuro, botão 
 
 ## Próximos Passos
 
-1. US-30 — shell e navegação: Dashboard, Meus Boards, Tarefas, Conversas e Agentes, sem `?workspace=`.
+1. US-31 — Kanban visual, sobre as colunas e os filtros que já existem.
 
 ---
 

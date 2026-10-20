@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\ab_ui\Hook;
 
 use Drupal\ab_ui\WorkspaceContext;
+use Drupal\Core\Database\Connection;
 use Drupal\Core\Hook\Attribute\Hook;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
@@ -20,6 +21,7 @@ final class AbUiHooks {
   public function __construct(
     private readonly WorkspaceContext $context,
     private readonly AccountInterface $currentUser,
+    private readonly Connection $database,
   ) {}
 
   /**
@@ -145,6 +147,69 @@ final class AbUiHooks {
           'form' => NULL,
           'back_url' => '',
         ],
+      ],
+    ];
+  }
+
+  /**
+   * Attaches one poller for the selected workspace.
+   */
+  #[Hook('page_attachments')]
+  public function pageAttachments(array &$attachments): void {
+    if ((int) $this->currentUser->id() <= 0) {
+      return;
+    }
+    $workspace = $this->context->workspace();
+    if ($workspace === NULL) {
+      return;
+    }
+    $sequence = $this->database->query(
+      'SELECT sequence FROM {ab_workspace_sequence} WHERE workspace_id = :id',
+      [':id' => (string) $workspace->uuid()],
+    )->fetchField();
+    $cursor = $sequence === FALSE ? '0' : (string) $sequence;
+    $prefix = '/api/agent-board/v1/workspaces/' . $workspace->uuid();
+    $attachments['#attached']['library'][] = 'ab_ui/sync';
+    $attachments['#attached']['drupalSettings']['abUiSync'] = [
+      'eventsUrl' => $prefix . '/events',
+      'cursor' => $cursor,
+      'active' => 3000,
+      'hidden' => 15000,
+      'max' => 60000,
+    ];
+    $attachments['#attached']['html_head'][] = [
+      [
+        '#tag' => 'meta',
+        '#attributes' => [
+          'name' => 'ab-sync-cursor',
+          'content' => $cursor,
+        ],
+      ],
+      'ab_sync_cursor',
+    ];
+    $attachments['#cache']['contexts'][] = 'user';
+    $attachments['#cache']['contexts'][] = 'ab_workspace';
+  }
+
+  /**
+   * Prints the status line the poller fills in.
+   */
+  #[Hook('page_top')]
+  public function pageTop(array &$page_top): void {
+    if ((int) $this->currentUser->id() <= 0 || $this->context->workspace() === NULL) {
+      return;
+    }
+    $page_top['ab_sync_status'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'p',
+      '#attributes' => [
+        'class' => ['ab-sync-status'],
+        'role' => 'status',
+        'hidden' => 'hidden',
+      ],
+      '#value' => '',
+      '#cache' => [
+        'contexts' => ['user', 'ab_workspace'],
       ],
     ];
   }

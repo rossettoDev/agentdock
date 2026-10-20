@@ -4,3 +4,15 @@ kanban:
   dependencies:
     - core/drupal
     - core/once
+
+sync:
+  js:
+    js/sync-schedule.js: {}
+    js/sync.js: {}
+  css:
+    component:
+      css/sync.css: {}
+  dependencies:
+    - core/drupal
+    - core/drupalSettings
+    - core/once

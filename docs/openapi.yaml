@@ -1037,6 +1037,13 @@ components:
         next_cursor:
           type: string
           nullable: true
+        cursor:
+          type: string
+          nullable: true
+          description: >
+            Last sequence inspected on an event or inbox page, including
+            rows left out by access. The next poll sends it as cursor.
+            Absent on other lists.
     Workspace:
       type: object
       required: [id, name, timezone]

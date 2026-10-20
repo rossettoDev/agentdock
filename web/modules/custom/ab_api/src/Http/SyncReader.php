@@ -176,6 +176,7 @@ final class SyncReader {
       'page' => [
         'limit' => $limit,
         'next_cursor' => $more === FALSE ? NULL : (string) $last,
+        'cursor' => $last > $after ? (string) $last : NULL,
       ],
     ];
   }

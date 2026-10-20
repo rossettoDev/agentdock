@@ -707,7 +707,7 @@ Como owner, quero usar o MVP com confiança.
 
 Como agente compatível, quero usar ferramentas de domínio.
 
-**Dependências:** US-27. **Status:** in_progress.
+**Dependências:** US-27. **Status:** done.
 
 ### US-28/T01 — Criar adaptador stdio sobre HTTP
 
@@ -723,7 +723,7 @@ Como agente compatível, quero usar ferramentas de domínio.
 
 ### US-28/T03 — Integrar um cliente real
 
-- [ ] **Entrega:** Validar recursos efetivamente disponíveis, executar ciclo e documentar configuração/limitações.
+- [x] **Entrega:** Validar recursos efetivamente disponíveis, executar ciclo e documentar configuração/limitações.
 - **Aceite:** Integração funciona no ambiente testado sem pressupor controle remoto de editor.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

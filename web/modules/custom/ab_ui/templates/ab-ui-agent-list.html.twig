@@ -2,6 +2,8 @@
 /**
  * @file
  * Lists agents of the workspace selected in the session.
+ *
+ * Enabled is administrative. Activity comes from stored executions.
  */
 #}
 <div class="ab-agent-list">
@@ -17,16 +19,54 @@
     </p>
   {% endif %}
 
+  {% if counts %}
+    <ul class="ab-agent-counts">
+      {% for count in counts %}
+        <li>{{ count.label }}: {{ count.value }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  {% if filters %}
+    <nav class="ab-agent-filters" aria-label="{{ 'Filtros dos agentes'|t }}">
+      {% for item in filters %}
+        <a href="{{ item.url }}"{% if item.current %} aria-current="page"{% endif %}>{{ item.label }}</a>
+      {% endfor %}
+    </nav>
+  {% endif %}
+
+  {% if list_url %}
+    <form class="ab-agent-search" method="get" action="{{ list_url }}">
+      <label for="ab-agent-q">{{ 'Buscar'|t }}</label>
+      <input id="ab-agent-q" type="search" name="q" value="{{ q }}">
+      {% if enabled != '' %}
+        <input type="hidden" name="enabled" value="{{ enabled }}">
+      {% endif %}
+      {% if work %}
+        <input type="hidden" name="work" value="{{ work }}">
+      {% endif %}
+      <button class="ab-button" type="submit">{{ 'Buscar'|t }}</button>
+    </form>
+  {% endif %}
+
   {% if items %}
     <ul class="ab-agent-items">
       {% for item in items %}
         <li class="ab-card">
           <a href="{{ item.url }}">{{ item.label }}</a>
           <span class="ab-agent-status">{{ item.status }}</span>
+          {% if item.activity %}
+            <span class="ab-badge">{{ item.activity }}</span>
+          {% endif %}
+          {% if item.live %}
+            <span class="ab-agent-live">{{ '@count execuções'|t({'@count': item.live}) }}</span>
+          {% endif %}
           <span class="ab-agent-limit">{{ 'Limite: @limit'|t({'@limit': item.limit}) }}</span>
         </li>
       {% endfor %}
     </ul>
+  {% elseif filter_empty %}
+    <p>{{ 'Nenhum agente com este filtro.'|t }}</p>
   {% elseif workspace_label %}
     <p>{{ 'Nenhum agente neste workspace.'|t }}</p>
   {% endif %}

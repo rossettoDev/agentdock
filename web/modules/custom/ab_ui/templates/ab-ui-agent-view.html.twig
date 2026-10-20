@@ -2,6 +2,8 @@
 /**
  * @file
  * Shows one agent without claiming it is running.
+ *
+ * The secret token stays out. A closed attempt is not a live signal.
  */
 #}
 <article class="ab-agent-view">
@@ -13,8 +15,51 @@
     <p class="ab-agent-capabilities">{{ capabilities }}</p>
   {% endif %}
   <p class="ab-agent-status">{{ status }}</p>
+  {% if activity %}
+    <p class="ab-agent-activity">{{ activity }}</p>
+  {% endif %}
   <p class="ab-agent-limit">{{ 'Limite: @limit'|t({'@limit': limit}) }}</p>
   <p class="ab-agent-signal">{{ signal }}</p>
+  {% if access_note %}
+    <p class="ab-agent-access">{{ access_note }}</p>
+  {% endif %}
+  {% if executions %}
+    <h2>{{ 'Execuções'|t }}</h2>
+    <ul class="ab-agent-executions">
+      {% for item in executions %}
+        <li>
+          <p>
+            {% if item.url %}
+              <a href="{{ item.url }}">{{ item.task }}</a>
+            {% else %}
+              {{ item.task }}
+            {% endif %}
+            — {{ 'Tentativa @n'|t({'@n': item.attempt}) }}
+          </p>
+          {% if item.status %}
+            <p class="ab-badge">{{ item.status }}</p>
+          {% endif %}
+          {% if item.signal %}
+            <p>{{ item.signal }}</p>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  {% if closed %}
+    <h2>{{ 'Última encerrada'|t }}</h2>
+    <p>
+      {% if closed.url %}
+        <a href="{{ closed.url }}">{{ closed.task }}</a>
+      {% else %}
+        {{ closed.task }}
+      {% endif %}
+      — {{ 'Tentativa @n'|t({'@n': closed.attempt}) }}
+    </p>
+    {% if closed.status %}
+      <p class="ab-badge">{{ closed.status }}</p>
+    {% endif %}
+  {% endif %}
   {% if grants %}
     <ul class="ab-agent-grants">
       {% for grant in grants %}

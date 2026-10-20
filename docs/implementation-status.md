@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-20  
-**Marco atual:** M9 — US-32 concluída. US-33 é a próxima.
+**Marco atual:** M9 — US-33 concluída. US-34 é a próxima.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md` e `docs/backlog-ui-m9.md`. Os registros de US-01 a US-28 não são reescritos por esta fase.
 
@@ -3255,10 +3255,71 @@ PHPCS e PHPStan nos arquivos PHP alterados não apontaram erro. Na tarefa do MCP
 
 ---
 
+### US-33 — Central de Agentes
+
+**Status:** done  
+**Objetivo:** Mostrar habilitação, execução e último sinal já gravados no workspace, sem custo, modelo ou presença inventada.
+
+#### US-33/T01 — Lista e filtros
+
+**Status:** done  
+**Entrega:** `/agents` busca por nome, descrição e capacidades. Os filtros `enabled` e `work` só aceitam os valores previstos e conservam a busca. As contagens são do workspace inteiro: habilitados, desabilitados, em execução, aguardando informação, aguardando tarefa e execuções sem continuação. Um filtro vazio diz “Nenhum agente com este filtro.” A lista vazia do workspace continua “Nenhum agente neste workspace.”
+
+#### US-33/T02 — Painel de agente
+
+**Status:** done  
+**Entrega:** O detalhe mostra descrição, capacidades, limite, grants do próprio workspace e as execuções em andamento. Cada execução viva traz a tarefa, a tentativa e o sinal daquela linha. A última tentativa encerrada aparece à parte. Sem execução viva, a frase segue “Não há sinal de execução.”
+
+#### US-33/T03 — Cadastro, permissões e credenciais
+
+**Status:** done  
+**Entrega:** Os formulários de edição, grant e token permanecem. O dono lê que pode editar e emitir credenciais. Quem administra agentes sem credenciais lê que a emissão não está na conta e não vê “Criar token”. O token completo continua só na mensagem de criação. A lista não imprime segredo nem hash.
+
+#### US-33/T04 — Estados de execução
+
+**Status:** done  
+**Entrega:** Os estados visíveis são Habilitado, Desabilitado, Em execução, Aguardando informação, Aguardando tarefa, Enviada, Falhou, Interrompida e Cancelada. “Aguardando tarefa” só vale para agente habilitado sem execução viva. Heartbeat ausente continua “Execução em andamento.” A tela não diz online nem trabalhando.
+
+**Evidências:**
+
+```bash
+$ SIMPLETEST_DB=pgsql://postgres:@database:5432/drupal11 \
+  SIMPLETEST_BASE_URL=http://appserver \
+  php vendor/bin/phpunit \
+  web/modules/custom/ab_ui/tests/src/Functional/AgentCenterUiTest.php
+OK (1 test, 73 assertions)
+
+$ SIMPLETEST_DB=pgsql://postgres:@database:5432/drupal11 \
+  SIMPLETEST_BASE_URL=http://appserver \
+  php vendor/bin/phpunit \
+  web/modules/custom/ab_ui/tests/src/Functional/AgentUiTest.php
+OK (1 test, 67 assertions)
+
+$ SIMPLETEST_DB=pgsql://postgres:@database:5432/drupal11 \
+  SIMPLETEST_BASE_URL=http://appserver \
+  php vendor/bin/phpunit \
+  web/modules/custom/ab_ui/tests/src/Functional/AgentTokenUiTest.php
+OK (1 test, 38 assertions)
+
+$ SIMPLETEST_DB=pgsql://postgres:@database:5432/drupal11 \
+  SIMPLETEST_BASE_URL=http://appserver \
+  php vendor/bin/phpunit \
+  web/modules/custom/ab_ui/tests/src/Functional/TaskReviewUiTest.php
+OK (1 test, 84 assertions)
+```
+
+PHPCS e PHPStan nos arquivos PHP alterados não apontaram erro. Em Casa MCP Inspector, a lista mostra 1 habilitado, 1 aguardando tarefa e 4 sem continuação. `?work=running` e `?q=Alheio` respondem “Nenhum agente com este filtro.” Os links conservam `q` e não levam `workspace=`. O detalhe do Agente MCP Inspector mostra a tentativa 4 interrompida, o grant do quadro e “Não há sinal de execução.” Em 390px o menu começa recolhido e a página não rola na horizontal.
+
+**Bloqueios:** nenhum.
+
+**Próxima ação:** US-34.
+
+---
+
 ## Estatísticas
 
 - **Total de tasks do backlog M0–M8:** 83, todas registradas como done no corpo histórico
-- **M9:** US-29 done; US-30 done; US-31 done; US-32 done; US-33 em diante todo
+- **M9:** US-29 done; US-30 done; US-31 done; US-32 done; US-33 done; US-34 em diante todo
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
@@ -3273,7 +3334,7 @@ PHPCS e PHPStan nos arquivos PHP alterados não apontaram erro. Na tarefa do MCP
 
 ## Próximos Passos
 
-1. US-33 — central de agentes, com o que já está gravado.
+1. US-34 — central de mensagens, com as threads que já existem.
 
 ---
 

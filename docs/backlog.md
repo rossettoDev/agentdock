@@ -707,17 +707,17 @@ Como owner, quero usar o MVP com confiança.
 
 Como agente compatível, quero usar ferramentas de domínio.
 
-**Dependências:** US-27. **Status:** todo.
+**Dependências:** US-27. **Status:** in_progress.
 
 ### US-28/T01 — Criar adaptador stdio sobre HTTP
 
-- [ ] **Entrega:** Mapear ferramentas da arquitetura, schema de entrada/saída e identidade por agente.
+- [x] **Entrega:** Mapear ferramentas da arquitetura, schema de entrada/saída e identidade por agente.
 - **Aceite:** Nenhuma ferramenta acessa banco ou implementa regra paralela.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 
 ### US-28/T02 — Validar manutenção da lease
 
-- [ ] **Entrega:** Definir runner responsável pelo heartbeat; cancelamento e encerramento de sessão.
+- [x] **Entrega:** Definir runner responsável pelo heartbeat; cancelamento e encerramento de sessão.
 - **Aceite:** Chamada MCP isolada não é tratada como execução permanentemente ativa.
 - **Verificação:** demonstrar o aceite com teste de regra/integração quando aplicável; para documentação ou apresentação, revisão direta e validação funcional proporcional.
 

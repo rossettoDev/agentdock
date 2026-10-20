@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-20  
-**Marco atual:** M7 — US-27 concluída. US-28 segue todo.
+**Marco atual:** M8 — US-28/T01 e T02 concluídas. T03 segue todo.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
 
@@ -2925,6 +2925,62 @@ PHPCS: exit 0
 
 ---
 
+## US-28 — Conectar por MCP após o MVP
+
+**Status:** in_progress  
+**Dependências:** US-27 done.  
+**Objetivo:** Expor as ferramentas da arquitetura por stdio, chamando a API com a credencial do processo, sem tratar a sessão como execução.
+
+#### US-28/T01 — Criar adaptador stdio sobre HTTP
+
+**Status:** done  
+**Entrega:** `tools/mcp-adapter` com as doze ferramentas, o schema de entrada e a identidade vinda do ambiente.
+
+**Contrato:**
+- cada ferramenta faz uma chamada HTTP. O código não abre banco e não contém approve, reject nem heartbeat
+- o workspace e o token vêm do processo. Um argumento `agent_id` é recusado antes de qualquer request
+- a chave de idempotência e a lease, quando a rota exige, são encaminhadas e não ficam guardadas no adaptador
+
+#### US-28/T02 — Validar manutenção da lease
+
+**Status:** done  
+**Entrega:** O runner em `tools/agent-runner` continua dono do heartbeat. Fechar o stdio não cancela a execução.
+
+**Contrato:**
+- `notifications/cancelled` e o fim da entrada não geram request
+- um claim seguido do encerramento do processo deixa a execução `running`. A release só ocorre na ferramenta `release_task`
+- não há cliente MCP de editor nesta história. A T03 continua todo
+
+**Evidências:**
+```bash
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_api/tests/src/Unit/McpAdapterTest.php
+OK (3 tests, 40 assertions)
+
+$ lando exec appserver -- env SIMPLETEST_DB='pgsql://postgres:@database:5432/drupal11' \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_api/tests/src/Functional/McpAdapterHttpTest.php
+OK (1 test, 54 assertions)
+
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php \
+    tools/mcp-adapter \
+    web/modules/custom/ab_api/tests/src/Unit/McpAdapterTest.php \
+    web/modules/custom/ab_api/tests/src/Functional/McpAdapterHttpTest.php
+PHPCS: exit 0
+```
+
+#### US-28/T03 — Integrar um cliente real
+
+**Status:** todo  
+**Entrega:** Ainda não há cliente externo.
+
+**Bloqueios:** T03 depende de um cliente MCP real no ambiente. O ensaio acima fala o protocolo por stdio e não substitui esse cliente.
+
+**Próxima ação:** US-28/T03 — integrar um cliente real.
+
+---
+
 ## Estatísticas
 
 - **Total de tasks:** 83 (conforme backlog)
@@ -2936,12 +2992,13 @@ PHPCS: exit 0
 - **M5:** US-20 done; US-21 done; US-22 done; US-23 done
 - **M6:** US-24 done; US-25 done; US-26 done
 - **M7:** US-27 done
+- **M8:** US-28 in_progress (T01 e T02 done; T03 todo)
 
 ---
 
 ## Próximos Passos
 
-1. US-28/T01 — adaptador MCP sobre HTTP
+1. US-28/T03 — cliente MCP real no ambiente testado
 
 ---
 

@@ -13,12 +13,18 @@ use Drupal\ab_board\TaskDependencyManager;
 use Drupal\ab_board\TaskRepository;
 use Drupal\ab_board\TaskTransitionPolicy;
 use Drupal\ab_communication\InputRequestService;
+use Drupal\ab_communication\MessagePage;
+use Drupal\ab_communication\MessageService;
+use Drupal\ab_communication\StoredMessage;
 use Drupal\ab_core\Authorization\ActorContext;
 use Drupal\ab_core\Authorization\HumanActorContextFactory;
 use Drupal\ab_core\Authorization\MembershipScope;
+use Drupal\ab_core\Authorization\ScopedOperationDeniedException;
+use Drupal\ab_core\Authorization\ScopedResourceNotFoundException;
 use Drupal\ab_core\Authorization\WorkspacePermission;
 use Drupal\ab_core\Entity\Workspace;
 use Drupal\ab_ui\Form\InputAnswerForm;
+use Drupal\ab_ui\Form\MessageComposeForm;
 use Drupal\ab_ui\Form\TaskDependencyForm;
 use Drupal\ab_ui\Form\TaskReorderForm;
 use Drupal\ab_ui\Form\TaskReviewForm;
@@ -70,6 +76,7 @@ final class TaskController implements ContainerInjectionInterface {
     private readonly Connection $database,
     private readonly InputRequestService $requests,
     private readonly HumanActorContextFactory $actors,
+    private readonly MessageService $messageService,
   ) {}
 
   /**
@@ -174,10 +181,15 @@ final class TaskController implements ContainerInjectionInterface {
   /**
    * Shows one readable task without changing the selected workspace.
    *
+   * @param string $uuid
+   *   Public task id.
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The current request. The tab query selects one section.
+   *
    * @return array<string, mixed>
    *   A render array.
    */
-  public function view(string $uuid): array {
+  public function view(string $uuid, Request $request): array {
     $task = $this->visibleTask($uuid);
     $workspace = $this->workspaceOf($task);
     $can_write = $workspace instanceof Workspace && $this->canWrite($workspace);
@@ -187,13 +199,45 @@ final class TaskController implements ContainerInjectionInterface {
     $back = $board instanceof Board
       ? Url::fromRoute('ab_ui.board_tasks', ['uuid' => $board->uuid()])->toString()
       : Url::fromRoute('ab_ui.boards')->toString();
+    $due = '';
+    $assigned = FALSE;
+    $agent_name = '';
+    $attempts = [];
+    $questions = [];
+    $thread = [
+      'messages' => [],
+      'empty' => (string) $this->t('Nenhuma mensagem nesta conversa.'),
+      'older' => '',
+    ];
+    if ($workspace instanceof Workspace) {
+      $due = $this->dueLabel($workspace, $task->get('due_at')->getString());
+      $agent = $this->assignedAgent($workspace, $task);
+      $assigned = $agent['assigned'];
+      $agent_name = $agent['name'];
+      $attempts = $this->attempts($task, $workspace);
+      $questions = $this->questions($task, $workspace, $can_write);
+      $thread = $this->thread($workspace, $task, $request);
+    }
+    $has_links = FALSE;
+    foreach ($attempts as $attempt) {
+      if ($attempt['links'] !== []) {
+        $has_links = TRUE;
+      }
+    }
+    $tab = $this->taskTab($request);
     $build = [
       '#theme' => 'ab_ui_task_view',
       '#label' => (string) $task->label(),
+      '#uuid' => (string) $task->uuid(),
       '#status' => $this->statusLabel($task->get('status')->getString()),
       '#priority' => $this->priorityLabel($task->get('priority')->getString()),
       '#owner' => $this->ownerName($task),
-      '#due' => $workspace instanceof Workspace ? $this->dueLabel($workspace, $task->get('due_at')->getString()) : '',
+      '#due' => $due,
+      '#agent_assigned' => $assigned,
+      '#agent_name' => $agent_name,
+      '#board_label' => $board instanceof Board ? (string) $board->label() : '',
+      '#tab' => $tab,
+      '#tabs' => $this->tabLinks($task, $tab),
       '#description' => $this->markup($task->get('description')->getString()),
       '#criteria' => $this->markup($task->get('acceptance_criteria')->getString()),
       '#edit_url' => $can_write ? Url::fromRoute('ab_ui.task_edit', [
@@ -203,17 +247,33 @@ final class TaskController implements ContainerInjectionInterface {
       '#blocked' => $this->dependencies->isBlocked($task),
       '#dependencies' => $this->dependencyItems($task),
       '#dependency_form' => NULL,
-      '#attempts' => $this->attempts($task),
+      '#attempts' => $attempts,
+      '#has_links' => $has_links,
       '#review_form' => NULL,
-      '#questions' => $workspace instanceof Workspace ? $this->questions($task, $workspace, $can_write) : [],
+      '#questions' => $questions,
+      '#messages' => $thread['messages'],
+      '#messages_empty' => $thread['empty'],
+      '#older_url' => $thread['older'],
+      '#message_form' => NULL,
       '#conversation_url' => Url::fromRoute('ab_ui.task_conversation', [
         'uuid' => $task->uuid(),
       ])->toString(),
       '#back_url' => $back,
       '#cache' => $this->cacheMeta($workspace),
     ];
+    $build['#cache']['contexts'][] = 'url.query_args:tab';
+    $build['#cache']['contexts'][] = 'url.query_args:before';
     if ($workspace instanceof Workspace && $workspace->id() !== NULL) {
       $build['#cache']['tags'][] = 'ab_workspace_messages:' . $workspace->id();
+    }
+    if ($can_write) {
+      $build['#message_form'] = $this->formBuilder->getForm(
+        MessageComposeForm::class,
+        'task',
+        (string) $task->uuid(),
+        '',
+        'task',
+      );
     }
     if ($can_write && $targets !== []) {
       $build['#transition_form'] = $this->formBuilder->getForm(
@@ -247,18 +307,39 @@ final class TaskController implements ContainerInjectionInterface {
   /**
    * Lists attempts, notes and result links for one visible task.
    *
+   * A row from another task or workspace is skipped. Notes stay text.
+   *
+   * @param \Drupal\ab_board\Entity\Task $task
+   *   Task already loaded for this screen.
+   * @param \Drupal\ab_core\Entity\Workspace $workspace
+   *   Workspace that owns the task.
+   *
    * @return array<int, array<string, mixed>>
    *   One item per stored execution.
    */
-  private function attempts(Task $task): array {
+  private function attempts(Task $task, Workspace $workspace): array {
     $rows = $this->database->select('ab_execution', 'e')
-      ->fields('e', ['id', 'attempt', 'status', 'result_summary', 'failure_code'])
+      ->fields('e', [
+        'id',
+        'uuid',
+        'attempt',
+        'status',
+        'result_summary',
+        'failure_code',
+        'heartbeat_at',
+        'lease_expires_at',
+        'task',
+        'workspace',
+      ])
       ->condition('task', $task->id())
       ->orderBy('attempt')
       ->execute()
       ->fetchAll();
     $ids = [];
     foreach ($rows as $row) {
+      if (!$this->sameExecution($row, $task, $workspace)) {
+        continue;
+      }
       $ids[] = (int) $row->id;
     }
     $notes = [];
@@ -289,19 +370,132 @@ final class TaskController implements ContainerInjectionInterface {
         ];
       }
     }
+    $expired = $this->expiredExecutionIds($task, $workspace);
     $items = [];
     foreach ($rows as $row) {
+      if (!$this->sameExecution($row, $task, $workspace)) {
+        continue;
+      }
       $id = (int) $row->id;
+      $status = (string) $row->status;
       $items[] = [
         'number' => (string) $row->attempt,
-        'status' => $this->executionLabel((string) $row->status),
+        'status' => $this->executionLabel($status),
         'summary' => $this->markup((string) $row->result_summary),
         'failure' => (string) $row->failure_code,
+        'notice' => $this->executionNotice($row, $expired),
+        'signal' => $this->executionSignal($workspace, $row),
         'notes' => $notes[$id] ?? [],
         'links' => $links[$id] ?? [],
       ];
     }
     return $items;
+  }
+
+  /**
+   * Reports whether the execution row belongs to this task.
+   *
+   * @param object $row
+   *   Execution row from storage.
+   * @param \Drupal\ab_board\Entity\Task $task
+   *   Task open on the screen.
+   * @param \Drupal\ab_core\Entity\Workspace $workspace
+   *   Workspace that owns the task.
+   */
+  private function sameExecution(object $row, Task $task, Workspace $workspace): bool {
+    $same_task = (string) $row->task === (string) $task->id();
+    $same_workspace = (string) $row->workspace === (string) $workspace->id();
+    return $same_task && $same_workspace;
+  }
+
+  /**
+   * Returns the sentence for a failed or expired execution.
+   *
+   * @param object $row
+   *   Execution row from storage.
+   * @param array<string, true> $expired
+   *   Execution uuids whose interrupt reason is expiry.
+   */
+  private function executionNotice(object $row, array $expired): string {
+    $status = (string) $row->status;
+    if ($status === 'failed') {
+      return (string) $this->t('A execução falhou.');
+    }
+    $uuid = (string) $row->uuid;
+    if ($this->leaseLapsed($row) || isset($expired[$uuid])) {
+      return (string) $this->t('A execução expirou.');
+    }
+    return '';
+  }
+
+  /**
+   * Returns the stored signal, without calling the agent online.
+   *
+   * @param \Drupal\ab_core\Entity\Workspace $workspace
+   *   Workspace that owns the execution.
+   * @param object $row
+   *   Execution row from storage.
+   */
+  private function executionSignal(Workspace $workspace, object $row): string {
+    if ($this->leaseLapsed($row)) {
+      return '';
+    }
+    $heartbeat = (int) $row->heartbeat_at;
+    if ($heartbeat > 0) {
+      $when = $this->clockLabel($workspace, $heartbeat);
+      return $when === '' ? '' : (string) $this->t('Último sinal: @time', [
+        '@time' => $when,
+      ]);
+    }
+    $live = in_array((string) $row->status, ['running', 'waiting_input'], TRUE);
+    return $live ? (string) $this->t('Execução em andamento.') : '';
+  }
+
+  /**
+   * Reports a live lease whose stored expiry is already past.
+   *
+   * @param object $row
+   *   Execution row from storage.
+   */
+  private function leaseLapsed(object $row): bool {
+    $live = in_array((string) $row->status, ['running', 'waiting_input'], TRUE);
+    $expires = (int) $row->lease_expires_at;
+    return $live && $expires > 0 && $expires <= $this->time->getRequestTime();
+  }
+
+  /**
+   * Collects execution uuids interrupted because the lease expired.
+   *
+   * @param \Drupal\ab_board\Entity\Task $task
+   *   Task open on the screen.
+   * @param \Drupal\ab_core\Entity\Workspace $workspace
+   *   Workspace that owns the task.
+   *
+   * @return array<string, true>
+   *   Execution uuids keyed for lookup.
+   */
+  private function expiredExecutionIds(Task $task, Workspace $workspace): array {
+    $rows = $this->database->select('ab_event', 'e')
+      ->fields('e', ['payload'])
+      ->condition('workspace_id', (string) $workspace->uuid())
+      ->condition('type', 'execution.interrupted')
+      ->condition('resource_id', (string) $task->uuid())
+      ->execute();
+    $ids = [];
+    foreach ($rows as $row) {
+      $payload = $row->payload;
+      if (is_string($payload)) {
+        $payload = json_decode($payload, TRUE);
+      }
+      if (!is_array($payload) || ($payload['reason'] ?? '') !== 'expired') {
+        continue;
+      }
+      $uuid = $payload['execution_id'] ?? '';
+      if (is_string($uuid) && $uuid !== '') {
+        $ids[$uuid] = TRUE;
+      }
+    }
+    return $ids;
   }
 
   /**
@@ -331,6 +525,9 @@ final class TaskController implements ContainerInjectionInterface {
       $items[] = [
         'label' => (string) $predecessor->label(),
         'status' => $this->statusLabel($predecessor->get('status')->getString()),
+        'url' => Url::fromRoute('ab_ui.task_view', [
+          'uuid' => $predecessor->uuid(),
+        ])->toString(),
       ];
     }
     return $items;
@@ -766,6 +963,226 @@ final class TaskController implements ContainerInjectionInterface {
       'urgent' => (string) $this->t('Urgente'),
       default => (string) $this->t('Normal'),
     };
+  }
+
+  /**
+   * Returns the tab named in the query, or the description tab.
+   *
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The current request.
+   */
+  private function taskTab(Request $request): string {
+    $tab = $request->query->get('tab');
+    $allowed = ['descricao', 'conversas', 'atividade', 'links'];
+    if (is_string($tab) && in_array($tab, $allowed, TRUE)) {
+      return $tab;
+    }
+    return 'descricao';
+  }
+
+  /**
+   * Builds the four section links. Unknown sections are not offered.
+   *
+   * @param \Drupal\ab_board\Entity\Task $task
+   *   Task open on the screen.
+   * @param string $current
+   *   Selected tab.
+   *
+   * @return list<array{label: string, url: string, current: bool}>
+   *   One link per honest section.
+   */
+  private function tabLinks(Task $task, string $current): array {
+    $labels = [
+      'descricao' => (string) $this->t('Descrição'),
+      'conversas' => (string) $this->t('Conversas'),
+      'atividade' => (string) $this->t('Execuções'),
+      'links' => (string) $this->t('Links de entrega'),
+    ];
+    $links = [];
+    foreach ($labels as $tab => $label) {
+      $options = ['fragment' => 'ab-task-' . $tab];
+      if ($tab !== 'descricao') {
+        $options['query'] = ['tab' => $tab];
+      }
+      $links[] = [
+        'label' => $label,
+        'url' => Url::fromRoute('ab_ui.task_view', [
+          'uuid' => $task->uuid(),
+        ], $options)->toString(),
+        'current' => $current === $tab,
+      ];
+    }
+    return $links;
+  }
+
+  /**
+   * Returns the assigned agent when it belongs to this workspace.
+   *
+   * An unresolved id stays assigned and the number is not returned.
+   *
+   * @param \Drupal\ab_core\Entity\Workspace $workspace
+   *   Workspace that owns the task.
+   * @param \Drupal\ab_board\Entity\Task $task
+   *   Task open on the screen.
+   *
+   * @return array{assigned: bool, name: string}
+   *   Whether an agent is stored, and the name when it resolves.
+   */
+  private function assignedAgent(Workspace $workspace, Task $task): array {
+    $id = $task->get('assigned_agent')->getString();
+    if ($id === '' || $id === '0') {
+      return ['assigned' => FALSE, 'name' => ''];
+    }
+    $agent = $this->entityTypeManager->getStorage('ab_agent')->load($id);
+    if (!$agent instanceof Agent) {
+      return ['assigned' => TRUE, 'name' => ''];
+    }
+    $same = (string) $agent->get('workspace')->getString();
+    if ($same !== (string) $workspace->id()) {
+      return ['assigned' => TRUE, 'name' => ''];
+    }
+    return ['assigned' => TRUE, 'name' => (string) $agent->label()];
+  }
+
+  /**
+   * Reads the task thread through the message service.
+   *
+   * Opening the thread does not create it. A miss stays empty.
+   *
+   * @param \Drupal\ab_core\Entity\Workspace $workspace
+   *   Workspace that owns the task.
+   * @param \Drupal\ab_board\Entity\Task $task
+   *   Task open on the screen.
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The current request. The before query pages older messages.
+   *
+   * @return array<string, mixed>
+   *   Lines, the empty sentence and the older-page URL.
+   */
+  private function thread(Workspace $workspace, Task $task, Request $request): array {
+    $empty = (string) $this->t('Nenhuma mensagem nesta conversa.');
+    $result = ['messages' => [], 'empty' => $empty, 'older' => ''];
+    $raw = $request->query->get('before');
+    $cursor = NULL;
+    if (is_string($raw) && preg_match('/^\d+\.\d+$/', $raw) === 1) {
+      $cursor = $raw;
+    }
+    try {
+      $actor = $this->actors->create($workspace);
+      $thread = $this->messageService->findThreadUuid($actor, 'task', (string) $task->uuid());
+      $page = $thread === NULL
+        ? new MessagePage([], NULL)
+        : $this->messageService->read($actor, $thread, $cursor, MessageService::PAGE_DEFAULT);
+    }
+    catch (ScopedResourceNotFoundException | ScopedOperationDeniedException) {
+      return $result;
+    }
+    $older = '';
+    if ($page->cursor !== NULL) {
+      $older = Url::fromRoute('ab_ui.task_view', ['uuid' => $task->uuid()], [
+        'query' => [
+          'tab' => 'conversas',
+          'before' => $page->cursor,
+        ],
+        'fragment' => 'ab-task-conversas',
+      ])->toString();
+    }
+    return [
+      'messages' => $this->messageLines($workspace, $page),
+      'empty' => $empty,
+      'older' => $older,
+    ];
+  }
+
+  /**
+   * Prepares sanitized lines for the task thread.
+   *
+   * @param \Drupal\ab_core\Entity\Workspace $workspace
+   *   Workspace that owns the messages.
+   * @param \Drupal\ab_communication\MessagePage $page
+   *   One page already authorized for this actor.
+   *
+   * @return array<int, array<string, mixed>>
+   *   Author, kind, time and body for each message.
+   */
+  private function messageLines(Workspace $workspace, MessagePage $page): array {
+    $lines = [];
+    foreach ($page->messages as $message) {
+      $html = $this->markdown->render($message->body);
+      $lines[] = [
+        'author' => $this->messageAuthor($workspace, $message),
+        'kind' => $this->messageKind($message->kind),
+        'time' => $this->clockLabel($workspace, $message->created),
+        'body' => $html === '' ? [] : ['#markup' => $html],
+        'reply' => $message->replyTo !== NULL,
+      ];
+    }
+    return $lines;
+  }
+
+  /**
+   * Returns a display name for the message author in this workspace.
+   *
+   * @param \Drupal\ab_core\Entity\Workspace $workspace
+   *   Workspace that owns the message.
+   * @param \Drupal\ab_communication\StoredMessage $message
+   *   Stored message already read for this actor.
+   */
+  private function messageAuthor(Workspace $workspace, StoredMessage $message): string {
+    if ($message->actorType === ActorContext::TYPE_SYSTEM) {
+      return (string) $this->t('Sistema');
+    }
+    if ($message->actorType === ActorContext::TYPE_AGENT) {
+      $ids = $this->entityTypeManager->getStorage('ab_agent')->getQuery()
+        ->accessCheck(FALSE)
+        ->condition('uuid', $message->actorId)
+        ->condition('workspace', $workspace->id())
+        ->execute();
+      $agent = $this->entityTypeManager->getStorage('ab_agent')->load(reset($ids) ?: 0);
+      return $agent instanceof Agent ? (string) $agent->label() : (string) $this->t('Participante');
+    }
+    $user = $this->entityTypeManager->getStorage('user')->load($message->actorId);
+    return $user instanceof UserInterface ? $user->getAccountName() : (string) $this->t('Participante');
+  }
+
+  /**
+   * Returns the Portuguese label of a message kind.
+   *
+   * @param string $kind
+   *   Stored message kind.
+   */
+  private function messageKind(string $kind): string {
+    return match ($kind) {
+      'answer' => (string) $this->t('Resposta'),
+      'progress' => (string) $this->t('Progresso'),
+      'question' => (string) $this->t('Pergunta'),
+      'result' => (string) $this->t('Resultado'),
+      'system' => (string) $this->t('Sistema'),
+      default => (string) $this->t('Comentário'),
+    };
+  }
+
+  /**
+   * Formats a timestamp in the workspace timezone.
+   *
+   * @param \Drupal\ab_core\Entity\Workspace $workspace
+   *   Workspace whose timezone is used.
+   * @param int $timestamp
+   *   UTC unix time. Zero stays blank.
+   */
+  private function clockLabel(Workspace $workspace, int $timestamp): string {
+    if ($timestamp <= 0) {
+      return '';
+    }
+    $timezone = $workspace->get('timezone')->getString();
+    try {
+      $zone = new \DateTimeZone($timezone === '' ? 'America/Sao_Paulo' : $timezone);
+    }
+    catch (\Exception) {
+      $zone = new \DateTimeZone('America/Sao_Paulo');
+    }
+    $when = (new \DateTimeImmutable('@' . $timestamp))->setTimezone($zone);
+    return $when->format('d/m/Y H:i');
   }
 
   /**

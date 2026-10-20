@@ -581,3 +581,27 @@ body {
     min-width: 0;
   }
 }
+
+.ab-task-view {
+  min-width: 0;
+}
+
+.ab-task-view .ab-tabs ul {
+  flex-wrap: wrap;
+}
+
+.ab-task-uuid,
+.ab-task-board {
+  overflow-wrap: anywhere;
+}
+
+.ab-task-view[data-ab-tab] [data-ab-panel] {
+  display: none;
+}
+
+.ab-task-view[data-ab-tab="descricao"] [data-ab-panel="descricao"],
+.ab-task-view[data-ab-tab="conversas"] [data-ab-panel="conversas"],
+.ab-task-view[data-ab-tab="atividade"] [data-ab-panel="atividade"],
+.ab-task-view[data-ab-tab="links"] [data-ab-panel="links"] {
+  display: block;
+}

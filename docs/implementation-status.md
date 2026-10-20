@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-20  
-**Marco atual:** M9 — US-31 concluída. US-32 é a próxima.
+**Marco atual:** M9 — US-32 concluída. US-33 é a próxima.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md` e `docs/backlog-ui-m9.md`. Os registros de US-01 a US-28 não são reescritos por esta fase.
 
@@ -3204,10 +3204,61 @@ No quadro do MCP Inspector, as cinco colunas aparecem com a contagem. `?priority
 
 ---
 
+### US-32 — Detalhes da tarefa
+
+**Status:** done  
+**Objetivo:** Reunir descrição, conversa, execução e links na rota que já existia, sem inventar checklist, arquivo ou percentual.
+
+#### US-32/T01 — Visão geral em painel contextual
+
+**Status:** done  
+**Entrega:** A página `/tasks/{uuid}` mostra título, UUID, status, prioridade, prazo, responsável, agente do workspace e o link do board. Descrição e critérios seguem o Markdown já sanitizado. Dependências apontam para a tarefa predecessora. As abas são links; voltar no navegador restaura a seção anterior.
+
+#### US-32/T02 — Progresso, histórico e entrega
+
+**Status:** done  
+**Entrega:** Cada tentativa mostra status, nota em texto, resumo e links http/https. Heartbeat vira “Último sinal” ou “Execução em andamento”. Aprovar, rejeitar e cancelar continuam nos formulários da policy, com a versão da tela. Não há barra percentual.
+
+#### US-32/T03 — Conversa e pedidos de informação
+
+**Status:** done  
+**Entrega:** A aba Conversas lê a thread pelo `MessageService` existente e lista os pedidos de informação. Quem não tem escrita não vê enviar nem responder. Aprovar só aparece para quem revisa uma tarefa em revisão. Mensagem de outro workspace não entra na página.
+
+#### US-32/T04 — Estados e abas honestas
+
+**Status:** done  
+**Entrega:** As seções são Descrição, Conversas, Execuções e Links de entrega. Critérios são texto. Não há aba Arquivos nem checklist. Vazio, falha e lease vencida têm frase própria. O conflito de versão permanece “A tarefa foi alterada. Recarregue e tente de novo.”
+
+**Evidências:**
+
+```bash
+$ SIMPLETEST_DB=pgsql://postgres:@database:5432/drupal11 \
+  SIMPLETEST_BASE_URL=http://appserver \
+  php vendor/bin/phpunit \
+  web/modules/custom/ab_ui/tests/src/Functional/TaskDetailUiTest.php \
+  web/modules/custom/ab_ui/tests/src/Functional/TaskReviewUiTest.php \
+  web/modules/custom/ab_ui/tests/src/Functional/TaskScreensUiTest.php \
+  web/modules/custom/ab_ui/tests/src/Functional/TaskDependencyUiTest.php \
+  web/modules/custom/ab_ui/tests/src/Functional/TaskTransitionUiTest.php \
+  web/modules/custom/ab_ui/tests/src/Functional/TaskVersionUiTest.php \
+  web/modules/custom/ab_ui/tests/src/Functional/InputRequestUiTest.php \
+  web/modules/custom/ab_ui/tests/src/Functional/ConversationUiTest.php \
+  web/modules/custom/ab_ui/tests/src/Functional/SyncUiTest.php
+OK (9 tests, 477 assertions)
+```
+
+PHPCS e PHPStan nos arquivos PHP alterados não apontaram erro. Na tarefa do MCP Inspector, Descrição, Conversas, Execuções e Links de entrega trocam pela URL. Enter na aba Conversas abre a seção e o voltar retorna à descrição. Em 390px a página não rola na horizontal.
+
+**Bloqueios:** nenhum.
+
+**Próxima ação:** US-33.
+
+---
+
 ## Estatísticas
 
 - **Total de tasks do backlog M0–M8:** 83, todas registradas como done no corpo histórico
-- **M9:** US-29 done; US-30 done; US-31 done; US-32 em diante todo
+- **M9:** US-29 done; US-30 done; US-31 done; US-32 done; US-33 em diante todo
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
@@ -3222,7 +3273,7 @@ No quadro do MCP Inspector, as cinco colunas aparecem com a contagem. `?priority
 
 ## Próximos Passos
 
-1. US-32 — detalhe da tarefa, com as abas que já têm dados.
+1. US-33 — central de agentes, com o que já está gravado.
 
 ---
 

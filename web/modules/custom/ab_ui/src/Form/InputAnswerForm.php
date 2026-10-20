@@ -107,7 +107,9 @@ final class InputAnswerForm extends FormBase {
     }
     $this->messenger()->addStatus($this->t('Resposta enviada.'));
     if ($task !== '') {
-      $form_state->setRedirect('ab_ui.task_view', ['uuid' => $task]);
+      $form_state->setRedirect('ab_ui.task_view', ['uuid' => $task], [
+        'query' => ['tab' => 'conversas'],
+      ]);
     }
   }
 

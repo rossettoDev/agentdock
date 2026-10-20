@@ -1,0 +1,22 @@
+uuid: 58bab75d-7e4f-4269-b7ba-8e50082e16b5
+langcode: pt-br
+status: true
+dependencies:
+  module:
+    - system
+  theme:
+    - agent_board
+_core:
+  default_config_hash: eYL19CLDyinGTWYQfBD1DswWzglEotE_kHnHx3AxTXM
+id: agent_board_powered
+theme: agent_board
+region: header
+weight: 0
+provider: null
+plugin: system_powered_by_block
+settings:
+  id: system_powered_by_block
+  label: 'Desenvolvido com Drupal'
+  label_display: '0'
+  provider: system
+visibility: {  }

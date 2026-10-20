@@ -1,0 +1,22 @@
+uuid: c082b190-b7f0-4442-87a7-d6fc92a772c0
+langcode: pt-br
+status: true
+dependencies:
+  module:
+    - help
+  theme:
+    - agent_board
+_core:
+  default_config_hash: VfPFqqxfkomud5CO8DUijw85QIl9GIxh_nIxLOYESxg
+id: agent_board_help
+theme: agent_board
+region: header
+weight: 0
+provider: null
+plugin: help_block
+settings:
+  id: help_block
+  label: Ajuda
+  label_display: '0'
+  provider: help
+visibility: {  }

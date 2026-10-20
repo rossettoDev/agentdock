@@ -1,0 +1,24 @@
+uuid: b35607b4-dd96-4b20-88a2-91c71c2fd87e
+langcode: pt-br
+status: true
+dependencies:
+  config:
+    - block_content.type.basic
+    - field.storage.block_content.body
+  module:
+    - text
+_core:
+  default_config_hash: EMr_qVrI5RWwhnTUxZkHqQEZhDT3UfcwmFfobpxgkbk
+id: block_content.basic.body
+field_name: body
+entity_type: block_content
+bundle: basic
+label: Corpo
+description: ''
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings:
+  allowed_formats: {  }
+field_type: text_long

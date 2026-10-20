@@ -77,4 +77,18 @@ Em caso de conflito, preservar as regras da arquitetura e documentar o ajuste vi
 
 ---
 
-**Última atualização:** 2026-10-15 · US-02/T02
+**Última atualização:** 2026-10-20 · US-27/T02
+
+## Conferência de 2026-10-20
+
+A tela em uso não copia o protótipo escuro. O tema `agent_board` empilha o kanban abaixo de 768px. Os testes funcionais de domínio usam o tema `stark`, então o CSS do tema não é a evidência deles.
+
+O que a tela faz e o protótipo não pede como MVP:
+
+- o card tem o botão **Mover** além do arrastar
+- agente aparece como habilitado ou desabilitado, sem status "online"
+- conversa vazia diz que não há mensagem e não oferece DM
+- board desconhecido responde "A página não foi encontrada", sem o título
+- o painel com métricas continua fora do MVP
+
+Não houve auditoria automática de acessibilidade. O que foi visto na sessão local: link "Pular para o conteúdo principal", **Mover** recebe foco, colunas vazias mostram contagem 0.

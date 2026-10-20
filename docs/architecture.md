@@ -256,9 +256,9 @@ Runner de referência é o CLI PHP em `tools/agent-runner`. A linguagem foi esco
 
 Loop: consultar tarefas prontas → escolher tarefa elegível → claim → carregar contexto → trabalhar mantendo heartbeat → enviar progresso/dúvidas → submit ou fail. Em perda de lease, parar novas ações. Reconexão sempre valida execução antes de retomar. O runner lista tarefas `ready`; snapshot e inbox estão na API e não escolhem a próxima tarefa por ele. 409 no claim continua significando que a tarefa não está elegível.
 
-MCP posterior expõe `list_boards`, `list_ready_tasks`, `get_task`, `claim_task`, `report_progress`, `post_message`, `request_human_input`, `get_execution`, `submit_result`, `fail_execution`, `release_task` e `get_agent_inbox`. O adaptador chama API com credencial do agente; não acessa banco diretamente.
+MCP posterior expõe `list_boards`, `list_ready_tasks`, `get_task`, `claim_task`, `report_progress`, `post_message`, `request_human_input`, `get_execution`, `submit_result`, `fail_execution`, `release_task` e `get_agent_inbox`. O adaptador em `tools/mcp-adapter` chama a API com a credencial do processo; não acessa banco e não escolhe agente, autor ou workspace pelo argumento.
 
-Sessão MCP ou conexão HTTP não equivale a execução. Heartbeat precisa ser mantido por runner/serviço enquanto há trabalho ativo; uma chamada MCP isolada não garante isso. Primeiro transporte recomendado: stdio local; avaliar HTTP remoto e autenticação compatível com os clientes somente no marco MCP.
+Sessão MCP ou conexão HTTP não equivale a execução. O processo que renova a lease é o runner em `tools/agent-runner`, enquanto há trabalho ativo. O adaptador atende a chamada e encerra. Fechar o stdio não faz release nem fail. Cancelar é `fail_execution` ou `release_task`; se ninguém renova, o worker recupera a lease vencida. Uma chamada MCP isolada não mantém a execução ativa. Primeiro transporte: stdio local. HTTP remoto fica fora deste marco.
 
 ## 13. Estrutura Drupal
 

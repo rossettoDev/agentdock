@@ -116,6 +116,7 @@ final class AbUiHooks {
       'ab_ui_task_list' => [
         'variables' => [
           'board_label' => '',
+          'board_description' => '',
           'add_url' => '',
           'columns' => [],
           'cancelled' => [],
@@ -126,6 +127,11 @@ final class AbUiHooks {
           'today_empty' => FALSE,
           'board_url' => '',
           'empty' => TRUE,
+          'priorities' => [],
+          'agents' => [],
+          'priority' => '',
+          'agent' => '',
+          'filter_empty' => FALSE,
         ],
       ],
       'ab_ui_task_view' => [

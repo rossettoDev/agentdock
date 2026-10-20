@@ -1,7 +1,7 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-20  
-**Marco atual:** M9 — US-30 concluída. US-31 é a próxima.
+**Marco atual:** M9 — US-31 concluída. US-32 é a próxima.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md` e `docs/backlog-ui-m9.md`. Os registros de US-01 a US-28 não são reescritos por esta fase.
 
@@ -3157,10 +3157,57 @@ No quadro `/boards/{uuid}/tasks` do workspace selecionado: Tarefas e o board fic
 
 ---
 
+### US-31 — Kanban visual
+
+**Status:** done  
+**Objetivo:** Ler o quadro pelos status gravados, com filtros que não atravessam o workspace.
+
+#### US-31/T01 — Cabeçalho e filtros de board
+
+**Status:** done  
+**Entrega:** Nome e descrição do board, criar tarefa quando há escrita, Hoje, Canceladas e as quatro prioridades. O agente entra no filtro só se já está atribuído a uma tarefa legível deste board. O status permanece nas cinco colunas. Não há aba Lista, Calendário nem Timeline.
+
+#### US-31/T02 — Colunas e cards
+
+**Status:** done  
+**Entrega:** Colunas Backlog, Pronta, Em andamento, Em revisão e Concluída, com a contagem dos cards filtrados. O card mostra prioridade, Bloqueada, Aguardando resposta quando há pedido aberto, prazo, responsável, nome do agente do workspace e a tentativa da execução ativa. Um id de agente ou execução de outro workspace não vira nome nem texto.
+
+#### US-31/T03 — Ações e drag-and-drop
+
+**Status:** done  
+**Entrega:** O arraste continua submetendo os botões da `TaskTransitionPolicy`. A coluna ganha o alvo visual e o card fica pendente até o envio. Versão obsoleta continua na mensagem já existente e o card volta à coluna gravada.
+
+#### US-31/T04 — Atualização incremental
+
+**Status:** done  
+**Entrega:** O mesmo poller de antes. Enquanto o card está sendo arrastado, a região não é trocada; o refresh fica pendente e segue depois do arraste. Foco, rascunho e revogação permanecem como já estavam.
+
+**Evidências:**
+
+```bash
+$ SIMPLETEST_DB=pgsql://postgres:@database:5432/drupal11 \
+  SIMPLETEST_BASE_URL=http://appserver \
+  php vendor/bin/phpunit \
+  web/modules/custom/ab_ui/tests/src/Functional/KanbanFiltersUiTest.php \
+  web/modules/custom/ab_ui/tests/src/Functional/TaskKanbanUiTest.php \
+  web/modules/custom/ab_ui/tests/src/Functional/TaskKanbanOrderUiTest.php \
+  web/modules/custom/ab_ui/tests/src/Functional/TaskKanbanMoveUiTest.php \
+  web/modules/custom/ab_ui/tests/src/Functional/SyncUiTest.php
+OK (5 tests, 239 assertions)
+```
+
+No quadro do MCP Inspector, as cinco colunas aparecem com a contagem. `?priority=urgent` mostra “Nenhuma tarefa com este filtro.” e zera as contagens. O link Hoje conserva a prioridade. A página não rola na horizontal.
+
+**Bloqueios:** nenhum.
+
+**Próxima ação:** US-32.
+
+---
+
 ## Estatísticas
 
 - **Total de tasks do backlog M0–M8:** 83, todas registradas como done no corpo histórico
-- **M9:** US-29 done; US-30 done; US-31 em diante todo
+- **M9:** US-29 done; US-30 done; US-31 done; US-32 em diante todo
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
@@ -3175,7 +3222,7 @@ No quadro `/boards/{uuid}/tasks` do workspace selecionado: Tarefas e o board fic
 
 ## Próximos Passos
 
-1. US-31 — Kanban visual, sobre as colunas e os filtros que já existem.
+1. US-32 — detalhe da tarefa, com as abas que já têm dados.
 
 ---
 

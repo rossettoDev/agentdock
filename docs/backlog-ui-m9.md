@@ -1,6 +1,6 @@
 # AgentDock — Backlog de evolução visual (M9)
 
-Versão 1.0 · 20/10/2026 · Status: **em execução** (US-30 done).
+Versão 1.0 · 20/10/2026 · Status: **em execução** (US-31 done).
 
 ## 1. Fontes e objetivo
 
@@ -28,7 +28,7 @@ Objetivo: transformar a interface funcional existente na experiência visual de 
 |---|---|---|---|---|
 | US-29 | Auditoria visual e design system | US-28 | P0 | done |
 | US-30 | Shell, navegação e componentes compartilhados | US-29 | P0 | done |
-| US-31 | Kanban visual | US-30; US-11, US-25 existentes | P0 | todo |
+| US-31 | Kanban visual | US-30; US-11, US-25 existentes | P0 | done |
 | US-32 | Detalhe da tarefa | US-30; US-16, US-18 existentes | P0 | todo |
 | US-33 | Central de Agentes | US-30; US-12, US-13, US-16 existentes | P1 | todo |
 | US-34 | Central de Mensagens | US-30; US-17–19, US-25 existentes | P0 | todo |
@@ -59,10 +59,10 @@ Executar **uma task por interação no Cursor**, seguindo o `Definition of Done`
 
 **História:** Como membro, quero perceber status, prioridade, responsáveis e progresso de cada tarefa num quadro legível.
 
-- [ ] **US-31/T01 — Cabeçalho e filtros de board.** Layout conforme screenshot; tabs Kanban e Lista somente se houver listagem funcional; filtro Hoje existente, prioridades, agente e status quando houver consulta autorizada correspondente. **Aceite:** filtro nunca amplia workspace/grants; filtros preservam contexto e têm estado vazio.
-- [ ] **US-31/T02 — Colunas e cards.** Renderizar estados persistidos `backlog`, `ready`, `in_progress`, `in_review`, `done`; canceladas em filtro separado. Mapear rótulos conforme referência sem fundir `backlog` com `ready`; exibir badges de `blocked`/`waiting_input`, prazo no timezone, `human_owner`, `assigned_agent`/execução quando disponíveis. **Aceite:** contagens batem com consultas filtradas; sem dados demonstrativos fixos.
-- [ ] **US-31/T03 — Ações e drag-and-drop.** Manter menu de movimento por teclado e serviço `TaskTransitionPolicy`; restilizar DnD/ordenação com feedback de pending/success/conflito. **Aceite:** arrastar não coloca tarefa arbitrariamente em andamento, revisão ou concluída; versão obsoleta reverte UI e explica o conflito.
-- [ ] **US-31/T04 — Atualização incremental.** Usar behavior/eventos existentes para refletir tarefas e estados do agente sem apagar foco/rascunho/drag. **Aceite:** duas abas convergem conforme meta existente; sem timer duplicado; nenhuma atualização posterior à revogação permanece visível.
+- [x] **US-31/T01 — Cabeçalho e filtros de board.** Layout conforme screenshot; tabs Kanban e Lista somente se houver listagem funcional; filtro Hoje existente, prioridades, agente e status quando houver consulta autorizada correspondente. **Aceite:** filtro nunca amplia workspace/grants; filtros preservam contexto e têm estado vazio. Lista, calendário e timeline ficam de fora. O status continua nas colunas.
+- [x] **US-31/T02 — Colunas e cards.** Renderizar estados persistidos `backlog`, `ready`, `in_progress`, `in_review`, `done`; canceladas em filtro separado. Mapear rótulos conforme referência sem fundir `backlog` com `ready`; exibir badges de `blocked`/`waiting_input`, prazo no timezone, `human_owner`, `assigned_agent`/execução quando disponíveis. **Aceite:** contagens batem com consultas filtradas; sem dados demonstrativos fixos.
+- [x] **US-31/T03 — Ações e drag-and-drop.** Manter menu de movimento por teclado e serviço `TaskTransitionPolicy`; restilizar DnD/ordenação com feedback de pending/success/conflito. **Aceite:** arrastar não coloca tarefa arbitrariamente em andamento, revisão ou concluída; versão obsoleta reverte UI e explica o conflito.
+- [x] **US-31/T04 — Atualização incremental.** Usar behavior/eventos existentes para refletir tarefas e estados do agente sem apagar foco/rascunho/drag. **Aceite:** duas abas convergem conforme meta existente; sem timer duplicado; nenhuma atualização posterior à revogação permanece visível.
 
 ### US-32 — Detalhes da tarefa
 

@@ -8,19 +8,30 @@
 #}
 {% macro card(card) %}
   <article class="ab-card{% if card.targets or card.reorder_form %} ab-card--movable{% endif %}" data-uuid="{{ card.uuid }}"{% if card.targets or card.reorder_form %} draggable="true"{% endif %}{% if card.targets %} data-targets="{{ card.targets|join(' ') }}"{% endif %}>
-    <h4><a href="{{ card.url }}">{{ card.label }}</a></h4>
-    <p>{{ card.priority }}</p>
+    <h4 class="ab-card__title"><a href="{{ card.url }}">{{ card.label }}</a></h4>
+    <p class="ab-card__meta">
+      <span class="ab-badge{% if card.priority_key in ['low', 'normal', 'high', 'urgent'] %} ab-badge--{{ card.priority_key }}{% endif %}">{{ card.priority }}</span>
+      {% if card.blocked %}
+        <span class="ab-badge ab-badge--blocked">{{ 'Bloqueada'|t }}</span>
+      {% endif %}
+      {% if card.waiting %}
+        <span class="ab-badge ab-badge--waiting_input">{{ 'Aguardando resposta'|t }}</span>
+      {% endif %}
+    </p>
     {% if card.due %}
       <p>{{ 'Prazo:'|t }} {{ card.due }}</p>
     {% endif %}
     {% if card.owner %}
       <p>{{ 'Responsável:'|t }} {{ card.owner }}</p>
     {% endif %}
-    {% if card.agent %}
+    {% if card.agent_name %}
+      <p>{{ card.agent_name }}</p>
+    {% elseif card.agent %}
       <p>{{ 'Agente atribuído'|t }}</p>
     {% endif %}
-    {% if card.blocked %}
-      <p>{{ 'Bloqueada'|t }}</p>
+    {% if card.attempt %}
+      <p>{{ 'Tentativa'|t }} {{ card.attempt }}</p>
+      <p>{{ card.execution }}</p>
     {% endif %}
     {% if card.move_form %}
       <details class="ab-card__move">
@@ -36,21 +47,29 @@
 {% import _self as kanban %}
 <div class="ab-task-list">
   {% if board_label %}
-    <p class="ab-task-board">{{ board_label }}</p>
+    <h2 class="ab-task-board">{{ board_label }}</h2>
+  {% endif %}
+  {% if board_description %}
+    <p>{{ board_description }}</p>
   {% endif %}
   {% if add_url %}
     <p>
       <a class="ab-button" href="{{ add_url }}">{{ 'Criar tarefa'|t }}</a>
     </p>
   {% endif %}
-  {% if cancelled_only or today_only %}
-    <p><a href="{{ board_url }}">{{ 'Voltar ao quadro'|t }}</a></p>
-  {% else %}
-    <p>
-      <a href="{{ cancelled_url }}">{{ 'Canceladas'|t }}</a>
-      <a href="{{ today_url }}">{{ 'Hoje'|t }}</a>
-    </p>
-  {% endif %}
+  <nav class="ab-kanban-filters" aria-label="{{ 'Filtros do quadro'|t }}">
+    {% if today_only or cancelled_only or priority or agent %}
+      <a href="{{ board_url }}">{{ 'Voltar ao quadro'|t }}</a>
+    {% endif %}
+    <a href="{{ today_url }}"{% if today_only %} aria-current="page"{% endif %}>{{ 'Hoje'|t }}</a>
+    <a href="{{ cancelled_url }}"{% if cancelled_only %} aria-current="page"{% endif %}>{{ 'Canceladas'|t }}</a>
+    {% for item in priorities %}
+      <a href="{{ item.url }}"{% if item.active %} aria-current="page"{% endif %}>{{ item.label }}</a>
+    {% endfor %}
+    {% for item in agents %}
+      <a href="{{ item.url }}"{% if item.active %} aria-current="page"{% endif %}>{{ item.label }}</a>
+    {% endfor %}
+  </nav>
   <div data-ab-sync="tasks" data-ab-sync-root>
   {% if cancelled_only %}
     <section class="ab-kanban-cancelled">
@@ -66,6 +85,8 @@
   {% else %}
     {% if today_empty %}
       <p>{{ 'Nenhuma tarefa para hoje.'|t }}</p>
+    {% elseif filter_empty %}
+      <p>{{ 'Nenhuma tarefa com este filtro.'|t }}</p>
     {% elseif empty %}
       <p>{{ 'Nenhuma tarefa neste board.'|t }}</p>
     {% endif %}

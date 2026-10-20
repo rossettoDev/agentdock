@@ -86,6 +86,10 @@ final class TaskController implements ContainerInjectionInterface {
     $can_write = $this->canWrite($workspace);
     $cancelled_only = $request->query->get('cancelled') === '1';
     $today_only = !$cancelled_only && $request->query->get('today') === '1';
+    $tasks = $this->tasks->accessibleTasks($board);
+    $agents = $this->agentsOnBoard($workspace, $tasks);
+    $priority = $this->priorityQuery($request);
+    $agent = $this->agentQuery($request, $agents);
     $columns = [];
     foreach (self::COLUMN_STATUSES as $status) {
       $columns[$status] = [
@@ -95,9 +99,11 @@ final class TaskController implements ContainerInjectionInterface {
       ];
     }
     $cancelled = [];
-    $tasks = $this->tasks->accessibleTasks($board);
     foreach ($tasks as $task) {
-      $card = $this->card($workspace, $task, $can_write);
+      if (!$this->matchesFilters($task, $priority, $agent, $agents)) {
+        continue;
+      }
+      $card = $this->card($workspace, $task, $can_write, $agents);
       $status = $task->get('status')->getString();
       if ($status === 'cancelled') {
         if (!$today_only) {
@@ -125,30 +131,34 @@ final class TaskController implements ContainerInjectionInterface {
     foreach ($columns as $column) {
       $visible += count($column['cards']);
     }
+    $shown = $cancelled_only ? count($cancelled) : $visible;
     $cache = $this->cacheMeta($workspace);
     $cache['contexts'][] = 'url.query_args:cancelled';
     $cache['contexts'][] = 'url.query_args:today';
+    $cache['contexts'][] = 'url.query_args:priority';
+    $cache['contexts'][] = 'url.query_args:agent';
+    $kept = ['priority' => $priority, 'agent' => $agent];
     return [
       '#theme' => 'ab_ui_task_list',
       '#board_label' => (string) $board->label(),
+      '#board_description' => $board->get('description')->getString(),
       '#add_url' => $can_write ? Url::fromRoute('ab_ui.task_add', [
         'uuid' => $board->uuid(),
       ])->toString() : '',
       '#columns' => $cancelled_only ? [] : $columns,
       '#cancelled' => $cancelled_only ? $cancelled : [],
       '#cancelled_only' => $cancelled_only,
-      '#cancelled_url' => Url::fromRoute('ab_ui.board_tasks', [
-        'uuid' => $board->uuid(),
-      ], ['query' => ['cancelled' => '1']])->toString(),
+      '#cancelled_url' => $this->boardUrl($board, ['cancelled' => '1'] + $kept),
       '#today_only' => $today_only,
-      '#today_url' => Url::fromRoute('ab_ui.board_tasks', [
-        'uuid' => $board->uuid(),
-      ], ['query' => ['today' => '1']])->toString(),
-      '#board_url' => Url::fromRoute('ab_ui.board_tasks', [
-        'uuid' => $board->uuid(),
-      ])->toString(),
+      '#today_url' => $this->boardUrl($board, ['today' => '1'] + $kept),
+      '#board_url' => $this->boardUrl($board, []),
       '#empty' => $tasks === [],
       '#today_empty' => $today_only && $visible === 0,
+      '#priorities' => $this->priorityLinks($board, $priority, $today_only, $cancelled_only, $agent),
+      '#agents' => $this->agentLinks($board, $agents, $agent, $today_only, $cancelled_only, $priority),
+      '#priority' => $priority,
+      '#agent' => $agent,
+      '#filter_empty' => ($priority !== '' || $agent !== '') && !$today_only && $shown === 0 && $tasks !== [],
       '#attached' => [
         'library' => ['ab_ui/kanban'],
         'drupalSettings' => [
@@ -457,36 +467,277 @@ final class TaskController implements ContainerInjectionInterface {
   }
 
   /**
+   * Keeps a priority query only when it is one of the stored values.
+   */
+  private function priorityQuery(Request $request): string {
+    $priority = $request->query->get('priority');
+    $allowed = ['low', 'normal', 'high', 'urgent'];
+    if (!is_string($priority) || !in_array($priority, $allowed, TRUE)) {
+      return '';
+    }
+    return $priority;
+  }
+
+  /**
+   * Keeps an agent query only when that agent is on this board.
+   *
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The current board request.
+   * @param array<string, array{id: string, label: string}> $agents
+   *   Agents assigned to accessible tasks, keyed by uuid.
+   */
+  private function agentQuery(Request $request, array $agents): string {
+    $agent = $request->query->get('agent');
+    if (!is_string($agent) || !isset($agents[$agent])) {
+      return '';
+    }
+    return $agent;
+  }
+
+  /**
+   * Reports whether the task matches the priority and agent filters.
+   *
+   * @param \Drupal\ab_board\Entity\Task $task
+   *   Task already loaded for this board.
+   * @param string $priority
+   *   Selected priority, or an empty string.
+   * @param string $agent
+   *   Selected agent uuid, or an empty string.
+   * @param array<string, array{id: string, label: string}> $agents
+   *   Agents assigned to accessible tasks, keyed by uuid.
+   */
+  private function matchesFilters(Task $task, string $priority, string $agent, array $agents): bool {
+    if ($priority !== '' && $task->get('priority')->getString() !== $priority) {
+      return FALSE;
+    }
+    if ($agent === '') {
+      return TRUE;
+    }
+    $id = $task->get('assigned_agent')->getString();
+    return isset($agents[$agent]) && $agents[$agent]['id'] === $id;
+  }
+
+  /**
+   * Lists agents assigned to accessible tasks of this workspace.
+   *
+   * @param \Drupal\ab_core\Entity\Workspace $workspace
+   *   Workspace that owns the board.
+   * @param \Drupal\ab_board\Entity\Task[] $tasks
+   *   Tasks the account can already read.
+   *
+   * @return array<string, array{id: string, label: string}>
+   *   Label and id, keyed by the agent uuid.
+   */
+  private function agentsOnBoard(Workspace $workspace, array $tasks): array {
+    $storage = $this->entityTypeManager->getStorage('ab_agent');
+    $found = [];
+    foreach ($tasks as $task) {
+      $id = $task->get('assigned_agent')->getString();
+      if ($id === '' || $id === '0') {
+        continue;
+      }
+      $agent = $storage->load($id);
+      if (!$agent instanceof Agent) {
+        continue;
+      }
+      if ((string) $agent->get('workspace')->getString() !== (string) $workspace->id()) {
+        continue;
+      }
+      $found[$agent->uuid()] = [
+        'id' => (string) $agent->id(),
+        'label' => (string) $agent->label(),
+      ];
+    }
+    return $found;
+  }
+
+  /**
+   * Builds the board URL with the filters that should stay.
+   *
+   * @param \Drupal\ab_board\Entity\Board $board
+   *   Board whose screen is open.
+   * @param array<string, string> $query
+   *   Query arguments. Empty values are omitted.
+   */
+  private function boardUrl(Board $board, array $query): string {
+    $kept = [];
+    foreach ($query as $key => $value) {
+      if ($value !== '') {
+        $kept[$key] = $value;
+      }
+    }
+    return Url::fromRoute('ab_ui.board_tasks', [
+      'uuid' => $board->uuid(),
+    ], ['query' => $kept])->toString();
+  }
+
+  /**
+   * Priority links that keep the other active filters.
+   *
+   * @param \Drupal\ab_board\Entity\Board $board
+   *   Board whose screen is open.
+   * @param string $current
+   *   Selected priority, or an empty string.
+   * @param bool $today
+   *   Whether the Hoje filter is active.
+   * @param bool $cancelled
+   *   Whether the cancelled filter is active.
+   * @param string $agent
+   *   Selected agent uuid, or an empty string.
+   *
+   * @return list<array{label: string, url: string, active: bool}>
+   *   One link per stored priority.
+   */
+  private function priorityLinks(Board $board, string $current, bool $today, bool $cancelled, string $agent): array {
+    $links = [];
+    foreach (['low', 'normal', 'high', 'urgent'] as $priority) {
+      $links[] = [
+        'label' => $this->priorityLabel($priority),
+        'url' => $this->boardUrl($board, [
+          'today' => $today ? '1' : '',
+          'cancelled' => $cancelled ? '1' : '',
+          'priority' => $priority,
+          'agent' => $agent,
+        ]),
+        'active' => $current === $priority,
+      ];
+    }
+    return $links;
+  }
+
+  /**
+   * Agent links limited to agents already visible on this board.
+   *
+   * @param \Drupal\ab_board\Entity\Board $board
+   *   Board whose screen is open.
+   * @param array<string, array{id: string, label: string}> $agents
+   *   Agents assigned to accessible tasks, keyed by uuid.
+   * @param string $current
+   *   Selected agent uuid, or an empty string.
+   * @param bool $today
+   *   Whether the Hoje filter is active.
+   * @param bool $cancelled
+   *   Whether the cancelled filter is active.
+   * @param string $priority
+   *   Selected priority, or an empty string.
+   *
+   * @return list<array{label: string, url: string, active: bool}>
+   *   One link per visible agent.
+   */
+  private function agentLinks(Board $board, array $agents, string $current, bool $today, bool $cancelled, string $priority): array {
+    $links = [];
+    foreach ($agents as $uuid => $agent) {
+      $links[] = [
+        'label' => $agent['label'],
+        'url' => $this->boardUrl($board, [
+          'today' => $today ? '1' : '',
+          'cancelled' => $cancelled ? '1' : '',
+          'priority' => $priority,
+          'agent' => $uuid,
+        ]),
+        'active' => $current === $uuid,
+      ];
+    }
+    return $links;
+  }
+
+  /**
    * Builds one card from the stored task.
    *
-   * The agent name waits for the agent entity. A stored id only says
-   * that an agent is assigned. Waiting on input waits for that entity.
+   * The agent name is shown only when that agent belongs to the workspace.
+   * An unresolved id stays as "assigned" and is never printed.
+   *
+   * @param \Drupal\ab_core\Entity\Workspace $workspace
+   *   Workspace that owns the task.
+   * @param \Drupal\ab_board\Entity\Task $task
+   *   Task already loaded for this board.
+   * @param bool $can_write
+   *   Whether the account can edit tasks.
+   * @param array<string, array{id: string, label: string}> $agents
+   *   Agents assigned to accessible tasks, keyed by uuid.
    *
    * @return array<string, mixed>
    *   Title, link, priority, due date, owner, blocked flag and move form.
    */
-  private function card(Workspace $workspace, Task $task, bool $can_write): array {
-    $agent = $task->get('assigned_agent')->getString();
+  private function card(Workspace $workspace, Task $task, bool $can_write, array $agents): array {
+    $agent_id = $task->get('assigned_agent')->getString();
+    $agent_name = '';
+    foreach ($agents as $agent) {
+      if ($agent['id'] === $agent_id) {
+        $agent_name = $agent['label'];
+      }
+    }
+    $assigned = $agent_id !== '' && $agent_id !== '0';
     $status = $task->get('status')->getString();
     $targets = (new TaskTransitionPolicy())->targets($status);
     $move_form = [];
     if ($can_write && $targets !== []) {
       $move_form = $this->formBuilder->getForm(TaskTransitionForm::class, $task->uuid(), 'board');
     }
+    $priority = $task->get('priority')->getString();
+    $execution = $this->executionLine($workspace, $task);
     return [
       'label' => (string) $task->label(),
       'uuid' => $task->uuid(),
       'url' => Url::fromRoute('ab_ui.task_view', [
         'uuid' => $task->uuid(),
       ])->toString(),
-      'priority' => $this->priorityLabel($task->get('priority')->getString()),
+      'priority' => $this->priorityLabel($priority),
+      'priority_key' => $priority,
       'due' => $this->dueLabel($workspace, $task->get('due_at')->getString()),
       'owner' => $this->ownerName($task),
       'blocked' => $this->dependencies->isBlocked($task),
-      'agent' => $agent !== '' && $agent !== '0',
+      'waiting' => $this->waitingForAnswer($workspace, $task),
+      'agent' => $assigned,
+      'agent_name' => $agent_name,
+      'attempt' => $execution['attempt'],
+      'execution' => $execution['execution'],
       'targets' => $can_write ? $targets : [],
       'move_form' => $move_form,
     ];
+  }
+
+  /**
+   * Reads the active execution when it belongs to this task.
+   *
+   * @return array{attempt: string, execution: string}
+   *   Attempt number and status label, or empty strings.
+   */
+  private function executionLine(Workspace $workspace, Task $task): array {
+    $empty = ['attempt' => '', 'execution' => ''];
+    $id = $task->get('active_execution')->getString();
+    if ($id === '' || $id === '0') {
+      return $empty;
+    }
+    $row = $this->database->select('ab_execution', 'e')
+      ->fields('e', ['attempt', 'status', 'task', 'workspace'])
+      ->condition('id', (int) $id)
+      ->execute()
+      ->fetchObject();
+    if (!is_object($row)) {
+      return $empty;
+    }
+    $same_task = (string) $row->task === (string) $task->id();
+    $same_workspace = (string) $row->workspace === (string) $workspace->id();
+    if (!$same_task || !$same_workspace) {
+      return $empty;
+    }
+    return [
+      'attempt' => (string) $row->attempt,
+      'execution' => $this->executionLabel((string) $row->status),
+    ];
+  }
+
+  /**
+   * Reports an open question. The question text stays off the card.
+   */
+  private function waitingForAnswer(Workspace $workspace, Task $task): bool {
+    foreach ($this->requests->forTask($this->actors->create($workspace), $task) as $request) {
+      if ($request->status === 'open') {
+        return TRUE;
+      }
+    }
+    return FALSE;
   }
 
   /**

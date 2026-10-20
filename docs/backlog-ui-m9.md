@@ -1,6 +1,6 @@
 # AgentDock — Backlog de evolução visual (M9)
 
-Versão 1.0 · 20/10/2026 · Status: **em execução** (US-32 done).
+Versão 1.0 · 20/10/2026 · Status: **em execução** (US-33 done).
 
 ## 1. Fontes e objetivo
 
@@ -30,7 +30,7 @@ Objetivo: transformar a interface funcional existente na experiência visual de 
 | US-30 | Shell, navegação e componentes compartilhados | US-29 | P0 | done |
 | US-31 | Kanban visual | US-30; US-11, US-25 existentes | P0 | done |
 | US-32 | Detalhe da tarefa | US-30; US-16, US-18 existentes | P0 | done |
-| US-33 | Central de Agentes | US-30; US-12, US-13, US-16 existentes | P1 | todo |
+| US-33 | Central de Agentes | US-30; US-12, US-13, US-16 existentes | P1 | done |
 | US-34 | Central de Mensagens | US-30; US-17–19, US-25 existentes | P0 | todo |
 | US-35 | Dashboard Geral | US-31–34 | P1 | todo |
 | US-36 | Integração, responsividade e validação final | US-31–35 | P0 | todo |
@@ -77,10 +77,10 @@ Executar **uma task por interação no Cursor**, seguindo o `Definition of Done`
 
 **História:** Como admin/owner, quero gerir agentes e entender seu trabalho sem confundir cadastro com presença online.
 
-- [ ] **US-33/T01 — Lista e filtros.** Reestilizar rota `/agents`, busca por agentes do workspace, enabled/disabled, trabalho ativo, contagens calculadas em queries com escopo. **Aceite:** habilitado é atributo administrativo e trabalhando exige execução/heartbeat elegível; não inventar custo/modelo/progresso.
-- [ ] **US-33/T02 — Painel de agente.** Mostrar nome, descrição, capabilities, grants por board, concurrency_limit, tarefa/execução atual e último sinal quando presentes; múltiplas execuções se limite permitir. **Aceite:** nenhuma referência entre workspaces; se sem execução, indicar sem atividade e não “online”.
-- [ ] **US-33/T03 — Cadastro, permissões e credenciais.** Integrar formulários já existentes, visual de ativação/grants e ciclo de emissão/revogação/rotação do token. **Aceite:** token completo mostrado só uma vez no fluxo apropriado; owner/admin distinguem suas permissões; nada sensível no DOM/log de listagem.
-- [ ] **US-33/T04 — Estados de execução.** Badges semânticos baseados em entidades reais: aguardando tarefa, running, waiting_input, submitted, failed, interrupted. **Aceite:** tela não afirma que uma conexão MCP aberta mantém heartbeat; só dados persistidos.
+- [x] **US-33/T01 — Lista e filtros.** Reestilizar rota `/agents`, busca por agentes do workspace, enabled/disabled, trabalho ativo, contagens calculadas em queries com escopo. **Aceite:** habilitado é atributo administrativo e trabalhando exige execução/heartbeat elegível; não inventar custo/modelo/progresso.
+- [x] **US-33/T02 — Painel de agente.** Mostrar nome, descrição, capabilities, grants por board, concurrency_limit, tarefa/execução atual e último sinal quando presentes; múltiplas execuções se limite permitir. **Aceite:** nenhuma referência entre workspaces; se sem execução, indicar sem atividade e não “online”.
+- [x] **US-33/T03 — Cadastro, permissões e credenciais.** Integrar formulários já existentes, visual de ativação/grants e ciclo de emissão/revogação/rotação do token. **Aceite:** token completo mostrado só uma vez no fluxo apropriado; owner/admin distinguem suas permissões; nada sensível no DOM/log de listagem.
+- [x] **US-33/T04 — Estados de execução.** Badges semânticos baseados em entidades reais: aguardando tarefa, running, waiting_input, submitted, failed, interrupted. **Aceite:** tela não afirma que uma conexão MCP aberta mantém heartbeat; só dados persistidos.
 
 ### US-34 — Central de Mensagens
 

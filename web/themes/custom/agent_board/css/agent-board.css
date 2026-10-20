@@ -605,3 +605,28 @@ body {
 .ab-task-view[data-ab-tab="links"] [data-ab-panel="links"] {
   display: block;
 }
+
+.ab-agent-list,
+.ab-agent-view,
+.ab-agent-search {
+  min-width: 0;
+}
+
+.ab-agent-counts,
+.ab-agent-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ab-space-2);
+  margin: 0 0 var(--ab-space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.ab-agent-filters a[aria-current="page"] {
+  color: var(--ab-text);
+  text-decoration: underline;
+}
+
+.ab-agent-search input[type="search"] {
+  max-width: 100%;
+}

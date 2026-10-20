@@ -1,6 +1,6 @@
 # AgentDock — Backlog de evolução visual (M9)
 
-Versão 1.0 · 20/10/2026 · Status: **em execução** (US-31 done).
+Versão 1.0 · 20/10/2026 · Status: **em execução** (US-32 done).
 
 ## 1. Fontes e objetivo
 
@@ -29,7 +29,7 @@ Objetivo: transformar a interface funcional existente na experiência visual de 
 | US-29 | Auditoria visual e design system | US-28 | P0 | done |
 | US-30 | Shell, navegação e componentes compartilhados | US-29 | P0 | done |
 | US-31 | Kanban visual | US-30; US-11, US-25 existentes | P0 | done |
-| US-32 | Detalhe da tarefa | US-30; US-16, US-18 existentes | P0 | todo |
+| US-32 | Detalhe da tarefa | US-30; US-16, US-18 existentes | P0 | done |
 | US-33 | Central de Agentes | US-30; US-12, US-13, US-16 existentes | P1 | todo |
 | US-34 | Central de Mensagens | US-30; US-17–19, US-25 existentes | P0 | todo |
 | US-35 | Dashboard Geral | US-31–34 | P1 | todo |
@@ -68,10 +68,10 @@ Executar **uma task por interação no Cursor**, seguindo o `Definition of Done`
 
 **História:** Como humano, quero entender a tarefa, sua execução e as decisões no mesmo contexto visual.
 
-- [ ] **US-32/T01 — Visão geral em painel contextual.** Reorganizar detalhe existente (ou rota com abertura contextual e fallback direto): título/UUID, descrição Markdown sanitizada, critérios de aceite textuais, prioridade, prazo, owner humano, agente atribuído, status e dependências. **Aceite:** links diretos e back/forward funcionam; não perder contexto do board; acessível por teclado.
-- [ ] **US-32/T02 — Progresso, histórico e entrega.** Exibir status de execução atual, tentativas, heartbeat/último sinal quando disponível, notas, resumo, links de resultado e ações humanas permitidas. **Aceite:** barra percentual só se existir dado persistido confiável; `approve/reject/cancel` seguem policy e versão; não confundir nota com %.
-- [ ] **US-32/T03 — Conversa e pedidos de informação.** Aba/seção com thread de tarefa e input requests existentes, resposta humana vinculada e mensagens de sistema; integrar sem duplicar MessageService. **Aceite:** agente não aprova entrega; humanos sem permissão não veem enviar/aprovar; thread de outro workspace não aparece.
-- [ ] **US-32/T04 — Estados e abas honestas.** Descrição, Conversas, Execuções/Atividade e Links de entrega; mostrar critérios como texto, não checklist falso. Omitir aba Arquivos e checklist interativo até história posterior. **Aceite:** vazio, falha, conflito e execução expirada têm mensagem específica; sem botão inerte.
+- [x] **US-32/T01 — Visão geral em painel contextual.** Reorganizar detalhe existente (ou rota com abertura contextual e fallback direto): título/UUID, descrição Markdown sanitizada, critérios de aceite textuais, prioridade, prazo, owner humano, agente atribuído, status e dependências. **Aceite:** links diretos e back/forward funcionam; não perder contexto do board; acessível por teclado. A rota continua `/tasks/{uuid}`. As abas são links com `tab`.
+- [x] **US-32/T02 — Progresso, histórico e entrega.** Exibir status de execução atual, tentativas, heartbeat/último sinal quando disponível, notas, resumo, links de resultado e ações humanas permitidas. **Aceite:** não há barra percentual. `approve/reject/cancel` seguem a policy e a versão. A nota continua texto.
+- [x] **US-32/T03 — Conversa e pedidos de informação.** Aba/seção com thread de tarefa e input requests existentes, resposta humana vinculada e mensagens de sistema; integrar sem duplicar MessageService. **Aceite:** o agente não aprova entrega. Quem não escreve não vê enviar nem aprovar. Thread de outro workspace não aparece.
+- [x] **US-32/T04 — Estados e abas honestas.** Descrição, Conversas, Execuções/Atividade e Links de entrega; mostrar critérios como texto, não checklist falso. Omitir aba Arquivos e checklist interativo até história posterior. **Aceite:** vazio, falha, conflito e execução expirada têm mensagem específica. Sem botão inerte.
 
 ### US-33 — Central de Agentes
 

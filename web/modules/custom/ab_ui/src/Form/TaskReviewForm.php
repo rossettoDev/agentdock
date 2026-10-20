@@ -157,7 +157,9 @@ final class TaskReviewForm extends FormBase {
       $this->messenger()->addError($this->t('Operação não permitida.'));
       return;
     }
-    $form_state->setRedirect('ab_ui.task_view', ['uuid' => $uuid]);
+    $form_state->setRedirect('ab_ui.task_view', ['uuid' => $uuid], [
+      'query' => ['tab' => 'atividade'],
+    ]);
   }
 
   /**

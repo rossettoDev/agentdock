@@ -152,6 +152,14 @@ ab_ui.task_conversation:
     _user_is_logged_in: 'TRUE'
     uuid: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
 
+ab_ui.design_sample:
+  path: '/ui/amostra'
+  defaults:
+    _controller: '\Drupal\ab_ui\Controller\DesignSampleController::sample'
+    _title: 'Amostra visual'
+  requirements:
+    _user_is_logged_in: 'TRUE'
+
 ab_ui.task_edit:
   path: '/tasks/{uuid}/edit'
   defaults:

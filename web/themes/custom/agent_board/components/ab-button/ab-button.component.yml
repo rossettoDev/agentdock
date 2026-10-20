@@ -1,0 +1,30 @@
+$schema: https://git.drupalcode.org/project/drupal/-/raw/HEAD/core/assets/schemas/v1/metadata.schema.json
+name: Button
+status: stable
+description: 'Botão ou link com as classes ab-button já usadas nas listas.'
+libraryOverrides:
+  dependencies:
+    - agent_board/global
+props:
+  type: object
+  required:
+    - label
+  properties:
+    label:
+      type: string
+      title: Rótulo
+    url:
+      type: string
+      title: Destino
+      description: 'Quando preenchido e o controle não está desabilitado, renderiza um link.'
+    variant:
+      type: string
+      title: Variante
+      enum:
+        - primary
+        - quiet
+      default: primary
+    disabled:
+      type: boolean
+      title: Desabilitado
+      default: false

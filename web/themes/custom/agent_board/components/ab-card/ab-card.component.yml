@@ -1,0 +1,16 @@
+$schema: https://git.drupalcode.org/project/drupal/-/raw/HEAD/core/assets/schemas/v1/metadata.schema.json
+name: Card
+status: stable
+description: 'Cartão com a classe ab-card já usada nas listas.'
+libraryOverrides:
+  dependencies:
+    - agent_board/global
+props:
+  type: object
+  properties:
+    title:
+      type: string
+      title: Título
+slots:
+  body:
+    title: Conteúdo

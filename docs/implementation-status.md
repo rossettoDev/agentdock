@@ -1,9 +1,9 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-20  
-**Marco atual:** M8 — US-28 concluída.
+**Marco atual:** M9 — US-29 concluída. US-30 é a próxima.
 
-Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md`.
+Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md` e `docs/backlog-ui-m9.md`. Os registros de US-01 a US-28 não são reescritos por esta fase.
 
 ## Legenda
 
@@ -3005,9 +3005,113 @@ O PHP 8.1 do WSL precisou da extensão curl carregada por `PHP_INI_SCAN_DIR`. O 
 
 ---
 
+## M9 — Evolução visual
+
+Fonte: `docs/backlog-ui-m9.md`. Nenhuma task desta fase altera domínio.
+
+### US-29 — Auditar referências e definir design system
+
+**Status:** done  
+**Objetivo:** Interface consistente com os estados que o AgentDock já persiste.
+
+#### US-29/T01 — Inventariar telas e rotas reais
+
+**Status:** done  
+**Entrega:** Matriz imagem → rota → fonte de dados → ação → disponibilidade em `docs/US-29-T01-matriz.md`.
+
+**Evidências:**
+
+Cinco arquivos em `docs/screens/`, nomes lidos do diretório:
+
+- `Painel AI Board em modo escuro.png`
+- `Quadro Kanban Drupal em modo escuro.png`
+- `Painel de Tarefa Drupal em Andamento.png`
+- `Painel de Agentes IA em Modo Escuro.png`
+- `Painel de Conversas com Agentes de IA.png`
+
+Rotas conferidas em `web/modules/custom/ab_ui/ab_ui.routing.yml`. Não há rota de dashboard nem de relatórios. Kanban em `/boards/{uuid}/tasks`, detalhe em `/tasks/{uuid}`, agentes em `/agents` e `/agents/{uuid}`, conversas em `/conversations` e `/conversations/{uuid}`. Workspace continua na sessão.
+
+Elementos só ilustrativos ou fora do M9 ficam na matriz: anexos, checklist interativo, DM, reuniões, calendário, timeline, tags, percentual sem campo, status “online”, busca global e relatórios.
+
+**Validação:** revisão direta dos arquivos e do código. Nenhum PHP foi alterado; PHPUnit, PHPCS e PHPStan não foram executados nesta task.
+
+**Bloqueios:** nenhum.
+
+**Próxima ação:** US-29/T02.
+
+---
+
+#### US-29/T02 — Auditar os dados realmente disponíveis
+
+**Status:** done  
+**Entrega:** Contrato do que a UI pode contar ou rotular em `docs/US-29-T02-contrato-dados.md`. Nenhum KPI foi implementado.
+
+**Evidências:**
+
+Campos e serviços conferidos no código:
+
+- `ab_task.status` e `priority`; `TaskDayWindow::includes`; `TaskDependencyManager::isBlocked`
+- `ab_execution.status`, `heartbeat_at`, `attempt`, `result_summary`; tabelas `ab_execution_progress` e `ab_execution_link`
+- `AgentController::signalLabel` (três frases; não diz “online”)
+- `ab_input_request.status` (`open` ou `answered`), distinto do status `waiting_input` da execução
+- `MessageService::listThreads` e `ThreadSummary` (excerpt; `created` é lido e não sai no valor); não há cursor de não lidas
+- `NotificationService::listFor`: menção, `read_at`, sem corpo
+
+Não há coluna de percentual, série histórica, modelo de LLM nem presença. Contagem futura fica no workspace da sessão e, no dashboard, em boards não arquivados.
+
+**Validação:** revisão direta do código. Nenhum PHP foi alterado; PHPUnit, PHPCS e PHPStan não foram executados nesta task.
+
+**Bloqueios:** nenhum.
+
+**Próxima ação:** US-29/T03.
+
+---
+
+#### US-29/T03 — Definir tokens e componentes SDC
+
+**Status:** done  
+**Entrega:** Tokens em `web/themes/custom/agent_board/css/agent-board.css`, sete SDC em `components/` e a amostra `/ui/amostra`. Contrato visual em `docs/US-29-T03-design-system.md`.
+
+**Evidências:**
+
+O botão usa `#1d4ed8` com texto branco (razão 6,70). `#3b82f6` com branco fica em 3,68 e não é fundo de botão. O link `a.ab-button` precisou de seletor mais específico que `.ab-content a`; sem isso o texto saía `#93c5fd`. Conferido no navegador: `color: rgb(255, 255, 255)` e `background: rgb(29, 78, 216)`.
+
+A amostra mostra botão primário, quiet, desabilitado, badges dos status reais, abas com `aria-current`, humano/agente, “Não há sinal de execução.”, skeleton, cartão, vazio e erro com `role="alert"`. A regra carregada no CSS é `.ab-button:focus-visible { outline: 2px solid var(--ab-focus); outline-offset: 2px; }`.
+
+**Validação:**
+
+```text
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice \
+    web/modules/custom/ab_ui/src/Controller/DesignSampleController.php \
+    web/modules/custom/ab_ui/tests/src/Functional/DesignSystemUiTest.php \
+    web/modules/custom/ab_ui/src/Hook/AbUiHooks.php \
+    web/themes/custom/agent_board
+(sem apontamentos)
+
+$ lando phpstan -- web/modules/custom/ab_ui/src/Controller/DesignSampleController.php \
+    web/modules/custom/ab_ui/src/Hook/AbUiHooks.php
+[OK] No errors
+
+$ SIMPLETEST_DB=pgsql://postgres:@database:5432/drupal11 \
+  SIMPLETEST_BASE_URL=http://appserver \
+  php vendor/bin/phpunit web/modules/custom/ab_ui/tests/src/Functional/DesignSystemUiTest.php
+OK (1 test, 21 assertions)
+```
+
+O `lando php` direto herda `SIMPLETEST_DB=mysql://...` do container e recusa a conexão. O comando acima força o Postgres do `phpunit.xml.dist`.
+
+Página aberta em `http://localhost:60654/ui/amostra` com o tema escuro, botão desabilitado e estados vazio/erro visíveis.
+
+**Bloqueios:** nenhum.
+
+**Próxima ação:** US-30.
+
+---
+
 ## Estatísticas
 
-- **Total de tasks:** 83 (conforme backlog)
+- **Total de tasks do backlog M0–M8:** 83, todas registradas como done no corpo histórico
+- **M9:** US-29 done; US-30 em diante todo
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
@@ -3022,7 +3126,7 @@ O PHP 8.1 do WSL precisou da extensão curl carregada por `PHP_INI_SCAN_DIR`. O 
 
 ## Próximos Passos
 
-1. Nenhuma história pendente no backlog. Itens posteriores ao MVP continuam fora.
+1. US-30 — shell e navegação: Dashboard, Meus Boards, Tarefas, Conversas e Agentes, sem `?workspace=`.
 
 ---
 

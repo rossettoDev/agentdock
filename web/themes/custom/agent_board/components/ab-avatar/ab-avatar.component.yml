@@ -1,0 +1,26 @@
+$schema: https://git.drupalcode.org/project/drupal/-/raw/HEAD/core/assets/schemas/v1/metadata.schema.json
+name: Avatar
+status: stable
+description: 'Iniciais e tipo humano ou agente. Não indica presença online.'
+libraryOverrides:
+  dependencies:
+    - agent_board/global
+props:
+  type: object
+  required:
+    - name
+    - kind
+    - kind_label
+  properties:
+    name:
+      type: string
+      title: Nome
+    kind:
+      type: string
+      title: Tipo
+      enum:
+        - human
+        - agent
+    kind_label:
+      type: string
+      title: Rótulo do tipo

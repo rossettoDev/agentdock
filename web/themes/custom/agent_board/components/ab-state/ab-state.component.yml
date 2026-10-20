@@ -1,0 +1,30 @@
+$schema: https://git.drupalcode.org/project/drupal/-/raw/HEAD/core/assets/schemas/v1/metadata.schema.json
+name: State
+status: stable
+description: 'Estado vazio, erro ou carregamento. O erro usa role=alert.'
+libraryOverrides:
+  dependencies:
+    - agent_board/global
+props:
+  type: object
+  required:
+    - variant
+    - title
+    - message
+  properties:
+    variant:
+      type: string
+      title: Variante
+      enum:
+        - empty
+        - error
+        - loading
+    title:
+      type: string
+      title: Título
+    message:
+      type: string
+      title: Mensagem
+slots:
+  action:
+    title: Ação

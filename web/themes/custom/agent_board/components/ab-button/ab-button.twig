@@ -1,0 +1,11 @@
+{% set classes = ['ab-button'] %}
+{% if variant == 'quiet' %}
+  {% set classes = classes|merge(['ab-button--quiet']) %}
+{% endif %}
+{% if disabled %}
+  <button type="button" class="{{ classes|join(' ') }}" disabled>{{ label }}</button>
+{% elseif url %}
+  <a href="{{ url }}" class="{{ classes|join(' ') }}">{{ label }}</a>
+{% else %}
+  <button type="button" class="{{ classes|join(' ') }}">{{ label }}</button>
+{% endif %}

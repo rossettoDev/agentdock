@@ -1,0 +1,5 @@
+<div class="ab-state ab-state--{{ variant }}"{% if variant == 'error' %} role="alert"{% elseif variant == 'loading' %} role="status"{% endif %}>
+  <h3>{{ title }}</h3>
+  <p>{{ message }}</p>
+  {% block action %}{% endblock %}
+</div>

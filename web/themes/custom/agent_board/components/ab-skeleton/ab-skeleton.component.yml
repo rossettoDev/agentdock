@@ -1,0 +1,16 @@
+$schema: https://git.drupalcode.org/project/drupal/-/raw/HEAD/core/assets/schemas/v1/metadata.schema.json
+name: Skeleton
+status: stable
+description: 'Placeholder de carregamento com texto para leitor de tela.'
+libraryOverrides:
+  dependencies:
+    - agent_board/global
+props:
+  type: object
+  properties:
+    lines:
+      type: integer
+      title: Linhas
+      default: 3
+      minimum: 1
+      maximum: 6

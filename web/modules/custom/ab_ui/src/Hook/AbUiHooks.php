@@ -156,6 +156,22 @@ final class AbUiHooks {
           'back_url' => '',
         ],
       ],
+      'ab_ui_design_sample' => [
+        'variables' => [
+          'primary' => [],
+          'quiet' => [],
+          'disabled' => [],
+          'badges' => [],
+          'tabs' => [],
+          'human' => [],
+          'agent' => [],
+          'signal' => [],
+          'skeleton' => [],
+          'card' => [],
+          'empty_state' => [],
+          'error' => [],
+        ],
+      ],
     ];
   }
 

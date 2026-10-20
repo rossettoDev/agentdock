@@ -1,0 +1,9 @@
+<nav class="ab-tabs" aria-label="{{ label }}">
+  <ul>
+    {% for item in items %}
+      <li>
+        <a href="{{ item.url }}" class="ab-tabs__link{{ item.current ? ' is-active' }}"{% if item.current %} aria-current="page"{% endif %}>{{ item.label }}</a>
+      </li>
+    {% endfor %}
+  </ul>
+</nav>

@@ -1,6 +1,6 @@
 # AgentDock — Backlog de evolução visual (M9)
 
-Versão 1.0 · 20/10/2026 · Status: **em execução** (US-33 done).
+Versão 1.0 · 21/10/2026 · Status: **em execução** (US-37 done).
 
 ## 1. Fontes e objetivo
 
@@ -34,6 +34,7 @@ Objetivo: transformar a interface funcional existente na experiência visual de 
 | US-34 | Central de Mensagens | US-30; US-17–19, US-25 existentes | P0 | todo |
 | US-35 | Dashboard Geral | US-31–34 | P1 | todo |
 | US-36 | Integração, responsividade e validação final | US-31–35 | P0 | todo |
+| US-37 | Chrome do protótipo | US-30; `docs/agentdock-prototype` | P0 | done |
 
 Executar **uma task por interação no Cursor**, seguindo o `Definition of Done` atual. Cada task desta fase inicia como `todo`; registrar evidências em `docs/implementation-status.md` sem alterar os registros históricos de US-01 a US-28.
 
@@ -108,6 +109,13 @@ Executar **uma task por interação no Cursor**, seguindo o `Definition of Done`
 - [ ] **US-36/T02 — Responsividade e acessibilidade.** Validar desktop/tablet/telefone, teclado, foco, `aria`/labels, contraste, redução de movimento e alternativa ao DnD. **Aceite:** evidenciação em viewport real e teste funcional; nenhuma operação exclusiva de mouse.
 - [ ] **US-36/T03 — Segurança, regressão e sincronização.** Rodar testes proporcionais dos módulos tocados, isolamento entre dois workspaces, revogação, sanitização, conflito 412, polling/410, sessão/CSRF e credenciais. **Aceite:** relatar comandos e resultados reais, corrigir regressões sem mudar serviço de domínio por estética.
 - [ ] **US-36/T04 — Comparação visual e documentação.** Comparar screenshots reais com telas; registrar diferenças deliberadas por limite de MVP. Atualizar `docs/screens/README.md`, backlog, status e ADR quando necessário. **Aceite:** cinco telas validadas; pendências do pós-M9 registradas separadamente.
+
+### US-37 — Chrome do protótipo
+
+**História:** Como usuário, quero que as telas já existentes usem o enquadramento de `docs/agentdock-prototype`, sem ganhar função que o protótipo só ilustra.
+
+- [x] **US-37/T01 — Sidebar e barra superior.** Sidebar de 196px, fixa na altura da janela, com marca, navegação e boards. Barra de 60px com o seletor de workspace, o sino e a conta. **Aceite:** não há busca global nem link de Dashboard. O botão Menu só aparece na largura estreita. O workspace continua na sessão.
+- [x] **US-37/T02 — Superfícies das telas existentes.** Colunas do kanban, filtros, contagens e linhas de agente seguem as superfícies do protótipo. **Aceite:** cinco colunas de status permanecem. Não há percentual, “online”, calendário, arquivos, checklist nem relatório. O botão primário continua no azul que passa contraste.
 
 ## 4. Evoluções opcionais — não iniciar como parte do M9
 

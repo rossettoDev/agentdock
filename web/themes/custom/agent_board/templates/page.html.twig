@@ -9,7 +9,7 @@
     <div class="ab-app">
       <aside id="ab-sidebar" class="ab-sidebar">
         <div class="ab-logo">
-          <a href="{{ front_page }}">{{ site_name|default('AgentDock') }}</a>
+          <a href="{{ front_page }}"><span class="ab-logo__mark" aria-hidden="true">◈</span> {{ site_name|default('AgentDock') }}</a>
         </div>
         <nav class="ab-sidebar__nav" aria-label="{{ 'Principal'|t }}">
           <ul>
@@ -41,20 +41,24 @@
         <header class="ab-header" role="banner">
           <div class="ab-header__inner">
             <button type="button" class="ab-button ab-button--quiet" data-ab-nav-toggle aria-expanded="true" aria-controls="ab-sidebar">{{ 'Menu'|t }}</button>
-            {% if workspace_selector %}
-              <div class="ab-workspace-selector">
-                {{ workspace_selector }}
-              </div>
-            {% endif %}
-            <button type="button" class="ab-button ab-button--quiet ab-bell" data-ab-bell aria-expanded="false" aria-controls="ab-context">
-              {{ 'Notificações'|t }}
-              {% if shell_unread %}
-                <span class="ab-bell__count">{{ shell_unread }}</span>
+            <div class="ab-header__slot">
+              {% if workspace_selector %}
+                <div class="ab-workspace-selector">
+                  {{ workspace_selector }}
+                </div>
               {% endif %}
-            </button>
-            {% if shell_account %}
-              <a class="ab-account" href="{{ shell_account_url }}">{{ shell_account }}</a>
-            {% endif %}
+            </div>
+            <div class="ab-header__actions">
+              <button type="button" class="ab-button ab-button--quiet ab-bell" data-ab-bell aria-expanded="false" aria-controls="ab-context">
+                {{ 'Notificações'|t }}
+                {% if shell_unread %}
+                  <span class="ab-bell__count">{{ shell_unread }}</span>
+                {% endif %}
+              </button>
+              {% if shell_account %}
+                <a class="ab-account" href="{{ shell_account_url }}">{{ shell_account }}</a>
+              {% endif %}
+            </div>
           </div>
         </header>
         {% if shell_breadcrumb %}
@@ -88,7 +92,7 @@
     <header class="ab-header" role="banner">
       <div class="ab-header__inner">
         <div class="ab-logo">
-          <a href="{{ front_page }}">{{ site_name|default('AgentDock') }}</a>
+          <a href="{{ front_page }}"><span class="ab-logo__mark" aria-hidden="true">◈</span> {{ site_name|default('AgentDock') }}</a>
         </div>
       </div>
     </header>

@@ -23,7 +23,7 @@ class ConversationUiTest extends BrowserTestBase {
   /**
    * {@inheritdoc}
    */
-  protected $defaultTheme = 'stark';
+  protected $defaultTheme = 'agent_board';
 
   /**
    * {@inheritdoc}

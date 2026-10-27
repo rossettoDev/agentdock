@@ -1,0 +1,1 @@
+pilot humans=20 agents=10 boards=10 tasks=5000 errors=0 write_p95_ms=14.14 read_p95_ms=0.35

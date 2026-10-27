@@ -37,3 +37,25 @@ Páginas independentes: `dashboard.html`, `kanban.html`, `task-details.html`, `a
 5. `reference/05-messages.png`
 
 As medidas/cores são aproximações visuais; validar com screenshots em viewport 1536 × 1024 contra os PNGs originais.
+
+## Layout integrado ao tema Drupal
+
+O tema `web/themes/custom/agent_board/` aplica os tokens e a apresentação deste
+protótipo às rotas existentes. `css/prototype.css` contém os ajustes visuais;
+os overrides `templates/ab-ui-*.html.twig` organizam o Kanban, os detalhes da
+tarefa, a tabela de agentes e a conversa. O componente SDC `ab-icon` fornece os
+ícones vetoriais da navegação e das notificações.
+
+A implementação mantém os render arrays, formulários, filtros, abas por URL,
+CSRF, polling e regras de transição existentes. As cinco colunas de status reais
+são preservadas, incluindo `ready`. Os números dos agentes vêm das execuções
+persistidas. Não há porcentagens de progresso estimadas nem presença simulada.
+
+O dashboard demonstrativo ainda não tem uma rota de produção correspondente.
+Busca global, checklist, anexos e DMs do protótipo continuam fora desta integração.
+A tela de conversas mantém a navegação lista/conversa do backend. A validação
+visual por screenshots em 1536 × 1024 ainda precisa ser realizada.
+
+Os testes funcionais `TaskKanbanUiTest`, `TaskDetailUiTest`, `AgentCenterUiTest`
+e `ConversationUiTest` usam o tema `agent_board` para verificar também os overrides.
+Após alterar templates ou componentes, execute `lando drush cr`.

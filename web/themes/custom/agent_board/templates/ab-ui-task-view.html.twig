@@ -1,0 +1,189 @@
+{#
+/**
+ * @file
+ * Shows one task without changing the selected workspace.
+ *
+ * The four sections are real links. Criteria stay text. There is no
+ * files tab, no checklist and no percent bar.
+ */
+#}
+<div class="ab-task-view" data-ab-sync="tasks" data-ab-sync-root data-ab-tab="{{ tab }}">
+  <div class="ab-task-layout">
+  <div class="ab-task-main">
+  <header class="ab-task-heading">
+    {% if board_label %}<p class="ab-task-board"><a href="{{ back_url }}">{{ board_label }}</a></p>{% endif %}
+    <h2 class="ab-task-title">{{ label }}</h2>
+    {% if uuid %}<p class="ab-task-uuid">{{ uuid }}</p>{% endif %}
+  </header>
+  {% if tabs %}
+    <nav class="ab-tabs" aria-label="{{ 'Seções da tarefa'|t }}">
+      <ul>
+        {% for item in tabs %}
+          <li>
+            <a href="{{ item.url }}" class="ab-tabs__link{{ item.current ? ' is-active' }}"{% if item.current %} aria-current="page"{% endif %}>{{ item.label }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </nav>
+  {% endif %}
+
+  <section id="ab-task-descricao" data-ab-panel="descricao">
+    <h2>{{ 'Descrição'|t }}</h2>
+    {% if description %}
+      <div class="ab-task-description">{{ description }}</div>
+    {% else %}
+      <p>{{ 'Nenhuma descrição.'|t }}</p>
+    {% endif %}
+    <h2>{{ 'Critérios de aceite'|t }}</h2>
+    {% if criteria %}
+      <div class="ab-task-criteria">{{ criteria }}</div>
+    {% else %}
+      <p>{{ 'Nenhum critério de aceite.'|t }}</p>
+    {% endif %}
+    {% if edit_url %}
+      <p><a href="{{ edit_url }}">{{ 'Editar'|t }}</a></p>
+    {% endif %}
+    {% if transition_form %}
+      {{ transition_form }}
+    {% endif %}
+    {% if dependencies %}
+      <h2>{{ 'Dependências'|t }}</h2>
+      <ul class="ab-task-dependencies">
+        {% for item in dependencies %}
+          <li><a href="{{ item.url }}">{{ item.label }}</a> — {{ item.status }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    {% if dependency_form %}
+      {{ dependency_form }}
+    {% endif %}
+  </section>
+
+  <section id="ab-task-conversas" data-ab-panel="conversas">
+    <h2>{{ 'Conversas'|t }}</h2>
+    <div data-ab-sync="messages">
+      {% if messages %}
+        <ol class="ab-messages">
+          {% for message in messages %}
+            <li>
+              <p>{{ message.author }} — {{ message.kind }}{% if message.time %} — {{ message.time }}{% endif %}</p>
+              {% if message.reply %}
+                <p>{{ 'Em resposta a uma mensagem.'|t }}</p>
+              {% endif %}
+              {% if message.body %}
+                <div class="ab-message-body">{{ message.body }}</div>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ol>
+      {% else %}
+        <p>{{ messages_empty }}</p>
+      {% endif %}
+      {% if questions %}
+        <h2>{{ 'Dúvidas'|t }}</h2>
+        <ul class="ab-task-questions">
+          {% for item in questions %}
+            <li>
+              <p>{{ item.status }}</p>
+              {% if item.question %}
+                <div class="ab-task-question">{{ item.question }}</div>
+              {% endif %}
+              {% if item.answer %}
+                <p>{{ item.author }}</p>
+                <div class="ab-task-answer">{{ item.answer }}</div>
+              {% endif %}
+              {% if item.form %}
+                {{ item.form }}
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </div>
+    {% if older_url %}
+      <p><a href="{{ older_url }}">{{ 'Mensagens anteriores'|t }}</a></p>
+    {% endif %}
+    {% if message_form %}
+      {{ message_form }}
+    {% endif %}
+    {% if conversation_url %}
+      <p><a href="{{ conversation_url }}">{{ 'Conversa'|t }}</a></p>
+    {% endif %}
+  </section>
+
+  <section id="ab-task-atividade" data-ab-panel="atividade">
+    <h2>{{ 'Execuções'|t }}</h2>
+    {% if attempts %}
+      <ol class="ab-task-attempts">
+        {% for attempt in attempts %}
+          <li>
+            <p>{{ 'Tentativa @n'|t({'@n': attempt.number}) }} — {{ attempt.status }}</p>
+            {% if attempt.notice %}
+              <p>{{ attempt.notice }}</p>
+            {% endif %}
+            {% if attempt.signal %}
+              <p>{{ attempt.signal }}</p>
+            {% endif %}
+            {% if attempt.summary %}
+              <div class="ab-task-result">{{ attempt.summary }}</div>
+            {% endif %}
+            {% if attempt.links %}
+              <ul class="ab-task-links">
+                {% for link in attempt.links %}
+                  <li><a href="{{ link.url }}">{{ link.label }}</a></li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+            {% if attempt.notes %}
+              <ul class="ab-task-progress">
+                {% for note in attempt.notes %}
+                  <li>{{ 'Nota'|t }}: {{ note }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+            {% if attempt.failure %}
+              <p>{{ attempt.failure }}</p>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ol>
+    {% else %}
+      <p>{{ 'Nenhuma execução nesta tarefa.'|t }}</p>
+    {% endif %}
+    {% if review_form %}
+      {{ review_form }}
+    {% endif %}
+  </section>
+
+  <section id="ab-task-links" data-ab-panel="links">
+    <h2>{{ 'Links de entrega'|t }}</h2>
+    {% if has_links %}
+      <ul class="ab-task-links">
+        {% for attempt in attempts %}
+          {% for link in attempt.links %}
+            <li><a href="{{ link.url }}">{{ link.label }}</a></li>
+          {% endfor %}
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>{{ 'Nenhum link de entrega.'|t }}</p>
+    {% endif %}
+  </section>
+
+  </div>
+  <aside class="ab-task-sidebar" aria-label="{{ 'Detalhes da tarefa'|t }}">
+    <section class="ab-detail-card">
+      <h2>{{ 'Detalhes'|t }}</h2>
+      <dl class="ab-detail-list">
+        <div><dt>{{ 'Status'|t }}</dt><dd class="ab-task-status"><span class="ab-badge">{{ status }}</span></dd></div>
+        <div><dt>{{ 'Prioridade'|t }}</dt><dd class="ab-task-priority">{{ priority }}</dd></div>
+        {% if owner %}<div><dt>{{ 'Responsável'|t }}</dt><dd class="ab-task-owner">{{ owner }}</dd></div>{% endif %}
+        {% if due %}<div><dt>{{ 'Prazo'|t }}</dt><dd class="ab-task-due">{{ due }}</dd></div>{% endif %}
+        {% if agent_assigned %}<div><dt>{{ 'Agente'|t }}</dt><dd class="ab-task-agent">{{ agent_name ? agent_name : 'Agente atribuído'|t }}</dd></div>{% endif %}
+      </dl>
+      {% if blocked %}<p class="ab-task-blocked ab-badge ab-badge--blocked">{{ 'Bloqueada'|t }}</p>{% endif %}
+    </section>
+  </aside>
+  </div>
+  <p><a href="{{ back_url }}">{{ 'Tarefas'|t }}</a></p>
+</div>

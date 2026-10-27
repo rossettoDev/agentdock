@@ -2,6 +2,7 @@
 
 **Última atualização:** 2026-10-20  
 **Marco atual:** M9 — US-37 concluída. US-34 é a próxima.
+**Congelado em 2026-10-27.** Não acrescente evidências aqui. O status vivo é `docs/status.md`. O corpo abaixo permanece como histórico.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md` e `docs/backlog-ui-m9.md`. Os registros de US-01 a US-28 não são reescritos por esta fase.
 

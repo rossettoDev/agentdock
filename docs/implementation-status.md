@@ -1,7 +1,8 @@
 # AgentDock — Status de Implementação
 
 **Última atualização:** 2026-10-20  
-**Marco atual:** M9 — US-33 concluída. US-34 é a próxima.
+**Marco atual:** M9 — US-37 concluída. US-34 é a próxima.
+**Congelado em 2026-10-27.** Não acrescente evidências aqui. O status vivo é `docs/status.md`. O corpo abaixo permanece como histórico.
 
 Este documento registra o status real de implementação e validação das user stories e tasks do projeto AgentDock, conforme definido em `docs/backlog.md` e `docs/backlog-ui-m9.md`. Os registros de US-01 a US-28 não são reescritos por esta fase.
 
@@ -3316,10 +3317,44 @@ PHPCS e PHPStan nos arquivos PHP alterados não apontaram erro. Em Casa MCP Insp
 
 ---
 
+### US-37 — Chrome do protótipo
+
+**Status:** done  
+**Objetivo:** Enquadrar as telas já existentes no shell de `docs/agentdock-prototype`, sem copiar busca global, percentual, presença ou abas que não têm rota.
+
+#### US-37/T01 — Sidebar e barra superior
+
+**Status:** done  
+**Entrega:** A sidebar fica em 196px, grudada na altura da janela, com a marca, a navegação e os boards. A barra tem 60px: seletor de workspace à esquerda, sino e conta à direita. O botão Menu fica só na largura estreita. Abaixo da toolbar do Drupal a sidebar desconta a altura dela.
+
+#### US-37/T02 — Superfícies das telas existentes
+
+**Status:** done  
+**Entrega:** Colunas do kanban, filtros, contagens e linhas de agente usam as superfícies escuras do protótipo. O botão primário continua `#1d4ed8`, porque o azul `#1475ff` do protótipo não segura texto branco.
+
+**Evidências:**
+
+```bash
+$ SIMPLETEST_DB=pgsql://postgres:@database:5432/drupal11 \
+  SIMPLETEST_BASE_URL=http://appserver \
+  php vendor/bin/phpunit \
+  web/modules/custom/ab_ui/tests/src/Functional/ShellNavigationUiTest.php \
+  web/modules/custom/ab_ui/tests/src/Functional/ShellVisualTest.php
+OK (5 tests, 58 assertions)
+```
+
+Em `/agents` a sidebar mede 196px e a barra 60px. Não há busca no cabeçalho nem link de Dashboard. No quadro MCP Inspector as cinco colunas continuam, com rolagem interna. Em 390px o menu aparece, a navegação recolhe e a página não rola na horizontal.
+
+**Bloqueios:** nenhum.
+
+**Próxima ação:** US-34.
+
+---
+
 ## Estatísticas
 
 - **Total de tasks do backlog M0–M8:** 83, todas registradas como done no corpo histórico
-- **M9:** US-29 done; US-30 done; US-31 done; US-32 done; US-33 done; US-34 em diante todo
+- **M9:** US-29 done; US-30 done; US-31 done; US-32 done; US-33 done; US-37 done; US-34 em diante todo
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done

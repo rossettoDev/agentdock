@@ -32,7 +32,7 @@ class AgentCenterUiTest extends BrowserTestBase {
   /**
    * {@inheritdoc}
    */
-  protected $defaultTheme = 'stark';
+  protected $defaultTheme = 'agent_board';
 
   /**
    * {@inheritdoc}
@@ -127,11 +127,11 @@ class AgentCenterUiTest extends BrowserTestBase {
     $this->assertSession()->pageTextContains('Inativo Casa');
     $this->assertSession()->pageTextContains('Falhou Casa');
     $this->assertSession()->pageTextNotContains('Revisor Alheio');
-    $this->assertSession()->pageTextContains('Habilitados: 2');
-    $this->assertSession()->pageTextContains('Desabilitados: 1');
-    $this->assertSession()->pageTextContains('Em execução: 1');
-    $this->assertSession()->pageTextContains('Aguardando tarefa: 1');
-    $this->assertSession()->pageTextContains('Sem continuação: 1');
+    $this->assertSession()->elementTextContains('css', '.ab-agent-counts', '2 Habilitados');
+    $this->assertSession()->elementTextContains('css', '.ab-agent-counts', '1 Desabilitados');
+    $this->assertSession()->elementTextContains('css', '.ab-agent-counts', '1 Em execução');
+    $this->assertSession()->elementTextContains('css', '.ab-agent-counts', '1 Aguardando tarefa');
+    $this->assertSession()->elementTextContains('css', '.ab-agent-counts', '1 Sem continuação');
     $this->assertSession()->pageTextContains('2 execuções');
     $this->assertSession()->pageTextNotContains('Online');
     $this->assertSession()->pageTextNotContains('online');

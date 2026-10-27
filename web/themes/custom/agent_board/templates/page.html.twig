@@ -9,13 +9,17 @@
     <div class="ab-app">
       <aside id="ab-sidebar" class="ab-sidebar">
         <div class="ab-logo">
-          <a href="{{ front_page }}">{{ site_name|default('AgentDock') }}</a>
+          <a href="{{ front_page }}"><span class="ab-logo__mark" aria-hidden="true">◈</span> {{ site_name|default('AgentDock') }}</a>
         </div>
         <nav class="ab-sidebar__nav" aria-label="{{ 'Principal'|t }}">
           <ul>
             {% for item in shell_nav %}
               <li>
-                <a href="{{ item.url }}"{% if item.active %} class="is-active" aria-current="page"{% endif %}>{{ item.label }}</a>
+                {% set icon = loop.first ? 'board' : (loop.last ? 'agent' : (loop.revindex == 2 ? 'message' : 'task')) %}
+                <a href="{{ item.url }}"{% if item.active %} class="is-active" aria-current="page"{% endif %}>
+                  <span class="ab-nav-icon" aria-hidden="true">{% include 'agent_board:ab-icon' with {name: icon} only %}</span>
+                  {{ item.label }}
+                </a>
               </li>
             {% endfor %}
           </ul>
@@ -35,26 +39,38 @@
             <a href="{{ shell_add_board }}">{{ 'Novo board'|t }}</a>
           </p>
         {% endif %}
+        {% if shell_account %}
+          <div class="ab-sidebar__foot">
+            <a class="ab-profile" href="{{ shell_account_url }}">
+              <span class="ab-avatar__mark" aria-hidden="true">{{ shell_account|first|upper }}</span>
+              <span><strong>{{ shell_account }}</strong><small>{{ 'Minha conta'|t }}</small></span>
+            </a>
+          </div>
+        {% endif %}
       </aside>
 
       <div class="ab-main">
         <header class="ab-header" role="banner">
           <div class="ab-header__inner">
             <button type="button" class="ab-button ab-button--quiet" data-ab-nav-toggle aria-expanded="true" aria-controls="ab-sidebar">{{ 'Menu'|t }}</button>
-            {% if workspace_selector %}
-              <div class="ab-workspace-selector">
-                {{ workspace_selector }}
-              </div>
-            {% endif %}
-            <button type="button" class="ab-button ab-button--quiet ab-bell" data-ab-bell aria-expanded="false" aria-controls="ab-context">
-              {{ 'Notificações'|t }}
-              {% if shell_unread %}
-                <span class="ab-bell__count">{{ shell_unread }}</span>
+            <div class="ab-header__slot">
+              {% if workspace_selector %}
+                <div class="ab-workspace-selector">
+                  {{ workspace_selector }}
+                </div>
               {% endif %}
-            </button>
-            {% if shell_account %}
-              <a class="ab-account" href="{{ shell_account_url }}">{{ shell_account }}</a>
-            {% endif %}
+            </div>
+            <div class="ab-header__actions">
+              <button type="button" class="ab-button ab-button--quiet ab-bell" data-ab-bell aria-expanded="false" aria-controls="ab-context">
+                {% include 'agent_board:ab-icon' with {name: 'bell'} only %}<span class="ab-visually-hidden">{{ 'Notificações'|t }}</span>
+                {% if shell_unread %}
+                  <span class="ab-bell__count">{{ shell_unread }}</span>
+                {% endif %}
+              </button>
+              {% if shell_account %}
+                <a class="ab-account" href="{{ shell_account_url }}">{{ shell_account }}</a>
+              {% endif %}
+            </div>
           </div>
         </header>
         {% if shell_breadcrumb %}
@@ -88,7 +104,7 @@
     <header class="ab-header" role="banner">
       <div class="ab-header__inner">
         <div class="ab-logo">
-          <a href="{{ front_page }}">{{ site_name|default('AgentDock') }}</a>
+          <a href="{{ front_page }}"><span class="ab-logo__mark" aria-hidden="true">◈</span> {{ site_name|default('AgentDock') }}</a>
         </div>
       </div>
     </header>

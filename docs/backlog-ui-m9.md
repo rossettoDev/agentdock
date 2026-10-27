@@ -1,10 +1,10 @@
 # AgentDock — Backlog de evolução visual (M9)
 
-Versão 1.0 · 20/10/2026 · Status: **em execução** (US-33 done).
+Versão 1.0 · 21/10/2026 · Status: **em execução** (US-37 done).
 
 ## 1. Fontes e objetivo
 
-Fontes: `docs/architecture.md` (arquitetura 1.0, especialmente §§ 4, 6, 8, 11, 13, 14, 17, 19 e 21), `docs/backlog.md` (US-01 a US-28) e `docs/implementation-status.md` (atualizado em 20/10/2026, M8 concluído). As cinco imagens de referência devem estar em `docs/screens/` e ser inspecionadas **no repositório** antes da implementação; não presumir nomes de arquivos. Este documento planeja a evolução das cinco telas, não declara que as telas já foram implementadas neste visual.
+Fontes desta fase: `docs/architecture.md` (arquitetura 1.0, especialmente §§ 4, 6, 8, 11, 13, 14, 17, 19 e 21), `docs/backlog.md` (US-01 a US-28) e `docs/implementation-status.md` (atualizado em 20/10/2026, M8 concluído). Para implementar, siga a seção 6: leia `AGENTS.md`, `docs/status.md` e só a história atual. Não releia essas fontes inteiras. As cinco imagens de referência devem estar em `docs/screens/`. Este documento planeja a evolução das cinco telas, não declara que as telas já foram implementadas neste visual.
 
 Objetivo: transformar a interface funcional existente na experiência visual de Dashboard, Kanban, Detalhes da Tarefa, Central de Agentes e Central de Mensagens, **sem reimplementar domínio, endpoints, autenticação ou sincronização**. Nome de produto conforme status atual: AgentDock; identificadores técnicos existentes `agent_board`, `ab_*` e tema `agent_board` permanecem.
 
@@ -34,8 +34,9 @@ Objetivo: transformar a interface funcional existente na experiência visual de 
 | US-34 | Central de Mensagens | US-30; US-17–19, US-25 existentes | P0 | todo |
 | US-35 | Dashboard Geral | US-31–34 | P1 | todo |
 | US-36 | Integração, responsividade e validação final | US-31–35 | P0 | todo |
+| US-37 | Chrome do protótipo | US-30; `docs/agentdock-prototype` | P0 | done |
 
-Executar **uma task por interação no Cursor**, seguindo o `Definition of Done` atual. Cada task desta fase inicia como `todo`; registrar evidências em `docs/implementation-status.md` sem alterar os registros históricos de US-01 a US-28.
+Executar **uma história por interação no Cursor**, com todas as tasks dela no mesmo commit, seguindo o `Definition of Done` atual. Registrar uma linha de evidência em `docs/status.md`. Não alterar `docs/implementation-status.md` nem os registros históricos de US-01 a US-28.
 
 ## M9 — Evolução visual
 
@@ -109,6 +110,13 @@ Executar **uma task por interação no Cursor**, seguindo o `Definition of Done`
 - [ ] **US-36/T03 — Segurança, regressão e sincronização.** Rodar testes proporcionais dos módulos tocados, isolamento entre dois workspaces, revogação, sanitização, conflito 412, polling/410, sessão/CSRF e credenciais. **Aceite:** relatar comandos e resultados reais, corrigir regressões sem mudar serviço de domínio por estética.
 - [ ] **US-36/T04 — Comparação visual e documentação.** Comparar screenshots reais com telas; registrar diferenças deliberadas por limite de MVP. Atualizar `docs/screens/README.md`, backlog, status e ADR quando necessário. **Aceite:** cinco telas validadas; pendências do pós-M9 registradas separadamente.
 
+### US-37 — Chrome do protótipo
+
+**História:** Como usuário, quero que as telas já existentes usem o enquadramento de `docs/agentdock-prototype`, sem ganhar função que o protótipo só ilustra.
+
+- [x] **US-37/T01 — Sidebar e barra superior.** Sidebar de 196px, fixa na altura da janela, com marca, navegação e boards. Barra de 60px com o seletor de workspace, o sino e a conta. **Aceite:** não há busca global nem link de Dashboard. O botão Menu só aparece na largura estreita. O workspace continua na sessão.
+- [x] **US-37/T02 — Superfícies das telas existentes.** Colunas do kanban, filtros, contagens e linhas de agente seguem as superfícies do protótipo. **Aceite:** cinco colunas de status permanecem. Não há percentual, “online”, calendário, arquivos, checklist nem relatório. O botão primário continua no azul que passa contraste.
+
 ## 4. Evoluções opcionais — não iniciar como parte do M9
 
 Estudar em marco e ADR próprios: (a) checklist estruturado e percentual derivado; (b) anexos binários privados com política de acesso, upload seguro e retenção; (c) mensagens diretas privadas, nova fronteira de autorização e semântica de participantes; (d) vistas Calendário/Timeline e colunas customizáveis; (e) custo/modelo/métricas reais de uso; (f) SSE. Antes de criar uma dessas histórias, especificar entidades, migração, API, policies, eventos e testes.
@@ -121,29 +129,23 @@ Estudar em marco e ADR próprios: (a) checklist estruturado e percentual derivad
 - Cada leitura, busca, contagem, autocomplete e evento respeita workspace e grants; ações respeitam policy, CSRF, version e comandos de domínio.
 - Estados loading, vazio, erro, 403/404/410, sessão expirada, conflito e desconexão são tratados conforme contexto.
 - Teclado, tela reduzida e contraste validados; DnD possui alternativa por botão.
-- Executar testes relevantes, PHPCS/PHPStan e documentar **resultado real** em `docs/implementation-status.md`; não declarar teste não executado.
-- Não sobrescrever os registros de M0–M8 e não marcar US-29–36 como done pela existência da imagem.
+- Por história: PHPUnit dos testes dos arquivos tocados, PHPCS nesses arquivos e browser só na tela alterada. PHPStan e a suíte inteira ficam na US-36. Registrar uma linha em `docs/status.md`, sem colar a saída do PHPUnit e sem declarar teste não executado.
+- Não sobrescrever os registros de M0–M8 e não marcar US-29–36 como done pela existência da imagem. Não atualizar `docs/architecture.md` no meio do M9.
 
 ## 6. Prompt inicial para o Cursor
 
 ```text
-Leia AGENTS.md, docs/architecture.md, docs/backlog.md,
-docs/implementation-status.md e docs/screens/README.md.
+Leia AGENTS.md, docs/status.md e somente o bloco da história atual
+em docs/backlog-ui-m9.md.
 
-Este trabalho é a fase M9 de evolução visual do AgentDock. Leia também
-agentdock-ui-backlog.md (ou docs/backlog-ui-m9.md após incluí-lo no repositório).
+Não abra docs/backlog.md, o corpo de docs/implementation-status.md,
+os ADR nem as evidências do MCP, salvo se a história citar um trecho.
+
+Implemente a próxima história inteira, todas as tasks dela, e pare.
+Não comece a história seguinte. Não faça push.
+
 Não recrie entidades, endpoints, serviços ou componentes existentes.
-M0–M8 estão registrados como concluídos; verifique o código atual antes de usar.
-
-Implemente SOMENTE US-29/T01.
-
-1. Inspecione as cinco imagens reais de docs/screens/ e o estado atual das rotas,
-   controllers, templates, libraries e componentes.
-2. Produza a matriz imagem → rota → fonte de dados → ação → lacunas de MVP.
-3. Preserve isolamento por workspace, políticas de acesso, comandos de domínio,
-   controle de versão e polling existente.
-4. Não implemente funcionalidade só porque aparece no mockup.
-5. Rode as validações pertinentes; registre arquivos alterados, testes e resultados
-   reais, pendências e status por ID em docs/implementation-status.md.
-6. Não faça push/deploy nem use credenciais reais.
+Não implemente funcionalidade só porque aparece no mockup.
+Preserve workspace, policies, comandos de domínio, versão e o polling existente.
+Registre uma linha em docs/status.md. Não cole a saída do PHPUnit.
 ```

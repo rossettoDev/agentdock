@@ -1,0 +1,74 @@
+{#
+/**
+ * @file
+ * Lists agents of the workspace selected in the session.
+ *
+ * Enabled is administrative. Activity comes from stored executions.
+ */
+#}
+<div class="ab-agent-list">
+  {% if workspace_label %}
+    <p class="ab-workspace-current">{{ 'Workspace atual: @name'|t({'@name': workspace_label}) }}</p>
+  {% else %}
+    <p class="ab-workspace-current">{{ 'Nenhum workspace selecionado.'|t }}</p>
+  {% endif %}
+
+  {% if add_url %}
+    <p>
+      <a class="ab-button" href="{{ add_url }}">{{ 'Criar agente'|t }}</a>
+    </p>
+  {% endif %}
+
+  {% if counts %}
+    <ul class="ab-agent-counts">
+      {% for count in counts %}
+        <li><strong>{{ count.value }}</strong> <span>{{ count.label }}</span></li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  {% if filters %}
+    <nav class="ab-agent-filters" aria-label="{{ 'Filtros dos agentes'|t }}">
+      {% for item in filters %}
+        <a href="{{ item.url }}"{% if item.current %} aria-current="page"{% endif %}>{{ item.label }}</a>
+      {% endfor %}
+    </nav>
+  {% endif %}
+
+  {% if list_url %}
+    <form class="ab-agent-search" method="get" action="{{ list_url }}">
+      <label for="ab-agent-q">{{ 'Buscar'|t }}</label>
+      <input id="ab-agent-q" type="search" name="q" value="{{ q }}">
+      {% if enabled != '' %}
+        <input type="hidden" name="enabled" value="{{ enabled }}">
+      {% endif %}
+      {% if work %}
+        <input type="hidden" name="work" value="{{ work }}">
+      {% endif %}
+      <button class="ab-button" type="submit">{{ 'Buscar'|t }}</button>
+    </form>
+  {% endif %}
+
+  {% if items %}
+    <div class="ab-table-scroll">
+      <table class="ab-agent-table">
+        <thead><tr><th scope="col">{{ 'Agente'|t }}</th><th scope="col">{{ 'Status'|t }}</th><th scope="col">{{ 'Atividade'|t }}</th><th scope="col">{{ 'Execuções'|t }}</th><th scope="col">{{ 'Limite'|t }}</th></tr></thead>
+        <tbody>
+          {% for item in items %}
+            <tr>
+              <td><a class="ab-agent-identity" href="{{ item.url }}"><span class="ab-avatar__mark" aria-hidden="true">{{ item.label|first|upper }}</span><strong>{{ item.label }}</strong></a></td>
+              <td class="ab-agent-status">{{ item.status }}</td>
+              <td>{% if item.activity %}<span class="ab-badge">{{ item.activity }}</span>{% else %}—{% endif %}</td>
+              <td class="ab-agent-live">{{ '@count execuções'|t({'@count': item.live|default(0)}) }}</td>
+              <td class="ab-agent-limit">{{ 'Limite: @limit'|t({'@limit': item.limit}) }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% elseif filter_empty %}
+    <p>{{ 'Nenhum agente com este filtro.'|t }}</p>
+  {% elseif workspace_label %}
+    <p>{{ 'Nenhum agente neste workspace.'|t }}</p>
+  {% endif %}
+</div>

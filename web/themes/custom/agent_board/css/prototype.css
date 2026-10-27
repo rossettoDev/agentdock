@@ -1,0 +1,653 @@
+/**
+ * Production presentation adapted from docs/agentdock-prototype/css/style.css.
+ * All content and actions continue to come from authorized Drupal render arrays.
+ */
+:root {
+  --ab-font: Inter, "Segoe UI", Arial, sans-serif;
+  --ab-font-md: 0.875rem;
+  --ab-font-sm: 0.75rem;
+  --ab-primary-strong: #1475ff;
+  --ab-primary-hover: #286fe0;
+  --ab-success: #12c98a;
+  --ab-warning: #f8ca36;
+  --ab-danger: #f04b64;
+}
+
+.ab-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.ab-sidebar__nav ul {
+  display: grid;
+  gap: 3px;
+}
+
+.ab-nav-icon {
+  display: inline-flex;
+  flex: 0 0 18px;
+}
+
+.ab-sidebar__boards a {
+  padding: 10px 12px;
+}
+
+.ab-sidebar__foot {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--ab-border);
+}
+
+.ab-sidebar a.ab-profile {
+  padding: 10px 4px;
+  gap: 9px;
+}
+
+.ab-profile strong,
+.ab-profile small {
+  display: block;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ab-profile small {
+  color: var(--ab-muted);
+  font-size: 11px;
+}
+
+.ab-avatar__mark {
+  flex: 0 0 32px;
+  background: #225481;
+  border: 1px solid #4d7190;
+  font-weight: 600;
+}
+
+.ab-bell {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px;
+  border-color: transparent;
+  color: var(--ab-text);
+}
+
+.ab-bell__count {
+  border-radius: 10px;
+  background: var(--ab-primary);
+  padding: 0 5px;
+  font-size: 11px;
+}
+
+.ab-account {
+  border-left: 1px solid var(--ab-border);
+  padding-left: 20px;
+}
+
+.ab-workspace-selector select,
+.ab-content input:not([type="checkbox"], [type="radio"], [type="submit"], [type="hidden"]),
+.ab-content textarea,
+.ab-content select {
+  padding: 9px 12px;
+  max-width: 100%;
+  font: inherit;
+}
+
+.ab-content textarea {
+  width: 100%;
+  min-height: 100px;
+  line-height: 1.7;
+}
+
+.ab-content input:focus-visible,
+.ab-content textarea:focus-visible,
+.ab-content select:focus-visible,
+.ab-header a:focus-visible,
+.ab-header select:focus-visible,
+.ab-header input:focus-visible {
+  outline: 2px solid var(--ab-focus);
+  outline-offset: 2px;
+}
+
+.ab-content h1 {
+  margin: 0 0 22px;
+  font-size: 26px;
+  letter-spacing: -0.04em;
+}
+
+.ab-content h2 {
+  font-size: 18px;
+}
+
+.ab-content h3 {
+  font-size: 15px;
+}
+
+.ab-page-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-bottom: 22px;
+}
+
+.ab-page-heading > h2,
+.ab-page-heading > p {
+  margin: 0;
+}
+
+.ab-page-heading > p:last-child {
+  margin-left: auto;
+}
+
+.ab-page-heading > h2.ab-task-board {
+  font-size: 26px;
+}
+
+.ab-card,
+.ab-detail-card,
+.ab-agent-counts li {
+  background: linear-gradient(140deg, #142334, #111f2e);
+}
+
+.ab-button,
+.ab-content a.ab-button,
+.ab-content .button,
+.ab-content input[type="submit"] {
+  border-radius: 7px;
+  padding: 9px 13px;
+  font-size: 13px;
+}
+
+.ab-content form {
+  padding: 15px;
+  margin: 15px 0;
+}
+
+.ab-content .form-item {
+  margin: 0 0 15px;
+}
+
+.ab-content .form-item label {
+  display: block;
+  margin-bottom: 6px;
+  color: #c7d6e5;
+}
+
+.ab-content .form-item .description {
+  color: var(--ab-muted);
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+.ab-kanban {
+  gap: 9px;
+  padding-bottom: 12px;
+}
+
+.ab-kanban__column {
+  padding: 7px;
+  min-height: 650px;
+}
+
+.ab-kanban__column h3 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 5px 12px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.ab-kanban__count {
+  background: #24384b;
+  border-radius: 5px;
+  padding: 1px 6px;
+  font-size: 11px;
+}
+
+.ab-kanban .ab-card {
+  padding: 12px;
+}
+
+.ab-kanban .ab-card:hover {
+  background: #203449;
+}
+
+.ab-kanban .ab-card__title {
+  font-size: 13px;
+  font-weight: 590;
+  line-height: 1.5;
+}
+
+.ab-kanban .ab-card__title a {
+  color: var(--ab-text);
+  text-decoration: none;
+}
+
+.ab-kanban .ab-card > p:not(.ab-card__meta) {
+  color: #9fb2c4;
+  font-size: 12px;
+  margin: 8px 0;
+}
+
+.ab-card__assignee {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.ab-card__assignee .ab-avatar__mark {
+  width: 25px;
+  height: 25px;
+  flex-basis: 25px;
+  font-size: 11px;
+}
+
+.ab-kanban__column[data-status="done"] .ab-card__title a {
+  color: #a1b1c3;
+  text-decoration: line-through;
+}
+
+.ab-badge {
+  border: 0;
+  border-radius: 5px;
+  padding: 4px 7px;
+  background: #244267;
+  color: #9dcbff;
+  font-size: 11px;
+}
+
+.ab-badge--low,
+.ab-badge--normal {
+  background: #334253;
+  color: #d5dfe8;
+}
+
+.ab-badge--high,
+.ab-badge--urgent,
+.ab-badge--blocked,
+.ab-badge--waiting_input,
+.ab-badge--in_review {
+  background: #57471a;
+  color: #f7dc79;
+}
+
+.ab-badge--done,
+.ab-badge--submitted,
+.ab-badge--enabled {
+  background: #124d41;
+  color: #83efb7;
+}
+
+.ab-badge--failed,
+.ab-badge--interrupted,
+.ab-badge--cancelled {
+  background: #572734;
+  color: #ff91a0;
+}
+
+.ab-card__move {
+  border-top: 1px solid var(--ab-border);
+  padding-top: 8px;
+  color: var(--ab-muted);
+  font-size: 12px;
+}
+
+.ab-card__move summary {
+  cursor: pointer;
+}
+
+.ab-kanban .ab-card form {
+  padding: 8px;
+  margin-bottom: 0;
+}
+
+.ab-task-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 335px;
+  gap: 15px;
+  max-width: 1250px;
+  margin: 0 auto;
+  align-items: start;
+}
+
+.ab-task-main,
+.ab-detail-card,
+.ab-agent-view {
+  min-width: 0;
+  border: 1px solid var(--ab-border);
+  border-radius: 9px;
+  background: linear-gradient(140deg, #142334, #111f2e);
+  padding: 24px;
+}
+
+.ab-task-heading .ab-task-board {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: normal;
+}
+
+.ab-task-heading h2.ab-task-title {
+  font-size: 25px;
+  margin: 14px 0;
+  line-height: 1.4;
+}
+
+.ab-task-uuid {
+  color: var(--ab-muted);
+  font-size: 11px;
+}
+
+.ab-task-description,
+.ab-task-criteria {
+  color: #c7d6e5;
+  font-size: 13px;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+}
+
+.ab-task-main [data-ab-panel] {
+  padding-top: 8px;
+}
+
+.ab-task-sidebar {
+  min-width: 0;
+}
+
+.ab-detail-card {
+  padding: 15px;
+}
+
+.ab-detail-card h2 {
+  margin: 0 0 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--ab-border);
+  font-size: 15px;
+}
+
+.ab-detail-list {
+  margin: 0;
+}
+
+.ab-detail-list > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+}
+
+.ab-detail-list dt {
+  color: var(--ab-muted);
+}
+
+.ab-detail-list dd {
+  margin: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.ab-tabs ul {
+  gap: 0;
+  border-bottom: 1px solid var(--ab-border);
+}
+
+.ab-tabs__link {
+  padding: 12px 13px;
+}
+
+.ab-tabs__link.is-active {
+  background: #10325b;
+  border-bottom-color: var(--ab-primary);
+}
+
+.ab-agent-counts {
+  gap: 11px;
+  margin-bottom: 15px;
+}
+
+.ab-agent-counts li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ab-agent-counts strong {
+  font-size: 23px;
+}
+
+.ab-agent-counts span {
+  color: var(--ab-muted);
+  font-size: 12px;
+}
+
+.ab-content form.ab-agent-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+.ab-agent-search input[type="search"] {
+  width: min(380px, 100%);
+}
+
+.ab-table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--ab-border);
+  border-radius: 9px;
+  background: #111f2e;
+}
+
+.ab-agent-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.ab-agent-table th {
+  padding: 12px 15px;
+  text-align: left;
+  color: var(--ab-muted);
+  font-weight: 500;
+  border-bottom: 1px solid var(--ab-border);
+}
+
+.ab-agent-table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #1e3344;
+}
+
+.ab-agent-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.ab-agent-table tbody tr:hover,
+.ab-agent-table tbody tr:focus-within {
+  background: #123050;
+}
+
+.ab-agent-identity {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  text-decoration: none;
+}
+
+.ab-content .ab-agent-identity {
+  color: var(--ab-text);
+}
+
+.ab-conversation {
+  max-width: 1100px;
+  margin: 0 auto;
+  background: #101e2d;
+  border: 1px solid var(--ab-border);
+  border-radius: 9px;
+  padding: 16px;
+}
+
+.ab-chat-heading {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--ab-border);
+}
+
+.ab-chat-heading h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.ab-messages,
+.ab-conversations,
+.ab-agent-executions,
+.ab-task-attempts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ab-messages {
+  min-height: 240px;
+}
+
+.ab-messages > li {
+  padding: 14px 12px 14px 48px;
+  position: relative;
+}
+
+.ab-messages > li::before {
+  content: "";
+  position: absolute;
+  top: 18px;
+  left: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid #4d7190;
+  background: #225481;
+}
+
+.ab-messages > li > p:first-child {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--ab-muted);
+}
+
+.ab-message-body {
+  line-height: 1.7;
+  color: #cfdfec;
+  overflow-wrap: anywhere;
+}
+
+.ab-message-body p {
+  margin: 6px 0;
+}
+
+.ab-conversation form {
+  background: #142538;
+  border-color: #35506b;
+  margin-bottom: 0;
+}
+
+.ab-conversations > li,
+.ab-agent-executions > li,
+.ab-task-attempts > li {
+  padding: 15px;
+  border-bottom: 1px solid var(--ab-border);
+}
+
+.ab-conversations > li:hover {
+  background: #12345c;
+}
+
+.ab-conversations > li > a:first-child {
+  font-weight: 600;
+  color: var(--ab-text);
+}
+
+.ab-conversations p {
+  color: var(--ab-muted);
+  font-size: 12px;
+}
+
+.ab-board-items,
+.ab-workspace-items {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 15px;
+}
+
+.ab-board-items .ab-card,
+.ab-workspace-items .ab-card {
+  padding: 20px;
+  margin: 0;
+  min-height: 95px;
+}
+
+.ab-workspace-items .ab-card a {
+  display: inline-block;
+  margin: 8px 8px 0 0;
+}
+
+@media (max-width: 1100px) {
+  .ab-task-layout {
+    grid-template-columns: minmax(0, 1fr) 260px;
+  }
+}
+
+@media (max-width: 768px) {
+  .ab-sidebar__nav ul {
+    display: flex;
+  }
+
+  .ab-sidebar__nav a {
+    white-space: nowrap;
+  }
+
+  .ab-sidebar__foot {
+    margin-top: 12px;
+  }
+
+  .ab-content {
+    width: 100%;
+    padding: 13px;
+  }
+
+  .ab-task-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ab-task-main {
+    padding: 16px;
+  }
+
+  .ab-kanban {
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .ab-kanban__column {
+    flex: 0 0 240px;
+    min-height: 350px;
+  }
+
+  .ab-header__actions {
+    gap: 10px;
+  }
+}

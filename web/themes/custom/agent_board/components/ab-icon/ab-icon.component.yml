@@ -1,0 +1,10 @@
+$schema: https://git.drupalcode.org/project/drupal/-/raw/HEAD/core/assets/schemas/v1/metadata.schema.json
+name: Icon
+status: stable
+props:
+  type: object
+  properties:
+    name:
+      type: string
+      title: Icon
+      enum: [board, task, agent, message, bell]

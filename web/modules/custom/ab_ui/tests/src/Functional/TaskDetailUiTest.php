@@ -34,7 +34,7 @@ class TaskDetailUiTest extends BrowserTestBase {
   /**
    * {@inheritdoc}
    */
-  protected $defaultTheme = 'stark';
+  protected $defaultTheme = 'agent_board';
 
   /**
    * {@inheritdoc}
@@ -144,7 +144,7 @@ class TaskDetailUiTest extends BrowserTestBase {
     $this->assertSession()->elementNotExists('css', '[role="progressbar"]');
     $this->assertSession()->linkNotExists('Arquivos');
     $this->assertSession()->linkNotExists('Checklist');
-    $current = $this->assertSession()->elementExists('css', 'a[aria-current="page"]');
+    $current = $this->assertSession()->elementExists('css', '.ab-task-view .ab-tabs a[aria-current="page"]');
     $this->assertSame('Descrição', $current->getText());
     $back = $this->assertSession()->elementExists('named', ['link', 'Tarefas']);
     $href = (string) $back->getAttribute('href');
@@ -154,14 +154,14 @@ class TaskDetailUiTest extends BrowserTestBase {
     $this->assertStringNotContainsString('workspace=', (string) $conversas->getAttribute('href'));
 
     $this->drupalGet('tasks/' . $empty->uuid(), ['query' => ['tab' => 'conversas']]);
-    $current = $this->assertSession()->elementExists('css', 'a[aria-current="page"]');
+    $current = $this->assertSession()->elementExists('css', '.ab-task-view .ab-tabs a[aria-current="page"]');
     $this->assertSame('Conversas', $current->getText());
     $this->assertSession()->pageTextContains('comentario da casa');
     $this->assertSession()->pageTextContains('Comentário');
     $this->assertSession()->buttonExists('Enviar');
 
     $this->drupalGet('tasks/' . $empty->uuid(), ['query' => ['tab' => 'arquivos']]);
-    $current = $this->assertSession()->elementExists('css', 'a[aria-current="page"]');
+    $current = $this->assertSession()->elementExists('css', '.ab-task-view .ab-tabs a[aria-current="page"]');
     $this->assertSame('Descrição', $current->getText());
     $this->assertSession()->linkNotExists('Arquivos');
 

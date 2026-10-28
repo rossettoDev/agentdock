@@ -7,4 +7,4 @@ props:
     name:
       type: string
       title: Icon
-      enum: [board, task, agent, message, bell]
+      enum: [board, task, agent, message, bell, home]

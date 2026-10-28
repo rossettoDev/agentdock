@@ -1,6 +1,6 @@
 # AgentDock — Backlog de evolução visual (M9)
 
-Versão 1.0 · 21/10/2026 · Status: **em execução** (US-34 done).
+Versão 1.0 · 21/10/2026 · Status: **em execução** (US-35 done).
 
 ## 1. Fontes e objetivo
 
@@ -32,7 +32,7 @@ Objetivo: transformar a interface funcional existente na experiência visual de 
 | US-32 | Detalhe da tarefa | US-30; US-16, US-18 existentes | P0 | done |
 | US-33 | Central de Agentes | US-30; US-12, US-13, US-16 existentes | P1 | done |
 | US-34 | Central de Mensagens | US-30; US-17–19, US-25 existentes | P0 | done |
-| US-35 | Dashboard Geral | US-31–34 | P1 | todo |
+| US-35 | Dashboard Geral | US-31–34 | P1 | done |
 | US-36 | Integração, responsividade e validação final | US-31–35 | P0 | todo |
 | US-37 | Chrome do protótipo | US-30; `docs/agentdock-prototype` | P0 | done |
 
@@ -96,10 +96,10 @@ Executar **uma história por interação no Cursor**, com todas as tasks dela no
 
 **História:** Como usuário, quero uma visão consolidada dos boards e tarefas que tenho permissão de acompanhar.
 
-- [ ] **US-35/T01 — Definir read-model agregado.** Criar serviço de leitura/consultas, não nova fonte de verdade: contagens por status, boards acessíveis, tarefas do dia/atrasadas, revisão aguardando humano, agentes com execução atual, atividade recente e notificações. **Aceite:** todos os números rastreáveis a dados reais, filtrados pelo workspace selecionado; sem custo de IA ou métricas arbitrárias.
-- [ ] **US-35/T02 — Montar cards e sessões.** Cards KPI, Meus Boards, agentes/execuções, distribuição de estados, tarefas que precisam de atenção, conversas e atividade recente; links para rotas efetivas. **Aceite:** primeira tela útil com banco vazio; nenhum dado mock fica em produção.
-- [ ] **US-35/T03 — Drill-down e preferências.** Cada indicador abre filtro correspondente; adaptar a dashboard para owner/admin/member/viewer e mobile. **Aceite:** viewer não vê criação/gestão; denominadores e filtros das contagens documentados; não revelar métricas de workspace alheio.
-- [ ] **US-35/T04 — Sincronização do painel.** Invalidar apenas regiões pertinentes com infraestrutura de eventos existente; evitar N+1 queries. **Aceite:** atualização consistente com polling atual; medições de consultas documentadas sem prometer capacidade que não foi testada.
+- [x] **US-35/T01 — Definir read-model agregado.** Criar serviço de leitura/consultas, não nova fonte de verdade: contagens por status, boards acessíveis, tarefas do dia/atrasadas, revisão aguardando humano, agentes com execução atual, atividade recente e notificações. **Aceite:** todos os números rastreáveis a dados reais, filtrados pelo workspace selecionado; sem custo de IA ou métricas arbitrárias.
+- [x] **US-35/T02 — Montar cards e sessões.** Cards KPI, Meus Boards, agentes/execuções, distribuição de estados, tarefas que precisam de atenção, conversas e atividade recente; links para rotas efetivas. **Aceite:** primeira tela útil com banco vazio; nenhum dado mock fica em produção.
+- [x] **US-35/T03 — Drill-down e preferências.** Cada indicador abre filtro correspondente; adaptar a dashboard para owner/admin/member/viewer e mobile. **Aceite:** viewer não vê criação/gestão; denominadores e filtros das contagens documentados; não revelar métricas de workspace alheio.
+- [x] **US-35/T04 — Sincronização do painel.** Invalidar apenas regiões pertinentes com infraestrutura de eventos existente; evitar N+1 queries. **Aceite:** atualização consistente com polling atual; medições de consultas documentadas sem prometer capacidade que não foi testada.
 
 ### US-36 — Integração visual e qualidade
 

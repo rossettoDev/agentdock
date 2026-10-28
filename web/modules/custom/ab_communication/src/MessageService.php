@@ -438,6 +438,7 @@ class MessageService {
         $row['task_uuid'],
         $row['task_title'],
         $this->excerpt($row['body']),
+        $row['created'],
       );
     }
     return $items;

@@ -2,34 +2,90 @@
 /**
  * @file
  * Shows one board or task conversation.
+ *
+ * The composer stays outside the sync region so a refresh keeps the draft.
  */
 #}
 <div class="ab-conversation">
-  <p class="ab-conversation-title">{{ label }}</p>
-  {% if context_url %}
-    <p><a href="{{ context_url }}">{{ context_label }}</a></p>
-  {% endif %}
-  {% if older_url %}
-    <p><a href="{{ older_url }}">{{ 'Mensagens anteriores'|t }}</a></p>
-  {% endif %}
-  <div data-ab-sync="messages" data-ab-sync-root>
-  {% if messages %}
-    <ol class="ab-messages">
-      {% for message in messages %}
-        <li>
-          <p>{{ message.author }} — {{ message.kind }}</p>
-          {% if message.reply %}
-            <p>{{ 'Em resposta a uma mensagem.'|t }}</p>
-          {% endif %}
-          {% if message.body %}
-            <div class="ab-message-body">{{ message.body }}</div>
-          {% endif %}
-        </li>
-      {% endfor %}
-    </ol>
-  {% else %}
-    <p>{{ empty }}</p>
-  {% endif %}
+  <header class="ab-chat-heading">
+    <h2 class="ab-conversation-title">{{ label }}</h2>
+  </header>
+  <div class="ab-conversation__layout">
+    <div class="ab-conversation__thread" data-ab-sync="messages" data-ab-sync-root>
+      {% if older_url %}
+        <p><a href="{{ older_url }}">{{ 'Mensagens anteriores'|t }}</a></p>
+      {% endif %}
+      {% if messages %}
+        <ol class="ab-messages">
+          {% for message in messages %}
+            <li>
+              <p>
+                <span class="ab-message-author">{{ message.author }}</span>
+                <span class="ab-message-actor">{{ message.actor }}</span>
+                <span class="ab-message-kind">{{ message.kind }}</span>
+                {% if message.when %}
+                  <time>{{ message.when }}</time>
+                {% endif %}
+              </p>
+              {% if message.reply %}
+                <p>{{ 'Em resposta a uma mensagem.'|t }}</p>
+              {% endif %}
+              {% if message.mentions %}
+                <p class="ab-message-mentions">
+                  {{ 'Menção:'|t }}
+                  {{ message.mentions|join(', ') }}
+                </p>
+              {% endif %}
+              {% if message.body %}
+                <div class="ab-message-body">{{ message.body }}</div>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ol>
+      {% else %}
+        <p>{{ empty }}</p>
+      {% endif %}
+    </div>
+    {% if context %}
+      <aside class="ab-conversation__context" data-ab-sync="tasks">
+        <p class="ab-conversation-kind">{{ context.kind }}</p>
+        <p><a href="{{ context.url }}">{{ context.title }}</a></p>
+        {% if context.status %}
+          <p>{{ 'Status:'|t }} {{ context.status }}</p>
+        {% endif %}
+        {% if context.priority %}
+          <p>{{ 'Prioridade:'|t }} {{ context.priority }}</p>
+        {% endif %}
+        {% if context.owner %}
+          <p>{{ 'Responsável:'|t }} {{ context.owner }}</p>
+        {% endif %}
+        {% if context.agent %}
+          <p>{{ 'Agente:'|t }} {{ context.agent }}</p>
+        {% endif %}
+        {% if context.dependencies %}
+          <p>{{ 'Dependências'|t }}</p>
+          <ul>
+            {% for item in context.dependencies %}
+              <li><a href="{{ item.url }}">{{ item.label }}</a> {{ item.status }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+        {% if context.requests %}
+          <p>{{ 'Pedidos de informação'|t }}</p>
+          <ul>
+            {% for item in context.requests %}
+              <li>
+                <p>{{ item.status }}</p>
+                {% if item.question %}
+                  <div class="ab-message-body">{{ item.question }}</div>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+        <p><a href="{{ context.url }}">{{ context.url_label }}</a></p>
+      </aside>
+    {% endif %}
   </div>
   {% if form %}
     {{ form }}

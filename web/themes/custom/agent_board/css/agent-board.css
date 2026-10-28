@@ -809,3 +809,45 @@ body:has(.admin-toolbar-control-bar) {
 .ab-agent-search input[type="search"] {
   max-width: 100%;
 }
+
+.ab-conversation__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(14rem, 18rem);
+  gap: var(--ab-space-4);
+  align-items: start;
+}
+
+.ab-conversation__thread,
+.ab-conversation__context {
+  min-width: 0;
+}
+
+.ab-conversation__context {
+  background: var(--ab-raised);
+  border: 1px solid var(--ab-border);
+  border-radius: var(--ab-radius);
+  padding: var(--ab-space-3);
+}
+
+.ab-conversation-kind,
+.ab-message-actor,
+.ab-message-kind,
+.ab-messages time {
+  color: var(--ab-muted);
+  font-size: var(--ab-font-sm);
+}
+
+.ab-message-author {
+  font-weight: 600;
+}
+
+.ab-message-mentions,
+.ab-messages > li > p {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 768px) {
+  .ab-conversation__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

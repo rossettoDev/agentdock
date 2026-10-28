@@ -11,8 +11,14 @@
   {% if items %}
     <ul class="ab-conversations">
       {% for item in items %}
-        <li>
+        <li class="ab-conversation-item">
           <a href="{{ item.url }}">{{ item.label }}</a>
+          <p>
+            <span class="ab-conversation-kind">{{ item.kind }}</span>
+            {% if item.when %}
+              <time>{{ item.when }}</time>
+            {% endif %}
+          </p>
           {% if item.excerpt %}
             <p>{{ item.excerpt }}</p>
           {% endif %}

@@ -4,7 +4,7 @@
  * Dark application shell for the screens that already have routes.
  */
 #}
-<div class="ab-layout">
+<div class="ab-layout is-fluid">
   {% if shell_nav %}
     <div class="ab-app">
       <aside id="ab-sidebar" class="ab-sidebar">
@@ -61,6 +61,10 @@
               {% endif %}
             </div>
             <div class="ab-header__actions">
+              <div class="ab-layout-switch" role="group" aria-label="{{ 'Largura do conteúdo'|t }}">
+                <button type="button" class="ab-button" data-ab-layout="boxed" aria-pressed="false">{{ 'Caixa'|t }}</button>
+                <button type="button" class="ab-button" data-ab-layout="fluid" aria-pressed="true">{{ 'Fluido'|t }}</button>
+              </div>
               <button type="button" class="ab-button ab-button--quiet ab-bell" data-ab-bell aria-expanded="false" aria-controls="ab-context">
                 {% include 'agent_board:ab-icon' with {name: 'bell'} only %}<span class="ab-visually-hidden">{{ 'Notificações'|t }}</span>
                 {% if shell_unread %}
@@ -79,7 +83,9 @@
         <div class="ab-body">
           <main class="ab-content" role="main">
             <a id="main-content" tabindex="-1"></a>
-            {{ page.content }}
+            <div class="ab-container">
+              {{ page.content }}
+            </div>
           </main>
           <aside id="ab-context" class="ab-context" hidden>
             <button type="button" class="ab-button ab-button--quiet" data-ab-context-close>{{ 'Fechar'|t }}</button>
@@ -111,7 +117,9 @@
     <div class="ab-main">
       <main class="ab-content" role="main">
         <a id="main-content" tabindex="-1"></a>
-        {{ page.content }}
+        <div class="ab-container">
+          {{ page.content }}
+        </div>
       </main>
     </div>
   {% endif %}

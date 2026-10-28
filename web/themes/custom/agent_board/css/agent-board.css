@@ -222,6 +222,48 @@ body {
   min-width: 0;
 }
 
+.ab-container {
+  min-width: 0;
+}
+
+.ab-layout.is-boxed .ab-container {
+  max-width: 1250px;
+  margin-inline: auto;
+}
+
+.ab-layout .layout--pass--content-medium > *,
+.ab-layout .layout--pass--content-narrow > * {
+  grid-column: 1 / -1;
+  width: auto;
+  max-width: none;
+}
+
+.ab-layout.is-fluid .ab-task-layout,
+.ab-layout.is-fluid .ab-conversation {
+  max-width: none;
+}
+
+.ab-layout-switch {
+  display: inline-flex;
+  border: 1px solid var(--ab-border);
+  border-radius: var(--ab-radius);
+  overflow: hidden;
+}
+
+.ab-header .ab-layout-switch .ab-button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ab-muted);
+  padding: 0.2rem 0.55rem;
+  font-size: var(--ab-font-sm);
+}
+
+.ab-header .ab-layout-switch .ab-button[aria-pressed="true"] {
+  background: var(--ab-primary-strong);
+  color: var(--ab-on-primary);
+}
+
 .ab-content a {
   color: var(--ab-link);
 }

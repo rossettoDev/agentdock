@@ -73,6 +73,41 @@
             }
           });
         }
+
+        const layout = app.closest('.ab-layout');
+        const choices = app.querySelectorAll('[data-ab-layout]');
+        const storageKey = 'ab-layout';
+        const applyLayout = (mode) => {
+          const fluid = mode !== 'boxed';
+          if (layout) {
+            layout.classList.toggle('is-fluid', fluid);
+            layout.classList.toggle('is-boxed', !fluid);
+          }
+          choices.forEach((choice) => {
+            const selected = choice.getAttribute('data-ab-layout') === (fluid ? 'fluid' : 'boxed');
+            choice.setAttribute('aria-pressed', selected ? 'true' : 'false');
+          });
+        };
+        let stored = 'fluid';
+        try {
+          stored = window.localStorage.getItem(storageKey) || 'fluid';
+        }
+        catch (error) {
+          stored = 'fluid';
+        }
+        applyLayout(stored);
+        choices.forEach((choice) => {
+          choice.addEventListener('click', () => {
+            const mode = choice.getAttribute('data-ab-layout') === 'boxed' ? 'boxed' : 'fluid';
+            try {
+              window.localStorage.setItem(storageKey, mode);
+            }
+            catch (error) {
+              // The choice still applies for this page when storage is blocked.
+            }
+            applyLayout(mode);
+          });
+        });
       });
     },
   };

@@ -183,6 +183,20 @@ final class AbUiHooks {
           'empty' => '',
         ],
       ],
+      'ab_ui_dashboard' => [
+        'variables' => [
+          'workspace_label' => NULL,
+          'cards' => [],
+          'statuses' => [],
+          'boards' => [],
+          'reviews' => [],
+          'overdue' => [],
+          'requests' => [],
+          'threads' => [],
+          'events' => [],
+          'empty' => '',
+        ],
+      ],
       'ab_ui_conversation_list' => [
         'variables' => [
           'workspace_label' => NULL,
@@ -375,6 +389,12 @@ final class AbUiHooks {
     $tasks = $this->tasksUrl();
     $items = [
       [
+        'label' => (string) $this->t('Dashboard'),
+        'url' => Url::fromRoute('ab_ui.dashboard')->toString(),
+        'active' => $route === 'ab_ui.dashboard',
+        'icon' => 'home',
+      ],
+      [
         'label' => (string) $this->t('Meus boards'),
         'url' => Url::fromRoute('ab_ui.boards')->toString(),
         'active' => in_array($route, [
@@ -382,6 +402,7 @@ final class AbUiHooks {
           'ab_ui.board_add',
           'ab_ui.board_view',
         ], TRUE),
+        'icon' => 'board',
       ],
     ];
     if ($tasks !== NULL) {
@@ -394,6 +415,7 @@ final class AbUiHooks {
           'ab_ui.task_view',
           'ab_ui.task_edit',
         ], TRUE),
+        'icon' => 'task',
       ];
     }
     $items[] = [
@@ -405,6 +427,7 @@ final class AbUiHooks {
         'ab_ui.board_conversation',
         'ab_ui.task_conversation',
       ], TRUE),
+      'icon' => 'message',
     ];
     $items[] = [
       'label' => (string) $this->t('Agentes'),
@@ -414,6 +437,7 @@ final class AbUiHooks {
         'ab_ui.agent_add',
         'ab_ui.agent_view',
       ], TRUE),
+      'icon' => 'agent',
     ];
     return $items;
   }

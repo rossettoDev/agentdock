@@ -1,3 +1,11 @@
+ab_ui.dashboard:
+  path: '/dashboard'
+  defaults:
+    _controller: '\Drupal\ab_ui\Controller\DashboardController::view'
+    _title: 'Dashboard'
+  requirements:
+    _user_is_logged_in: 'TRUE'
+
 ab_ui.workspaces:
   path: '/workspaces'
   defaults:

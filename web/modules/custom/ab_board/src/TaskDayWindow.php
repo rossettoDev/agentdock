@@ -30,15 +30,57 @@ final class TaskDayWindow {
     if ($status === 'cancelled' || $due === NULL) {
       return FALSE;
     }
+    $end = $this->endOfDay($timezone, $now);
+    return $end !== NULL && $due <= $end;
+  }
+
+  /**
+   * Returns the first second of the workspace day, or NULL.
+   *
+   * @param string $timezone
+   *   Workspace timezone.
+   * @param int $now
+   *   Instant being evaluated, as a UTC timestamp.
+   */
+  public function startOfDay(string $timezone, int $now): ?int {
+    return $this->boundary($timezone, $now, 0, 0, 0);
+  }
+
+  /**
+   * Returns the last second of the workspace day, or NULL.
+   *
+   * @param string $timezone
+   *   Workspace timezone.
+   * @param int $now
+   *   Instant being evaluated, as a UTC timestamp.
+   */
+  public function endOfDay(string $timezone, int $now): ?int {
+    return $this->boundary($timezone, $now, 23, 59, 59);
+  }
+
+  /**
+   * Returns one boundary of the workspace day, or NULL.
+   *
+   * @param string $timezone
+   *   Workspace timezone.
+   * @param int $now
+   *   Instant being evaluated, as a UTC timestamp.
+   * @param int $hour
+   *   Hour of the boundary.
+   * @param int $minute
+   *   Minute of the boundary.
+   * @param int $second
+   *   Second of the boundary.
+   */
+  private function boundary(string $timezone, int $now, int $hour, int $minute, int $second): ?int {
     try {
       $zone = new \DateTimeZone($timezone);
     }
     catch (\Exception) {
-      return FALSE;
+      return NULL;
     }
     $moment = (new \DateTimeImmutable('@' . $now))->setTimezone($zone);
-    $end = $moment->setTime(23, 59, 59);
-    return $due <= $end->getTimestamp();
+    return $moment->setTime($hour, $minute, $second)->getTimestamp();
   }
 
 }

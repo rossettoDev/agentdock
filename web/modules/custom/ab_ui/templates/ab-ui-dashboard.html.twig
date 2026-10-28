@@ -1,0 +1,113 @@
+{#
+/**
+ * @file
+ * Workspace dashboard built from stored counts.
+ */
+#}
+<div class="ab-dashboard">
+  {% if workspace_label %}
+    <p>{{ 'Workspace atual: @name'|t({'@name': workspace_label}) }}</p>
+  {% else %}
+    <p>{{ empty }}</p>
+  {% endif %}
+
+  {% if workspace_label %}
+    <div data-ab-sync="tasks" data-ab-sync-root>
+      <ul class="ab-dashboard-cards">
+        {% for card in cards %}
+          <li>
+            <a href="{{ card.url }}">{{ card.label }}</a>
+            <p class="ab-dashboard-value">{{ card.value }}</p>
+            <p>{{ card.note }}</p>
+          </li>
+        {% endfor %}
+      </ul>
+
+      <section>
+        <h2>{{ 'Tarefas por status'|t }}</h2>
+        <ul class="ab-dashboard-status">
+          {% for item in statuses %}
+            <li>{{ item.label }}: {{ item.value }}</li>
+          {% endfor %}
+        </ul>
+      </section>
+
+      <section>
+        <h2>{{ 'Meus boards'|t }}</h2>
+        {% if boards %}
+          <ul class="ab-dashboard-boards">
+            {% for board in boards %}
+              <li>
+                <a href="{{ board.url }}">{{ board.name }}</a>
+                <p>{{ 'Tarefas: @count'|t({'@count': board.tasks}) }}</p>
+                <p><a href="{{ board.today_url }}">{{ 'Hoje: @count'|t({'@count': board.today}) }}</a></p>
+                <p>{{ 'Atrasadas: @count'|t({'@count': board.overdue}) }}</p>
+                <p>{{ 'Em revisão: @count'|t({'@count': board.review}) }}</p>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p>{{ 'Nenhum board neste workspace.'|t }}</p>
+        {% endif %}
+      </section>
+
+      <section>
+        <h2>{{ 'Precisam de atenção'|t }}</h2>
+        {% if reviews or overdue or requests %}
+          <ul>
+            {% for item in reviews %}
+              <li><a href="{{ item.url }}">{{ item.label }}</a> {{ 'Em revisão'|t }}</li>
+            {% endfor %}
+            {% for item in overdue %}
+              <li><a href="{{ item.url }}">{{ item.label }}</a> {{ 'Atrasada'|t }}</li>
+            {% endfor %}
+            {% for item in requests %}
+              <li>
+                <a href="{{ item.url }}">{{ item.label }}</a>
+                {{ 'Pedido pendente'|t }}
+                {% if item.excerpt %}<p>{{ item.excerpt }}</p>{% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p>{{ 'Nada aguardando uma pessoa.'|t }}</p>
+        {% endif %}
+      </section>
+
+      <section>
+        <h2>{{ 'Atividade recente'|t }}</h2>
+        {% if events %}
+          <ul>
+            {% for event in events %}
+              <li>{{ event.label }} {% if event.when %}<time>{{ event.when }}</time>{% endif %}</li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p>{{ 'Nenhuma atividade recente.'|t }}</p>
+        {% endif %}
+      </section>
+    </div>
+
+    <section data-ab-sync="messages">
+      <h2>{{ 'Conversas'|t }}</h2>
+      {% if threads %}
+        <ul>
+          {% for thread in threads %}
+            <li>
+              <a href="{{ thread.url }}">{{ thread.label }}</a>
+              <p>{{ thread.kind }} {% if thread.when %}<time>{{ thread.when }}</time>{% endif %}</p>
+              {% if thread.excerpt %}<p>{{ thread.excerpt }}</p>{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>{{ 'Nenhuma conversa neste workspace.'|t }}</p>
+      {% endif %}
+    </section>
+
+    <section data-ab-sync="notifications">
+      <h2>{{ 'Notificações'|t }}</h2>
+      <p><a href="{{ cards[6].url }}">{{ 'Não lidas: @count'|t({'@count': cards[6].value}) }}</a></p>
+    </section>
+  {% endif %}
+</div>

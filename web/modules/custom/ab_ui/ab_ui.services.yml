@@ -11,3 +11,9 @@ services:
       - { name: cache.context }
   Drupal\ab_ui\TaskMarkdown:
     class: Drupal\ab_ui\TaskMarkdown
+  Drupal\ab_ui\DashboardReader:
+    arguments:
+      - '@database'
+      - '@datetime.time'
+      - '@Drupal\ab_board\TaskDayWindow'
+      - '@Drupal\ab_board\BoardRepository'

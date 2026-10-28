@@ -15,7 +15,7 @@
           <ul>
             {% for item in shell_nav %}
               <li>
-                {% set icon = loop.first ? 'board' : (loop.last ? 'agent' : (loop.revindex == 2 ? 'message' : 'task')) %}
+                {% set icon = item.icon|default('board') %}
                 <a href="{{ item.url }}"{% if item.active %} class="is-active" aria-current="page"{% endif %}>
                   <span class="ab-nav-icon" aria-hidden="true">{% include 'agent_board:ab-icon' with {name: icon} only %}</span>
                   {{ item.label }}

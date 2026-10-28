@@ -1,4 +1,5 @@
 services:
+  Drupal\ab_board\TaskDayWindow: {}
   Drupal\ab_board\BoardRepository:
     arguments:
       - '@current_user'

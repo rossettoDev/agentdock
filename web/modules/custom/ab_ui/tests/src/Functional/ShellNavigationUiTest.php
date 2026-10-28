@@ -70,7 +70,8 @@ class ShellNavigationUiTest extends BrowserTestBase {
 
     $this->drupalGet('boards/' . $board->uuid() . '/tasks');
     $this->assertSession()->statusCodeEquals(200);
-    $this->assertSession()->linkNotExists('Dashboard');
+    $dashboard = $this->assertSession()->elementExists('named', ['link', 'Dashboard']);
+    $this->assertStringNotContainsString('workspace=', (string) $dashboard->getAttribute('href'));
     $this->assertSession()->elementNotExists('css', 'input[type="search"]');
     $tasks = $this->assertSession()->elementExists('css', 'a[aria-current="page"]');
     $this->assertSame('Tarefas', $tasks->getText());

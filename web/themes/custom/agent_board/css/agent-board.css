@@ -851,3 +851,37 @@ body:has(.admin-toolbar-control-bar) {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.ab-dashboard-cards,
+.ab-dashboard-status,
+.ab-dashboard-boards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  gap: var(--ab-space-3);
+  margin: 0 0 var(--ab-space-4);
+  padding: 0;
+  list-style: none;
+}
+
+.ab-dashboard-cards li,
+.ab-dashboard-boards li {
+  min-width: 0;
+  background: var(--ab-raised);
+  border: 1px solid var(--ab-border);
+  border-radius: var(--ab-radius);
+  padding: var(--ab-space-3);
+}
+
+.ab-dashboard-value {
+  margin: var(--ab-space-2) 0;
+  font-size: var(--ab-font-lg);
+}
+
+.ab-dashboard section {
+  min-width: 0;
+  margin-bottom: var(--ab-space-4);
+}
+
+.ab-dashboard h2 {
+  font-size: var(--ab-font-md);
+}

@@ -1,6 +1,6 @@
 # AgentDock — Backlog de evolução visual (M9)
 
-Versão 1.0 · 21/10/2026 · Status: **em execução** (US-35 done).
+Versão 1.0 · 21/10/2026 · Status: **concluído** (US-36 done).
 
 ## 1. Fontes e objetivo
 
@@ -33,7 +33,7 @@ Objetivo: transformar a interface funcional existente na experiência visual de 
 | US-33 | Central de Agentes | US-30; US-12, US-13, US-16 existentes | P1 | done |
 | US-34 | Central de Mensagens | US-30; US-17–19, US-25 existentes | P0 | done |
 | US-35 | Dashboard Geral | US-31–34 | P1 | done |
-| US-36 | Integração, responsividade e validação final | US-31–35 | P0 | todo |
+| US-36 | Integração, responsividade e validação final | US-31–35 | P0 | done |
 | US-37 | Chrome do protótipo | US-30; `docs/agentdock-prototype` | P0 | done |
 
 Executar **uma história por interação no Cursor**, com todas as tasks dela no mesmo commit, seguindo o `Definition of Done` atual. Registrar uma linha de evidência em `docs/status.md`. Não alterar `docs/implementation-status.md` nem os registros históricos de US-01 a US-28.
@@ -105,10 +105,10 @@ Executar **uma história por interação no Cursor**, com todas as tasks dela no
 
 **História:** Como usuário, quero uma experiência consistente e utilizável nas cinco telas.
 
-- [ ] **US-36/T01 — Navegação e integração end-to-end.** Percorrer Dashboard → Board → Card → Conversa → Agente → Board, com URLs de recurso reais, acessos e estados. **Aceite:** fluxo preserva o workspace da sessão, sem criar seleções implícitas por query string.
-- [ ] **US-36/T02 — Responsividade e acessibilidade.** Validar desktop/tablet/telefone, teclado, foco, `aria`/labels, contraste, redução de movimento e alternativa ao DnD. **Aceite:** evidenciação em viewport real e teste funcional; nenhuma operação exclusiva de mouse.
-- [ ] **US-36/T03 — Segurança, regressão e sincronização.** Rodar testes proporcionais dos módulos tocados, isolamento entre dois workspaces, revogação, sanitização, conflito 412, polling/410, sessão/CSRF e credenciais. **Aceite:** relatar comandos e resultados reais, corrigir regressões sem mudar serviço de domínio por estética.
-- [ ] **US-36/T04 — Comparação visual e documentação.** Comparar screenshots reais com telas; registrar diferenças deliberadas por limite de MVP. Atualizar `docs/screens/README.md`, backlog, status e ADR quando necessário. **Aceite:** cinco telas validadas; pendências do pós-M9 registradas separadamente.
+- [x] **US-36/T01 — Navegação e integração end-to-end.** Percorrer Dashboard → Board → Card → Conversa → Agente → Board, com URLs de recurso reais, acessos e estados. **Aceite:** fluxo preserva o workspace da sessão, sem criar seleções implícitas por query string.
+- [x] **US-36/T02 — Responsividade e acessibilidade.** Validar desktop/tablet/telefone, teclado, foco, `aria`/labels, contraste, redução de movimento e alternativa ao DnD. **Aceite:** evidenciação em viewport real e teste funcional; nenhuma operação exclusiva de mouse.
+- [x] **US-36/T03 — Segurança, regressão e sincronização.** Rodar testes proporcionais dos módulos tocados, isolamento entre dois workspaces, revogação, sanitização, conflito 412, polling/410, sessão/CSRF e credenciais. **Aceite:** relatar comandos e resultados reais, corrigir regressões sem mudar serviço de domínio por estética.
+- [x] **US-36/T04 — Comparação visual e documentação.** Comparar screenshots reais com telas; registrar diferenças deliberadas por limite de MVP. Atualizar `docs/screens/README.md`, backlog, status e ADR quando necessário. **Aceite:** cinco telas validadas; pendências do pós-M9 registradas separadamente.
 
 ### US-37 — Chrome do protótipo
 

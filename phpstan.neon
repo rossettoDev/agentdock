@@ -4,7 +4,7 @@ parameters:
     - web/modules/custom
     - web/themes/custom
   excludePaths:
-    - web/modules/custom/*/tests
+    - web/modules/custom/*/tests/*
   scanDirectories:
     - web/core
     - web/modules/contrib

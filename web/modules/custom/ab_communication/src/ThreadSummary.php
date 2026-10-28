@@ -16,6 +16,7 @@ final class ThreadSummary {
     public readonly ?string $taskUuid,
     public readonly string $taskLabel,
     public readonly string $excerpt,
+    public readonly int $created,
   ) {}
 
 }

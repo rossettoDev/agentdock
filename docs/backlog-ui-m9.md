@@ -1,6 +1,6 @@
 # AgentDock — Backlog de evolução visual (M9)
 
-Versão 1.0 · 21/10/2026 · Status: **em execução** (US-37 done).
+Versão 1.0 · 21/10/2026 · Status: **em execução** (US-34 done).
 
 ## 1. Fontes e objetivo
 
@@ -31,7 +31,7 @@ Objetivo: transformar a interface funcional existente na experiência visual de 
 | US-31 | Kanban visual | US-30; US-11, US-25 existentes | P0 | done |
 | US-32 | Detalhe da tarefa | US-30; US-16, US-18 existentes | P0 | done |
 | US-33 | Central de Agentes | US-30; US-12, US-13, US-16 existentes | P1 | done |
-| US-34 | Central de Mensagens | US-30; US-17–19, US-25 existentes | P0 | todo |
+| US-34 | Central de Mensagens | US-30; US-17–19, US-25 existentes | P0 | done |
 | US-35 | Dashboard Geral | US-31–34 | P1 | todo |
 | US-36 | Integração, responsividade e validação final | US-31–35 | P0 | todo |
 | US-37 | Chrome do protótipo | US-30; `docs/agentdock-prototype` | P0 | done |
@@ -87,10 +87,10 @@ Executar **uma história por interação no Cursor**, com todas as tasks dela no
 
 **História:** Como membro, quero coordenar humanos e agentes em conversas contextualizadas por board ou tarefa.
 
-- [ ] **US-34/T01 — Lista de threads.** Reestilizar listagem autorizada por workspace com tipos board/task, título, preview permitido, data e indicação de não lidas somente se suportada pela projeção existente. **Aceite:** nenhum contato/DM privado inventado; paginação `before` mantida.
-- [ ] **US-34/T02 — Área de conversa.** Exibir autores `human`/`agent`/`system`, timestamps, kinds, respostas e @menções estruturadas; composer existente com envio e feedback. **Aceite:** sanitização, 16 KiB, identidade da autenticação, imutabilidade e deduplicação preservadas.
-- [ ] **US-34/T03 — Contexto lateral da tarefa.** Quando thread tiver tarefa, exibir link real, status, prioridade, owner/agente, dependências e pedidos de informação; quando for thread geral, mostrar board em vez de criar uma tarefa fictícia. **Aceite:** painel respeita a mesma policy e não amplia acesso.
-- [ ] **US-34/T04 — Quase tempo real e atenção humana.** Reutilizar eventos, input requests, menções e notificações para atualizar thread sem perder rascunho/foco. **Aceite:** duas abas sincronizam, sem duplicar mensagens; perda de acesso limpa conteúdo revogado.
+- [x] **US-34/T01 — Lista de threads.** Reestilizar listagem autorizada por workspace com tipos board/task, título, preview permitido, data e indicação de não lidas somente se suportada pela projeção existente. **Aceite:** nenhum contato/DM privado inventado; paginação `before` mantida.
+- [x] **US-34/T02 — Área de conversa.** Exibir autores `human`/`agent`/`system`, timestamps, kinds, respostas e @menções estruturadas; composer existente com envio e feedback. **Aceite:** sanitização, 16 KiB, identidade da autenticação, imutabilidade e deduplicação preservadas.
+- [x] **US-34/T03 — Contexto lateral da tarefa.** Quando thread tiver tarefa, exibir link real, status, prioridade, owner/agente, dependências e pedidos de informação; quando for thread geral, mostrar board em vez de criar uma tarefa fictícia. **Aceite:** painel respeita a mesma policy e não amplia acesso.
+- [x] **US-34/T04 — Quase tempo real e atenção humana.** Reutilizar eventos, input requests, menções e notificações para atualizar thread sem perder rascunho/foco. **Aceite:** duas abas sincronizam, sem duplicar mensagens; perda de acesso limpa conteúdo revogado.
 
 ### US-35 — Dashboard Geral
 

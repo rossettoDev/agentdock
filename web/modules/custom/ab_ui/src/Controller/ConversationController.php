@@ -8,7 +8,9 @@ use Drupal\ab_agent\Entity\Agent;
 use Drupal\ab_board\BoardRepository;
 use Drupal\ab_board\Entity\Board;
 use Drupal\ab_board\Entity\Task;
+use Drupal\ab_board\TaskDependencyManager;
 use Drupal\ab_board\TaskRepository;
+use Drupal\ab_communication\InputRequestService;
 use Drupal\ab_communication\MessagePage;
 use Drupal\ab_communication\MessageService;
 use Drupal\ab_communication\StoredMessage;
@@ -50,6 +52,8 @@ final class ConversationController implements ContainerInjectionInterface {
     private readonly HumanActorContextFactory $actors,
     private readonly BoardRepository $boards,
     private readonly TaskRepository $tasks,
+    private readonly TaskDependencyManager $dependencies,
+    private readonly InputRequestService $requests,
     private readonly MembershipScope $scope,
     private readonly WorkspaceContext $context,
     private readonly EntityTypeManagerInterface $entityTypeManager,
@@ -87,6 +91,8 @@ final class ConversationController implements ContainerInjectionInterface {
       $task = $thread->taskUuid !== NULL;
       $items[] = [
         'label' => $task ? $thread->taskLabel : $thread->boardLabel,
+        'kind' => $task ? (string) $this->t('Tarefa') : (string) $this->t('Quadro'),
+        'when' => $this->formatWhen($workspace, $thread->created),
         'url' => Url::fromRoute('ab_ui.conversation', [
           'uuid' => $thread->threadUuid,
         ])->toString(),
@@ -262,6 +268,7 @@ final class ConversationController implements ContainerInjectionInterface {
       '#empty' => (string) $this->t('Nenhuma mensagem nesta conversa.'),
       '#form' => NULL,
       '#back_url' => Url::fromRoute('ab_ui.conversations')->toString(),
+      '#context' => $this->context($workspace, $scope, $target, $contextUrl, $contextLabel, $label),
       '#cache' => $this->cacheMeta($workspace),
     ];
     $build['#cache']['contexts'][] = 'url.query_args:before';
@@ -283,14 +290,22 @@ final class ConversationController implements ContainerInjectionInterface {
    *   Author, kind and body for each message.
    */
   private function lines(Workspace $workspace, MessagePage $page): array {
+    $ids = [];
+    foreach ($page->messages as $message) {
+      $ids[] = $message->id;
+    }
+    $mentions = $this->mentionNames($workspace, $ids);
     $lines = [];
     foreach ($page->messages as $message) {
       $html = $this->markdown->render($message->body);
       $lines[] = [
         'author' => $this->author($workspace, $message),
+        'actor' => $this->actorLabel($message->actorType),
+        'when' => $this->formatWhen($workspace, $message->created),
         'kind' => $this->kindLabel($message->kind),
         'body' => $html === '' ? [] : ['#markup' => $html],
         'reply' => $message->replyTo !== NULL,
+        'mentions' => $mentions[$message->id] ?? [],
       ];
     }
     return $lines;
@@ -344,6 +359,207 @@ final class ConversationController implements ContainerInjectionInterface {
   private function workspaceOfTask(Task $task): ?Workspace {
     $workspace = $this->entityTypeManager->getStorage('ab_workspace')->load($task->get('workspace')->getString());
     return $workspace instanceof Workspace ? $workspace : NULL;
+  }
+
+  /**
+   * Builds the side panel from the board or the task already in scope.
+   *
+   * @return array<string, mixed>
+   *   Kind, link and the task fields when the thread belongs to one.
+   */
+  private function context(
+    Workspace $workspace,
+    string $scope,
+    string $target,
+    string $contextUrl,
+    string $contextLabel,
+    string $label,
+  ): array {
+    $panel = [
+      'kind' => $scope === 'task' ? (string) $this->t('Tarefa') : (string) $this->t('Quadro'),
+      'title' => $label,
+      'url' => $contextUrl,
+      'url_label' => $contextLabel,
+      'status' => '',
+      'priority' => '',
+      'owner' => '',
+      'agent' => '',
+      'dependencies' => [],
+      'requests' => [],
+    ];
+    if ($scope !== 'task') {
+      return $panel;
+    }
+    $task = $this->tasks->loadAccessibleByUuid($target);
+    if (!$task instanceof Task) {
+      return $panel;
+    }
+    $panel['status'] = $this->statusLabel($task->get('status')->getString());
+    $panel['priority'] = $this->priorityLabel($task->get('priority')->getString());
+    $panel['owner'] = $this->ownerName($task);
+    $panel['agent'] = $this->agentName($workspace, $task);
+    try {
+      foreach ($this->dependencies->predecessors($task) as $predecessor) {
+        $panel['dependencies'][] = [
+          'label' => (string) $predecessor->label(),
+          'url' => Url::fromRoute('ab_ui.task_view', [
+            'uuid' => $predecessor->uuid(),
+          ])->toString(),
+          'status' => $this->statusLabel($predecessor->get('status')->getString()),
+        ];
+      }
+    }
+    catch (ScopedResourceNotFoundException) {
+      $panel['dependencies'] = [];
+    }
+    foreach ($this->requests->forTask($this->actors->create($workspace), $task) as $request) {
+      $html = $this->markdown->render($request->question);
+      $panel['requests'][] = [
+        'status' => $request->status === 'open'
+          ? (string) $this->t('Pendente')
+          : (string) $this->t('Respondida'),
+        'question' => $html === '' ? [] : ['#markup' => $html],
+      ];
+    }
+    return $panel;
+  }
+
+  /**
+   * Names stored mentions without leaving the workspace.
+   *
+   * @param \Drupal\ab_core\Entity\Workspace $workspace
+   *   Workspace that owns the messages.
+   * @param list<int> $messageIds
+   *   Message ids on the current page.
+   *
+   * @return array<int, list<string>>
+   *   Display names keyed by message id.
+   */
+  private function mentionNames(Workspace $workspace, array $messageIds): array {
+    if ($messageIds === []) {
+      return [];
+    }
+    $rows = $this->database->select('ab_message_mention', 'm')
+      ->fields('m', ['message_id', 'recipient_type', 'recipient_id'])
+      ->condition('workspace', (int) $workspace->id())
+      ->condition('message_id', $messageIds, 'IN')
+      ->execute();
+    $names = [];
+    foreach ($rows as $row) {
+      if (!is_object($row)) {
+        continue;
+      }
+      $names[(int) $row->message_id][] = $this->recipientName(
+        $workspace,
+        (string) $row->recipient_type,
+        (string) $row->recipient_id,
+      );
+    }
+    return $names;
+  }
+
+  /**
+   * Returns a display name for a mention in this workspace.
+   */
+  private function recipientName(Workspace $workspace, string $type, string $id): string {
+    if ($type === ActorContext::TYPE_AGENT) {
+      $ids = $this->entityTypeManager->getStorage('ab_agent')->getQuery()
+        ->accessCheck(FALSE)
+        ->condition('uuid', $id)
+        ->condition('workspace', $workspace->id())
+        ->execute();
+      $agent = $this->entityTypeManager->getStorage('ab_agent')->load(reset($ids) ?: 0);
+      return $agent instanceof Agent ? (string) $agent->label() : (string) $this->t('Participante');
+    }
+    if ($type === ActorContext::TYPE_HUMAN) {
+      $user = $this->entityTypeManager->getStorage('user')->load($id);
+      return $user instanceof UserInterface ? $user->getAccountName() : (string) $this->t('Participante');
+    }
+    return (string) $this->t('Participante');
+  }
+
+  /**
+   * Returns the Portuguese label of an actor type.
+   */
+  private function actorLabel(string $type): string {
+    return match ($type) {
+      ActorContext::TYPE_AGENT => (string) $this->t('Agente'),
+      ActorContext::TYPE_SYSTEM => (string) $this->t('Sistema'),
+      default => (string) $this->t('Humano'),
+    };
+  }
+
+  /**
+   * Formats a UTC timestamp in the workspace timezone.
+   */
+  private function formatWhen(Workspace $workspace, int $timestamp): string {
+    if ($timestamp <= 0) {
+      return '';
+    }
+    $timezone = $workspace->get('timezone')->getString();
+    try {
+      $zone = new \DateTimeZone($timezone === '' ? 'America/Sao_Paulo' : $timezone);
+    }
+    catch (\Exception) {
+      $zone = new \DateTimeZone('America/Sao_Paulo');
+    }
+    return (new \DateTimeImmutable('@' . $timestamp))->setTimezone($zone)->format('d/m/Y H:i');
+  }
+
+  /**
+   * Returns the Portuguese label of a task status.
+   */
+  private function statusLabel(string $status): string {
+    return match ($status) {
+      'ready' => (string) $this->t('Pronta'),
+      'in_progress' => (string) $this->t('Em andamento'),
+      'in_review' => (string) $this->t('Em revisão'),
+      'done' => (string) $this->t('Concluída'),
+      'cancelled' => (string) $this->t('Cancelada'),
+      default => (string) $this->t('Backlog'),
+    };
+  }
+
+  /**
+   * Returns the Portuguese label of a priority.
+   */
+  private function priorityLabel(string $priority): string {
+    return match ($priority) {
+      'low' => (string) $this->t('Baixa'),
+      'high' => (string) $this->t('Alta'),
+      'urgent' => (string) $this->t('Urgente'),
+      default => (string) $this->t('Normal'),
+    };
+  }
+
+  /**
+   * Returns the responsible account name.
+   */
+  private function ownerName(Task $task): string {
+    $id = $task->get('human_owner')->getString();
+    if ($id === '') {
+      return '';
+    }
+    $user = $this->entityTypeManager->getStorage('user')->load($id);
+    return $user instanceof UserInterface ? $user->getAccountName() : '';
+  }
+
+  /**
+   * Returns the assigned agent when it still belongs to the workspace.
+   */
+  private function agentName(Workspace $workspace, Task $task): string {
+    $id = (int) $task->get('assigned_agent')->getString();
+    if ($id <= 0) {
+      return '';
+    }
+    $agent = $this->entityTypeManager->getStorage('ab_agent')->load($id);
+    if (!$agent instanceof Agent) {
+      return '';
+    }
+    if ($agent->get('workspace')->getString() !== (string) $workspace->id()) {
+      return '';
+    }
+    return (string) $agent->label();
   }
 
   /**

@@ -200,6 +200,7 @@ final class AbUiHooks {
           'empty' => '',
           'form' => NULL,
           'back_url' => '',
+          'context' => [],
         ],
       ],
       'ab_ui_design_sample' => [

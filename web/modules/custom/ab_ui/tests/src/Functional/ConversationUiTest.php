@@ -91,16 +91,36 @@ class ConversationUiTest extends BrowserTestBase {
     $this->submitForm([
       'body' => 'Segunda nota',
       'reply_to' => $message,
+      'mentions[]' => ['human:' . $viewer->id()],
     ], 'Enviar');
     $this->assertSession()->pageTextContains('Segunda nota');
     $this->assertSession()->pageTextContains('Em resposta a uma mensagem.');
+    $this->assertSession()->pageTextContains('Humano');
+    $this->assertSession()->pageTextContains($ada->getAccountName());
+    $this->assertSession()->pageTextContains('Menção:');
+    $this->assertSession()->pageTextContains($viewer->getAccountName());
+    $this->assertSession()->pageTextContains('Backlog');
+    $this->assertSession()->pageTextContains('Normal');
+    $region = $this->assertSession()->elementExists('css', '[data-ab-sync="messages"]');
+    $this->assertNull($region->find('css', '[name="body"]'));
+    $this->assertSession()->elementExists('css', '.ab-conversation__context');
+    $this->drupalGet('boards/' . $board->uuid() . '/conversation');
+    $this->assertSession()->statusCodeEquals(200);
+    $this->assertSession()->pageTextContains('Quadro');
+    $this->assertSession()->pageTextContains('Quadro Fala');
+    $this->assertSession()->linkExists('Tarefas');
+    $this->assertSession()->pageTextNotContains('Tema da conversa');
+    $this->assertSession()->pageTextNotContains('Não lidas');
     $this->drupalGet('workspaces');
     $this->submitForm([
       'workspace' => $workspace->uuid(),
     ], 'Usar este workspace');
     $this->drupalGet('conversations');
     $this->assertSession()->pageTextContains('Tema da conversa');
+    $this->assertSession()->pageTextContains('Tarefa');
+    $this->assertSession()->elementExists('css', '.ab-conversations time');
     $this->assertSession()->pageTextNotContains('mensagem direta');
+    $this->assertSession()->pageTextNotContains('Não lidas');
     $this->assertSession()->linkExists('Tarefa');
 
     $this->drupalLogin($viewer);
@@ -116,6 +136,7 @@ class ConversationUiTest extends BrowserTestBase {
     $this->assertSession()->statusCodeEquals(404);
     $this->assertSession()->pageTextNotContains('Segunda nota');
     $this->assertSession()->pageTextNotContains('Tema da conversa');
+    $this->assertSession()->pageTextNotContains($viewer->getAccountName());
   }
 
 }

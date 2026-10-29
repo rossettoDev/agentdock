@@ -1,0 +1,24 @@
+uuid: to-be-generated
+langcode: pt-br
+status: true
+dependencies:
+  module:
+    - node
+id: wiki_pattern
+label: 'Padrão Wiki'
+type: 'canonical_entities:node'
+pattern: 'docs/[node:title]'
+selection_criteria:
+  - id: node_type
+    negate: false
+    contexts_mapping:
+      node: node
+    context_definitions:
+      node:
+        type: 'entity:node'
+        label: Node
+    bundles:
+      wiki: wiki
+selection_logic: and
+weight: -5
+relationships: {}

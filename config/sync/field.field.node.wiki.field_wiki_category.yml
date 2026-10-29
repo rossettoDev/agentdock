@@ -1,0 +1,29 @@
+uuid: to-be-generated
+langcode: pt-br
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_wiki_category
+    - node.type.wiki
+    - taxonomy.vocabulary.wiki_category
+id: node.wiki.field_wiki_category
+field_name: field_wiki_category
+entity_type: node
+bundle: wiki
+label: Categoria
+description: 'Categoria da página de documentação'
+required: false
+translatable: true
+default_value: []
+default_value_callback: ''
+settings:
+  handler: default
+  handler_settings:
+    target_bundles:
+      wiki_category: wiki_category
+    sort:
+      field: name
+      direction: asc
+    auto_create: false
+    auto_create_bundle: ''
+field_type: entity_reference

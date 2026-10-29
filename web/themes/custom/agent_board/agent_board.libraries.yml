@@ -8,3 +8,10 @@ global:
   dependencies:
     - core/drupal
     - core/once
+
+wiki:
+  css:
+    theme:
+      css/wiki.css: {}
+  dependencies:
+    - core/drupal

@@ -1,126 +1,164 @@
 /**
  * @file
- * Estilos específicos para páginas wiki.
+ * Estilos específicos para páginas wiki no tema dark AgentDock.
  */
 
-.wiki-page-row {
-  margin-bottom: var(--space-m);
-  padding: var(--space-s);
-  background: var(--surface-low);
-  border-radius: var(--radius-m);
+/* View /docs */
+.ab-content .view-wiki-docs {
+  color: var(--ab-text, #edf4ff);
 }
 
-.wiki-page-row h3 {
+.ab-content .view-wiki-docs .wiki-page-row {
+  margin-bottom: var(--ab-space-4, 1rem);
+  padding: var(--ab-space-3, 0.75rem);
+  background: var(--ab-raised, #132131);
+  border: 1px solid var(--ab-border, #26394d);
+  border-radius: var(--ab-radius, 9px);
+}
+
+.ab-content .view-wiki-docs .wiki-page-row h3 {
   margin-top: 0;
-  margin-bottom: var(--space-xs);
+  margin-bottom: var(--ab-space-2, 0.5rem);
+  color: var(--ab-text, #edf4ff);
 }
 
-.wiki-summary {
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-  margin-top: var(--space-xs);
+.ab-content .view-wiki-docs .wiki-page-row a {
+  color: var(--ab-link, #93c5fd);
+  text-decoration: none;
 }
 
-.view-wiki-docs .view-grouping {
-  margin-bottom: var(--space-l);
+.ab-content .view-wiki-docs .wiki-page-row a:hover {
+  text-decoration: underline;
 }
 
-.view-wiki-docs .view-grouping-header {
-  font-size: var(--text-xl);
+.ab-content .view-wiki-docs .wiki-summary {
+  color: var(--ab-muted, #97a9bc);
+  font-size: var(--ab-font-sm, 0.875rem);
+  margin-top: var(--ab-space-1, 0.25rem);
+}
+
+.ab-content .view-wiki-docs .view-grouping {
+  margin-bottom: var(--ab-space-5, 1.5rem);
+}
+
+.ab-content .view-wiki-docs .view-grouping-header {
+  font-size: var(--ab-font-lg, 1.25rem);
   font-weight: 600;
-  margin-bottom: var(--space-m);
-  padding-bottom: var(--space-xs);
-  border-bottom: 2px solid var(--border-subtle);
+  color: var(--ab-text, #edf4ff);
+  margin-bottom: var(--ab-space-4, 1rem);
+  padding-bottom: var(--ab-space-2, 0.5rem);
+  border-bottom: 2px solid var(--ab-border, #26394d);
 }
 
-.view-wiki-docs .view-grouping-content {
-  padding-left: var(--space-m);
+.ab-content .view-wiki-docs .view-grouping-content {
+  padding-left: var(--ab-space-4, 1rem);
 }
 
-.view-wiki-docs .view-empty {
-  padding: var(--space-l);
+.ab-content .view-wiki-docs .view-empty {
+  padding: var(--ab-space-5, 1.5rem);
   text-align: center;
-  color: var(--text-secondary);
+  color: var(--ab-muted, #97a9bc);
 }
 
-.node--type-wiki {
+/* Node wiki */
+.ab-content .node--type-wiki {
   max-width: 800px;
   margin: 0 auto;
-  padding: var(--space-l);
+  padding: var(--ab-space-5, 1.5rem);
+  color: var(--ab-text, #edf4ff);
 }
 
-.node--type-wiki .field--name-body {
+.ab-content .node--type-wiki .field--name-body {
   line-height: 1.6;
+  color: var(--ab-text, #edf4ff);
 }
 
-.node--type-wiki h2 {
-  margin-top: var(--space-l);
-  margin-bottom: var(--space-m);
-  font-size: var(--text-2xl);
+.ab-content .node--type-wiki p {
+  color: var(--ab-text, #edf4ff);
+  margin-bottom: var(--ab-space-3, 0.75rem);
+}
+
+.ab-content .node--type-wiki h2 {
+  margin-top: var(--ab-space-5, 1.5rem);
+  margin-bottom: var(--ab-space-4, 1rem);
+  font-size: 1.5rem;
   font-weight: 600;
+  color: var(--ab-text, #edf4ff);
 }
 
-.node--type-wiki h3 {
-  margin-top: var(--space-m);
-  margin-bottom: var(--space-s);
-  font-size: var(--text-xl);
+.ab-content .node--type-wiki h3 {
+  margin-top: var(--ab-space-4, 1rem);
+  margin-bottom: var(--ab-space-3, 0.75rem);
+  font-size: var(--ab-font-lg, 1.25rem);
   font-weight: 600;
+  color: var(--ab-text, #edf4ff);
 }
 
-.node--type-wiki ul,
-.node--type-wiki ol {
-  margin-left: var(--space-m);
-  margin-bottom: var(--space-m);
+.ab-content .node--type-wiki ul,
+.ab-content .node--type-wiki ol {
+  margin-left: var(--ab-space-4, 1rem);
+  margin-bottom: var(--ab-space-4, 1rem);
+  color: var(--ab-text, #edf4ff);
 }
 
-.node--type-wiki li {
-  margin-bottom: var(--space-xs);
+.ab-content .node--type-wiki li {
+  margin-bottom: var(--ab-space-2, 0.5rem);
+  color: var(--ab-text, #edf4ff);
 }
 
-.node--type-wiki code {
-  background: var(--surface-low);
+.ab-content .node--type-wiki code {
+  background: var(--ab-raised, #132131);
+  color: var(--ab-link, #93c5fd);
   padding: 2px 6px;
   border-radius: 3px;
   font-family: 'Monaco', 'Courier New', monospace;
   font-size: 0.9em;
 }
 
-.node--type-wiki pre {
-  background: var(--surface-low);
-  padding: var(--space-m);
-  border-radius: var(--radius-m);
+.ab-content .node--type-wiki pre {
+  background: var(--ab-raised, #132131);
+  border: 1px solid var(--ab-border, #26394d);
+  padding: var(--ab-space-4, 1rem);
+  border-radius: var(--ab-radius, 9px);
   overflow-x: auto;
-  margin-bottom: var(--space-m);
+  margin-bottom: var(--ab-space-4, 1rem);
 }
 
-.node--type-wiki pre code {
+.ab-content .node--type-wiki pre code {
   background: none;
   padding: 0;
+  color: var(--ab-text, #edf4ff);
 }
 
-.node--type-wiki table {
+.ab-content .node--type-wiki table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: var(--space-m);
+  margin-bottom: var(--ab-space-4, 1rem);
 }
 
-.node--type-wiki th,
-.node--type-wiki td {
-  padding: var(--space-s);
-  border: 1px solid var(--border-subtle);
+.ab-content .node--type-wiki th,
+.ab-content .node--type-wiki td {
+  padding: var(--ab-space-3, 0.75rem);
+  border: 1px solid var(--ab-border, #26394d);
   text-align: left;
+  color: var(--ab-text, #edf4ff);
 }
 
-.node--type-wiki th {
-  background: var(--surface-low);
+.ab-content .node--type-wiki th {
+  background: var(--ab-raised, #132131);
   font-weight: 600;
 }
 
-.node--type-wiki a {
-  color: var(--primary);
+.ab-content .node--type-wiki a {
+  color: var(--ab-link, #93c5fd);
   text-decoration: none;
 }
 
-.node--type-wiki a:hover {
+.ab-content .node--type-wiki a:hover {
   text-decoration: underline;
+}
+
+.ab-content .node--type-wiki strong {
+  color: var(--ab-text, #edf4ff);
+  font-weight: 600;
 }

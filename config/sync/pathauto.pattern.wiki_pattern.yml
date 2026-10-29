@@ -1,4 +1,3 @@
-uuid: to-be-generated
 langcode: pt-br
 status: true
 dependencies:
@@ -9,7 +8,7 @@ label: 'Padrão Wiki'
 type: 'canonical_entities:node'
 pattern: 'docs/[node:title]'
 selection_criteria:
-  - id: node_type
+  - id: 'entity_bundle:node'
     negate: false
     contexts_mapping:
       node: node

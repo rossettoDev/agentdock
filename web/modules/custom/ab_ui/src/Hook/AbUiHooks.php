@@ -443,6 +443,12 @@ final class AbUiHooks {
       ], TRUE),
       'icon' => 'agent',
     ];
+    $items[] = [
+      'label' => (string) $this->t('Documentação'),
+      'url' => '/docs',
+      'active' => $route === 'view.wiki_docs.page_1' || str_starts_with($route, 'entity.node.canonical'),
+      'icon' => 'board',
+    ];
     return $items;
   }
 

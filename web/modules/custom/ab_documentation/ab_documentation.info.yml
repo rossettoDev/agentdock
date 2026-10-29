@@ -1,0 +1,14 @@
+name: 'AgentDock Documentation'
+type: module
+description: 'Documentação in-site para conectar agentes ao AgentDock'
+package: 'AgentDock'
+core_version_requirement: ^11
+dependencies:
+  - drupal:node
+  - drupal:taxonomy
+  - drupal:path
+  - drupal:text
+  - drupal:views
+  - drupal:filter
+  - pathauto:pathauto
+  - token:token

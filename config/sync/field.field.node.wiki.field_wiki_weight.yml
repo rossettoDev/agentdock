@@ -1,0 +1,24 @@
+uuid: to-be-generated
+langcode: pt-br
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_wiki_weight
+    - node.type.wiki
+id: node.wiki.field_wiki_weight
+field_name: field_wiki_weight
+entity_type: node
+bundle: wiki
+label: Peso
+description: 'Ordem de exibição na navegação (menor número aparece primeiro)'
+required: true
+translatable: false
+default_value:
+  - value: 0
+default_value_callback: ''
+settings:
+  min: -100
+  max: 100
+  prefix: ''
+  suffix: ''
+field_type: integer

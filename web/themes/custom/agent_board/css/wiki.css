@@ -1,0 +1,126 @@
+/**
+ * @file
+ * Estilos específicos para páginas wiki.
+ */
+
+.wiki-page-row {
+  margin-bottom: var(--space-m);
+  padding: var(--space-s);
+  background: var(--surface-low);
+  border-radius: var(--radius-m);
+}
+
+.wiki-page-row h3 {
+  margin-top: 0;
+  margin-bottom: var(--space-xs);
+}
+
+.wiki-summary {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  margin-top: var(--space-xs);
+}
+
+.view-wiki-docs .view-grouping {
+  margin-bottom: var(--space-l);
+}
+
+.view-wiki-docs .view-grouping-header {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  margin-bottom: var(--space-m);
+  padding-bottom: var(--space-xs);
+  border-bottom: 2px solid var(--border-subtle);
+}
+
+.view-wiki-docs .view-grouping-content {
+  padding-left: var(--space-m);
+}
+
+.view-wiki-docs .view-empty {
+  padding: var(--space-l);
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.node--type-wiki {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: var(--space-l);
+}
+
+.node--type-wiki .field--name-body {
+  line-height: 1.6;
+}
+
+.node--type-wiki h2 {
+  margin-top: var(--space-l);
+  margin-bottom: var(--space-m);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+}
+
+.node--type-wiki h3 {
+  margin-top: var(--space-m);
+  margin-bottom: var(--space-s);
+  font-size: var(--text-xl);
+  font-weight: 600;
+}
+
+.node--type-wiki ul,
+.node--type-wiki ol {
+  margin-left: var(--space-m);
+  margin-bottom: var(--space-m);
+}
+
+.node--type-wiki li {
+  margin-bottom: var(--space-xs);
+}
+
+.node--type-wiki code {
+  background: var(--surface-low);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+.node--type-wiki pre {
+  background: var(--surface-low);
+  padding: var(--space-m);
+  border-radius: var(--radius-m);
+  overflow-x: auto;
+  margin-bottom: var(--space-m);
+}
+
+.node--type-wiki pre code {
+  background: none;
+  padding: 0;
+}
+
+.node--type-wiki table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: var(--space-m);
+}
+
+.node--type-wiki th,
+.node--type-wiki td {
+  padding: var(--space-s);
+  border: 1px solid var(--border-subtle);
+  text-align: left;
+}
+
+.node--type-wiki th {
+  background: var(--surface-low);
+  font-weight: 600;
+}
+
+.node--type-wiki a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.node--type-wiki a:hover {
+  text-decoration: underline;
+}

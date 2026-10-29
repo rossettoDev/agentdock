@@ -1,0 +1,9 @@
+uuid: to-be-generated
+langcode: pt-br
+status: true
+dependencies: {}
+name: 'Categoria de Wiki'
+vid: wiki_category
+description: 'Categorias para organizar páginas da documentação'
+weight: 0
+new_revision: false

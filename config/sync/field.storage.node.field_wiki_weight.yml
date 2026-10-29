@@ -1,0 +1,24 @@
+uuid: to-be-generated
+langcode: pt-br
+status: true
+dependencies:
+  module:
+    - node
+id: node.wiki.field_wiki_weight
+field_name: field_wiki_weight
+entity_type: node
+type: integer
+settings:
+  unsigned: false
+  size: normal
+  min: ''
+  max: ''
+  prefix: ''
+  suffix: ''
+module: core
+locked: false
+cardinality: 1
+translatable: false
+indexes: {}
+persist_with_no_fields: false
+custom_storage: false

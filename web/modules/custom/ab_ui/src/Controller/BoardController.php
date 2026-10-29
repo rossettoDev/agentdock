@@ -9,13 +9,11 @@ use Drupal\ab_board\Entity\Board;
 use Drupal\ab_core\Authorization\MembershipScope;
 use Drupal\ab_core\Authorization\WorkspacePermission;
 use Drupal\ab_core\Entity\Workspace;
-use Drupal\ab_ui\Form\BoardArchiveForm;
 use Drupal\ab_ui\WorkspaceContext;
 use Drupal\Core\Cache\CacheableMetadata;
+use Drupal\Core\Cache\CacheableRedirectResponse;
 use Drupal\Core\DependencyInjection\AutowireTrait;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
-use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\Core\Form\FormBuilderInterface;
 use Drupal\Core\Http\Exception\CacheableNotFoundHttpException;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
@@ -33,8 +31,6 @@ final class BoardController implements ContainerInjectionInterface {
     private readonly BoardRepository $boards,
     private readonly WorkspaceContext $context,
     private readonly MembershipScope $scope,
-    private readonly EntityTypeManagerInterface $entityTypeManager,
-    private readonly FormBuilderInterface $formBuilder,
     private readonly AccountInterface $currentUser,
   ) {}
 
@@ -64,7 +60,7 @@ final class BoardController implements ContainerInjectionInterface {
     foreach ($this->boards->accessibleBoards($workspace) as $board) {
       $items[] = [
         'label' => (string) $board->label(),
-        'url' => Url::fromRoute('ab_ui.board_view', [
+        'url' => Url::fromRoute('ab_ui.board_tasks', [
           'uuid' => $board->uuid(),
         ])->toString(),
         'archived' => (int) $board->get('archived')->getString() === 1,
@@ -80,39 +76,20 @@ final class BoardController implements ContainerInjectionInterface {
   }
 
   /**
-   * Shows one readable board without changing the selected workspace.
+   * Sends a readable board to its task page.
    *
-   * @return array<string, mixed>
-   *   A render array.
+   * A board outside the selected workspace stays 404. The name,
+   * description and archive action are on the task page.
    */
-  public function view(string $uuid): array {
+  public function view(string $uuid): CacheableRedirectResponse {
     $board = $this->loadVisible($uuid);
-    $workspace = $this->workspaceOf($board);
-    $can_manage = $workspace instanceof Workspace && $this->scope->allows(
-      $this->currentUser,
-      $workspace,
-      WorkspacePermission::MANAGE_BOARDS,
-    );
-    $archived = (int) $board->get('archived')->getString() === 1;
-    $build = [
-      '#theme' => 'ab_ui_board_view',
-      '#label' => (string) $board->label(),
-      '#description' => $board->get('description')->getString(),
-      '#archived' => $archived,
-      '#back_url' => Url::fromRoute('ab_ui.boards')->toString(),
-      '#tasks_url' => Url::fromRoute('ab_ui.board_tasks', [
-        'uuid' => $board->uuid(),
-      ])->toString(),
-      '#conversation_url' => Url::fromRoute('ab_ui.board_conversation', [
-        'uuid' => $board->uuid(),
-      ])->toString(),
-      '#archive_form' => NULL,
-      '#cache' => $this->cacheMeta($workspace),
-    ];
-    if ($can_manage && !$archived) {
-      $build['#archive_form'] = $this->formBuilder->getForm(BoardArchiveForm::class, $board->uuid());
-    }
-    return $build;
+    $response = new CacheableRedirectResponse(Url::fromRoute('ab_ui.board_tasks', [
+      'uuid' => $board->uuid(),
+    ])->toString());
+    $cache = (new CacheableMetadata())
+      ->addCacheContexts(['user', 'ab_memberships', 'ab_workspace']);
+    $response->addCacheableDependency($cache);
+    return $response;
   }
 
   /**
@@ -127,14 +104,6 @@ final class BoardController implements ContainerInjectionInterface {
       ->addCacheContexts(['user', 'ab_memberships', 'ab_workspace'])
       ->addCacheTags(['ab_membership_list:' . $this->currentUser->id()]);
     throw new CacheableNotFoundHttpException($cache);
-  }
-
-  /**
-   * Loads the workspace stored on the board.
-   */
-  private function workspaceOf(Board $board): ?Workspace {
-    $workspace = $this->entityTypeManager->getStorage('ab_workspace')->load($board->get('workspace')->getString());
-    return $workspace instanceof Workspace ? $workspace : NULL;
   }
 
   /**

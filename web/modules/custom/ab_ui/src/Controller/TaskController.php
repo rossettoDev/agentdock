@@ -23,6 +23,7 @@ use Drupal\ab_core\Authorization\ScopedOperationDeniedException;
 use Drupal\ab_core\Authorization\ScopedResourceNotFoundException;
 use Drupal\ab_core\Authorization\WorkspacePermission;
 use Drupal\ab_core\Entity\Workspace;
+use Drupal\ab_ui\Form\BoardArchiveForm;
 use Drupal\ab_ui\Form\InputAnswerForm;
 use Drupal\ab_ui\Form\MessageComposeForm;
 use Drupal\ab_ui\Form\TaskDependencyForm;
@@ -84,13 +85,22 @@ final class TaskController implements ContainerInjectionInterface {
    *
    * The query only chooses that filter. It does not select a workspace.
    *
+   * @param string $uuid
+   *   Public board id.
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The current request. The query only filters the columns.
+   * @param string|null $task
+   *   Public id of the task open beside the columns.
+   *
    * @return array<string, mixed>
    *   A render array.
    */
-  public function listing(string $uuid, Request $request): array {
+  public function listing(string $uuid, Request $request, ?string $task = NULL): array {
     $board = $this->visibleBoard($uuid);
     $workspace = $this->tasks->workspaceOf($board);
     $can_write = $this->canWrite($workspace);
+    $archived = (int) $board->get('archived')->getString() === 1;
+    $open = $task;
     $cancelled_only = $request->query->get('cancelled') === '1';
     $today_only = !$cancelled_only && $request->query->get('today') === '1';
     $tasks = $this->tasks->accessibleTasks($board);
@@ -110,7 +120,7 @@ final class TaskController implements ContainerInjectionInterface {
       if (!$this->matchesFilters($task, $priority, $agent, $agents)) {
         continue;
       }
-      $card = $this->card($workspace, $task, $can_write, $agents);
+      $card = $this->card($workspace, $board, $task, $can_write, $agents, $open);
       $status = $task->get('status')->getString();
       if ($status === 'cancelled') {
         if (!$today_only) {
@@ -144,14 +154,25 @@ final class TaskController implements ContainerInjectionInterface {
     $cache['contexts'][] = 'url.query_args:today';
     $cache['contexts'][] = 'url.query_args:priority';
     $cache['contexts'][] = 'url.query_args:agent';
+    $cache['contexts'][] = 'url.path';
     $kept = ['priority' => $priority, 'agent' => $agent];
+    $can_manage = $this->scope->allows(
+      $this->currentUser,
+      $workspace,
+      WorkspacePermission::MANAGE_BOARDS,
+    );
     return [
       '#theme' => 'ab_ui_task_list',
       '#board_label' => (string) $board->label(),
       '#board_description' => $board->get('description')->getString(),
-      '#add_url' => $can_write ? Url::fromRoute('ab_ui.task_add', [
+      '#archived' => $archived,
+      '#archive_form' => $can_manage && !$archived
+        ? $this->formBuilder->getForm(BoardArchiveForm::class, $board->uuid())
+        : NULL,
+      '#add_url' => $can_write && !$archived ? Url::fromRoute('ab_ui.task_add', [
         'uuid' => $board->uuid(),
       ])->toString() : '',
+      '#panel' => $this->panel($board, $workspace, $open, $request, $can_write),
       '#columns' => $cancelled_only ? [] : $columns,
       '#cancelled' => $cancelled_only ? $cancelled : [],
       '#cancelled_only' => $cancelled_only,
@@ -167,7 +188,7 @@ final class TaskController implements ContainerInjectionInterface {
       '#agent' => $agent,
       '#filter_empty' => ($priority !== '' || $agent !== '') && !$today_only && $shown === 0 && $tasks !== [],
       '#attached' => [
-        'library' => ['ab_ui/kanban'],
+        'library' => ['ab_ui/kanban', 'core/drupal.dialog.ajax'],
         'drupalSettings' => [
           'abUiSync' => [
             'snapshotUrl' => '/api/agent-board/v1/workspaces/' . $workspace->uuid() . '/boards/' . $board->uuid() . '/snapshot',
@@ -846,17 +867,28 @@ final class TaskController implements ContainerInjectionInterface {
    *
    * @param \Drupal\ab_core\Entity\Workspace $workspace
    *   Workspace that owns the task.
+   * @param \Drupal\ab_board\Entity\Board $board
+   *   Board that contains the task.
    * @param \Drupal\ab_board\Entity\Task $task
    *   Task already loaded for this board.
    * @param bool $can_write
    *   Whether the account can edit tasks.
    * @param array<string, array{id: string, label: string}> $agents
    *   Agents assigned to accessible tasks, keyed by uuid.
+   * @param string|null $open
+   *   Public id of the task selected on this page.
    *
    * @return array<string, mixed>
    *   Title, link, priority, due date, owner, blocked flag and move form.
    */
-  private function card(Workspace $workspace, Task $task, bool $can_write, array $agents): array {
+  private function card(
+    Workspace $workspace,
+    Board $board,
+    Task $task,
+    bool $can_write,
+    array $agents,
+    ?string $open,
+  ): array {
     $agent_id = $task->get('assigned_agent')->getString();
     $agent_name = '';
     foreach ($agents as $agent) {
@@ -876,9 +908,11 @@ final class TaskController implements ContainerInjectionInterface {
     return [
       'label' => (string) $task->label(),
       'uuid' => $task->uuid(),
-      'url' => Url::fromRoute('ab_ui.task_view', [
-        'uuid' => $task->uuid(),
+      'url' => Url::fromRoute('ab_ui.board_task', [
+        'uuid' => $board->uuid(),
+        'task' => $task->uuid(),
       ])->toString(),
+      'current' => $open !== NULL && $open === (string) $task->uuid(),
       'priority' => $this->priorityLabel($priority),
       'priority_key' => $priority,
       'due' => $this->dueLabel($workspace, $task->get('due_at')->getString()),
@@ -1229,7 +1263,73 @@ final class TaskController implements ContainerInjectionInterface {
   }
 
   /**
-   * Cache metadata for a missing task or board.
+   * Builds the task open beside the columns.
+   *
+   * A task from another board answers 404. The compose form stays
+   * outside the region the snapshot replaces.
+   *
+   * @param \Drupal\ab_board\Entity\Board $board
+   *   Board of this screen.
+   * @param \Drupal\ab_core\Entity\Workspace $workspace
+   *   Workspace that owns the board.
+   * @param string|null $taskUuid
+   *   Public id of the selected task, or NULL when none is open.
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The current request.
+   * @param bool $canWrite
+   *   Whether the account can comment.
+   *
+   * @return array<string, mixed>|null
+   *   Title, sanitized text, messages and the compose form.
+   */
+  private function panel(
+    Board $board,
+    Workspace $workspace,
+    ?string $taskUuid,
+    Request $request,
+    bool $canWrite,
+  ): ?array {
+    if ($taskUuid === NULL || $taskUuid === '') {
+      return NULL;
+    }
+    $task = $this->visibleTask($taskUuid);
+    if ($task->get('board')->getString() !== (string) $board->id()) {
+      throw new CacheableNotFoundHttpException($this->notFoundCache());
+    }
+    $thread = $this->thread($workspace, $task, $request);
+    $form = NULL;
+    if ($canWrite) {
+      $form = $this->formBuilder->getForm(
+        MessageComposeForm::class,
+        'task',
+        (string) $task->uuid(),
+        '',
+        'task',
+        (string) $board->uuid(),
+      );
+    }
+    return [
+      'label' => (string) $task->label(),
+      'status' => $this->statusLabel($task->get('status')->getString()),
+      'priority' => $this->priorityLabel($task->get('priority')->getString()),
+      'owner' => $this->ownerName($task),
+      'due' => $this->dueLabel($workspace, $task->get('due_at')->getString()),
+      'description' => $this->markup($task->get('description')->getString()),
+      'criteria' => $this->markup($task->get('acceptance_criteria')->getString()),
+      'messages' => $thread['messages'],
+      'messages_empty' => $thread['empty'],
+      'message_form' => $form,
+      'task_url' => Url::fromRoute('ab_ui.task_view', [
+        'uuid' => $task->uuid(),
+      ])->toString(),
+      'close_url' => Url::fromRoute('ab_ui.board_tasks', [
+        'uuid' => $board->uuid(),
+      ])->toString(),
+    ];
+  }
+
+  /**
+   * Cache metadata for a missing board or task.
    */
   private function notFoundCache(): CacheableMetadata {
     return (new CacheableMetadata())

@@ -354,6 +354,38 @@ body {
   overflow-x: auto;
 }
 
+.ab-board-screen {
+  min-width: 0;
+}
+
+.ab-board-screen.has-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
+  gap: 1rem;
+  align-items: start;
+}
+
+.ab-board-screen.has-panel > * {
+  min-width: 0;
+}
+
+.ab-board-panel {
+  background: #101d2b;
+  border: 1px solid #2b4157;
+  border-radius: 7px;
+  padding: 0.75rem;
+  min-width: 0;
+}
+
+.ab-board-panel__actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.ab-card.is-current {
+  outline: 2px solid var(--ab-primary);
+}
+
 .ab-kanban__column {
   flex: 1 0 180px;
   min-width: 180px;
@@ -766,6 +798,10 @@ body:has(.admin-toolbar-control-bar) {
 
   .ab-kanban {
     flex-direction: column;
+  }
+
+  .ab-board-screen.has-panel {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .ab-kanban__column {

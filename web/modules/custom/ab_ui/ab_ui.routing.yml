@@ -74,6 +74,16 @@ ab_ui.board_tasks:
     _user_is_logged_in: 'TRUE'
     uuid: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
 
+ab_ui.board_task:
+  path: '/boards/{uuid}/tasks/{task}'
+  defaults:
+    _controller: '\Drupal\ab_ui\Controller\TaskController::listing'
+    _title: 'Tarefas'
+  requirements:
+    _user_is_logged_in: 'TRUE'
+    uuid: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+    task: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+
 ab_ui.task_add:
   path: '/boards/{uuid}/tasks/add'
   defaults:

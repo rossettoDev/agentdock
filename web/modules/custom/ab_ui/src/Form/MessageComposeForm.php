@@ -49,7 +49,15 @@ final class MessageComposeForm extends FormBase {
   /**
    * {@inheritdoc}
    */
-  public function buildForm(array $form, FormStateInterface $form_state, string $scope = '', string $target = '', string $return_uuid = '', string $surface = '') {
+  public function buildForm(
+    array $form,
+    FormStateInterface $form_state,
+    string $scope = '',
+    string $target = '',
+    string $return_uuid = '',
+    string $surface = '',
+    string $board_uuid = '',
+  ) {
     $form['#id'] = 'ab-ui-message-' . $scope . '-' . $target;
     $form['scope'] = [
       '#type' => 'hidden',
@@ -66,6 +74,10 @@ final class MessageComposeForm extends FormBase {
     $form['surface'] = [
       '#type' => 'hidden',
       '#value' => $surface === 'task' ? 'task' : '',
+    ];
+    $form['board_uuid'] = [
+      '#type' => 'hidden',
+      '#value' => $board_uuid,
     ];
     $form['reply_to'] = [
       '#type' => 'select',
@@ -165,6 +177,14 @@ final class MessageComposeForm extends FormBase {
       return;
     }
     $this->messenger()->addStatus($this->t('Mensagem enviada.'));
+    $board = (string) $form_state->getValue('board_uuid');
+    if ($board !== '' && $scope === 'task') {
+      $form_state->setRedirect('ab_ui.board_task', [
+        'uuid' => $board,
+        'task' => $target,
+      ]);
+      return;
+    }
     $surface = (string) $form_state->getValue('surface');
     if ($surface === 'task' && $scope === 'task') {
       $form_state->setRedirect('ab_ui.task_view', ['uuid' => $target], [

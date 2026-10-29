@@ -67,7 +67,7 @@ final class BoardArchiveForm extends FormBase {
       return;
     }
     $this->messenger()->addStatus($this->t('Board arquivado.'));
-    $form_state->setRedirect('ab_ui.board_view', ['uuid' => $board->uuid()]);
+    $form_state->setRedirect('ab_ui.board_tasks', ['uuid' => $board->uuid()]);
   }
 
 }

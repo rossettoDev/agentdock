@@ -4,7 +4,7 @@ O que fazer agora. O histórico com transcrições está congelado em `docs/impl
 
 **Atualizado:** 2026-10-28
 **Marco:** M9 fechado
-**Próxima história:** nenhuma neste marco. O que ficou para depois está na seção 4 de `docs/backlog-ui-m9.md`.
+**Próxima história:** US-38 em `docs/backlog-ui-m10.md` (colunas do quadro). O M9 continua fechado.
 
 ## Feito no M9
 
@@ -12,7 +12,7 @@ US-29, US-30, US-31, US-32, US-33, US-34, US-35, US-36 e US-37 estão concluída
 
 ## Última evidência
 
-US-36, 2026-10-28: `ScreenFlowUiTest` OK (1 teste, 150 asserções). PHPStan sem erros. Suíte: 170 testes, 10090 asserções; `AgentRunnerTest` e `TaskKanbanMoveUiTest` falharam juntos e passaram sozinhos.
+Ajustes do quadro, 2026-10-28: `BoardTaskPanelUiTest`, `WorkspaceBoardsUiTest`, `TaskScreensUiTest` e `ScreenFlowUiTest` OK (4 testes, 342 asserções). O link do quadro abre `/boards/{uuid}/tasks`. A tarefa selecionada fica no quadro, com a discussão. Colunas continuam as cinco do fluxo; o CRUD delas é a US-38.
 
 ## Como registrar a próxima
 

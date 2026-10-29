@@ -95,7 +95,10 @@ class TaskCreateForm extends FormBase {
       return;
     }
     $this->messenger()->addStatus($this->t('Tarefa criada.'));
-    $form_state->setRedirect('ab_ui.task_view', ['uuid' => $task->uuid()]);
+    $form_state->setRedirect('ab_ui.board_task', [
+      'uuid' => $board->uuid(),
+      'task' => $task->uuid(),
+    ]);
   }
 
   /**

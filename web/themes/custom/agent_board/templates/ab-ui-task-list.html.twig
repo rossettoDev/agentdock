@@ -7,8 +7,8 @@
  */
 #}
 {% macro card(card) %}
-  <article class="ab-card{% if card.targets or card.reorder_form %} ab-card--movable{% endif %}" data-uuid="{{ card.uuid }}"{% if card.targets or card.reorder_form %} draggable="true"{% endif %}{% if card.targets %} data-targets="{{ card.targets|join(' ') }}"{% endif %}>
-    <h4 class="ab-card__title"><a href="{{ card.url }}">{{ card.label }}</a></h4>
+  <article class="ab-card{% if card.current %} is-current{% endif %}{% if card.targets or card.reorder_form %} ab-card--movable{% endif %}" data-uuid="{{ card.uuid }}"{% if card.targets or card.reorder_form %} draggable="true"{% endif %}{% if card.targets %} data-targets="{{ card.targets|join(' ') }}"{% endif %}>
+    <h4 class="ab-card__title"><a href="{{ card.url }}"{% if card.current %} aria-current="page"{% endif %}>{{ card.label }}</a></h4>
     <p class="ab-card__meta">
       <span class="ab-badge{% if card.priority_key in ['low', 'normal', 'high', 'urgent'] %} ab-badge--{{ card.priority_key }}{% endif %}">{{ card.priority }}</span>
       {% if card.blocked %}
@@ -53,9 +53,15 @@
   {% if board_description %}
     <p>{{ board_description }}</p>
   {% endif %}
+  {% if archived %}
+    <p>{{ 'Arquivado'|t }}</p>
+  {% endif %}
+  {% if archive_form %}
+    {{ archive_form }}
+  {% endif %}
   {% if add_url %}
     <p>
-      <a class="ab-button" href="{{ add_url }}">{{ 'Criar tarefa'|t }}</a>
+      <a class="ab-button use-ajax" data-dialog-type="modal" data-dialog-options='{"width":480}' href="{{ add_url }}">{{ 'Criar tarefa'|t }}</a>
     </p>
   {% endif %}
   </div>
@@ -72,6 +78,7 @@
       <a href="{{ item.url }}"{% if item.active %} aria-current="page"{% endif %}>{{ item.label }}</a>
     {% endfor %}
   </nav>
+  <div class="ab-board-screen{% if panel %} has-panel{% endif %}">
   <div data-ab-sync="tasks" data-ab-sync-root>
   {% if cancelled_only %}
     <section class="ab-kanban-cancelled">
@@ -107,6 +114,47 @@
         </section>
       {% endfor %}
     </div>
+  {% endif %}
+  </div>
+  {% if panel %}
+    <aside class="ab-board-panel" aria-label="{{ 'Tarefa selecionada'|t }}">
+      <p class="ab-board-panel__actions">
+        <a href="{{ panel.close_url }}">{{ 'Fechar'|t }}</a>
+        <a href="{{ panel.task_url }}">{{ 'Página da tarefa'|t }}</a>
+      </p>
+      <h3>{{ panel.label }}</h3>
+      <p>{{ panel.status }}</p>
+      <p>{{ panel.priority }}</p>
+      {% if panel.owner %}
+        <p>{{ 'Responsável:'|t }} {{ panel.owner }}</p>
+      {% endif %}
+      {% if panel.due %}
+        <p>{{ 'Prazo:'|t }} {{ panel.due }}</p>
+      {% endif %}
+      {% if panel.description %}
+        <div class="ab-board-panel__text">{{ panel.description }}</div>
+      {% endif %}
+      {% if panel.criteria %}
+        <h4>{{ 'Critérios'|t }}</h4>
+        <div class="ab-board-panel__text">{{ panel.criteria }}</div>
+      {% endif %}
+      <h4>{{ 'Discussão'|t }}</h4>
+      {% if panel.messages %}
+        <ol class="ab-messages">
+          {% for message in panel.messages %}
+            <li>
+              <p>{{ message.author }} · {{ message.time }}</p>
+              {{ message.body }}
+            </li>
+          {% endfor %}
+        </ol>
+      {% else %}
+        <p>{{ panel.messages_empty }}</p>
+      {% endif %}
+      {% if panel.message_form %}
+        {{ panel.message_form }}
+      {% endif %}
+    </aside>
   {% endif %}
   </div>
 </div>

@@ -143,6 +143,9 @@ final class AbUiHooks {
           'priority' => '',
           'agent' => '',
           'filter_empty' => FALSE,
+          'archived' => FALSE,
+          'archive_form' => NULL,
+          'panel' => NULL,
         ],
       ],
       'ab_ui_task_view' => [
@@ -411,6 +414,7 @@ final class AbUiHooks {
         'url' => $tasks,
         'active' => in_array($route, [
           'ab_ui.board_tasks',
+          'ab_ui.board_task',
           'ab_ui.task_add',
           'ab_ui.task_view',
           'ab_ui.task_edit',
@@ -467,6 +471,7 @@ final class AbUiHooks {
     $boardRoutes = [
       'ab_ui.board_view',
       'ab_ui.board_tasks',
+      'ab_ui.board_task',
       'ab_ui.board_conversation',
       'ab_ui.task_add',
     ];
@@ -578,6 +583,7 @@ final class AbUiHooks {
       'ab_ui.board_add',
       'ab_ui.board_view',
       'ab_ui.board_tasks',
+      'ab_ui.board_task',
       'ab_ui.task_add',
       'ab_ui.task_view',
       'ab_ui.task_edit',
@@ -587,7 +593,7 @@ final class AbUiHooks {
       $links[] = Link::createFromRoute($this->t('Meus boards'), 'ab_ui.boards');
     }
     if ($board instanceof Board && !in_array($route, ['ab_ui.board_view'], TRUE)) {
-      $links[] = Link::createFromRoute($board->label(), 'ab_ui.board_view', [
+      $links[] = Link::createFromRoute($board->label(), 'ab_ui.board_tasks', [
         'uuid' => $board->uuid(),
       ]);
     }

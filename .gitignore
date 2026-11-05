@@ -74,6 +74,9 @@ web/sites/default/settings.local.php
 # Credenciais geradas pelo seed local. Não versionar.
 /private/
 
+# Dumps do banco local. Não versionar.
+/dumps/
+
 # Credencial do Cursor que opera o quadro. Os .example ficam no Git.
 .cursor/agentdock.env
 .cursor/agentdock.board

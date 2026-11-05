@@ -3390,9 +3390,45 @@ ausente como esperado web/modules/custom/ab_core/src/Authorization/WorkspaceAcce
 
 Nenhum PHP, rota, serviço ou teste foi alterado. PHPUnit, PHPCS e PHPStan não foram executados.
 
-**Bloqueios:** a política de memória só de workspace, sem board, não cabe no `AgentOperationGate` atual. Fica para a F2-US-29/T02.
+**Bloqueios:** a política de memória só de workspace, sem board, não cabe no `AgentOperationGate` atual. Resolvido na F2-US-29/T02 (agentes não acessam entry sem board no piloto).
 
-**Próxima ação:** F2-US-29/T02, somente após autorização. O M9 segue na US-34.
+**Próxima ação:** F2-US-29/T02 (concluída abaixo). O M9 segue na US-34.
+
+#### F2-US-29/T02 — Registrar ADRs de escopo, visibilidade, revisão, publicação e retenção
+
+**Status:** done
+**Entrega:** ADRs 003–005 e consolidado em `docs/phase2/F2-US-29-T02-politicas.md`. Aceite: matriz de acesso e política de conteúdo sensível. O módulo `ab_memory` não foi criado.
+
+**Evidências:**
+
+- `docs/adr/003-memoria-escopo-e-visibilidade.md` — fronteira workspace; visibilidade `board` (agentes via grant) vs `workspace` (somente humanos no piloto); escopos futuros `memory:read` / `memory:write` intersectando grant `read`/`write`; matriz de acesso.
+- `docs/adr/004-memoria-revisao-e-publicacao.md` — revisões imutáveis; `If-Match`; publish/archive só humano com `review`; eventos `memory.*` sem Markdown; ordem de locks do ADR 002.
+- `docs/adr/005-memoria-retencao-e-conteudo-sensivel.md` — memória durável ≠ feed 30 d; arquivo no piloto; hard delete futuro; heurística anti-segredo; conteúdo não confiável; logs sem corpo.
+- Pontos de extensão reconferidos (21 caminhos): 19 OK; `ab_memory` e `WorkspaceAccessPolicy` ausentes como esperado; correção: `AgentActorContextFactory` em `ab_agent/src/AgentActorContextFactory.php`.
+
+**Validação:**
+
+```text
+$ python3 (conferência de caminhos de extensão + existência dos ADRs)
+OK   ActorContext, WorkspaceRolePolicy, WorkspacePermission, MembershipScope,
+     WorkspaceBoundary, WorkspaceQueryScope, exceções de escopo,
+     HumanActorContextFactory, AgentOperationGate, AgentGrantManager,
+     AgentTokenScope, EventStoreInterface, EventDraft, ApiCaller, SyncReader,
+     IdempotencyService, ApiLimits, ADR 002
+OK   AgentActorContextFactory → ab_agent/src/AgentActorContextFactory.php
+AUSENTE_ESPERADO  web/modules/custom/ab_memory
+AUSENTE_ESPERADO  WorkspaceAccessPolicy.php
+OK   docs/adr/003-memoria-escopo-e-visibilidade.md
+OK   docs/adr/004-memoria-revisao-e-publicacao.md
+OK   docs/adr/005-memoria-retencao-e-conteudo-sensivel.md
+OK   docs/phase2/F2-US-29-T02-politicas.md
+```
+
+Nenhum PHP, rota, serviço ou teste de produto foi alterado. PHPUnit, PHPCS e PHPStan não foram executados (task só documental).
+
+**Bloqueios:** nenhum para a T03. Escopos `memory:*` ainda não existem no código — entram no OpenAPI/plano de migração da F2-US-29/T03.
+
+**Próxima ação:** F2-US-29/T03, somente após autorização. O M9 segue na US-34.
 
 ---
 
@@ -3400,7 +3436,7 @@ Nenhum PHP, rota, serviço ou teste foi alterado. PHPUnit, PHPCS e PHPStan não 
 
 - **Total de tasks do backlog M0–M8:** 83, todas registradas como done no corpo histórico
 - **M9:** US-29 done; US-30 done; US-31 done; US-32 done; US-33 done; US-37 done; US-34 em diante todo
-- **Fase 2:** F2-US-29/T01 done; F2-US-29/T02 em diante todo
+- **Fase 2:** F2-US-29/T01 done; F2-US-29/T02 done; F2-US-29/T03 em diante todo
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
@@ -3416,7 +3452,7 @@ Nenhum PHP, rota, serviço ou teste foi alterado. PHPUnit, PHPCS e PHPStan não 
 ## Próximos Passos
 
 1. US-34 — central de mensagens, com as threads que já existem.
-2. Fase 2, aguardando autorização: F2-US-29/T02 — ADRs de escopo, visibilidade, revisão, publicação e retenção.
+2. Fase 2, aguardando autorização: F2-US-29/T03 — OpenAPI incremental, limites, erros e plano de migração.
 
 ---
 

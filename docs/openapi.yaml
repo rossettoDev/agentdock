@@ -105,6 +105,159 @@ paths:
           $ref: '#/components/responses/Invalid'
         '428':
           $ref: '#/components/responses/PreconditionRequired'
+
+  /workspaces/{workspace_id}/boards/{board_id}/columns:
+    get:
+      operationId: listColumns
+      tags: [boards]
+      summary: List the columns of one board.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/BoardId'
+      responses:
+        '200':
+          description: Active columns in display order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColumnList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: createColumn
+      tags: [boards]
+      summary: Create a column.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/BoardId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ColumnWrite'
+      responses:
+        '201':
+          description: The created column.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColumnEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+  /workspaces/{workspace_id}/boards/{board_id}/columns/{column_id}:
+    patch:
+      operationId: renameColumn
+      tags: [boards]
+      summary: Rename a column. The key does not change.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/BoardId'
+        - $ref: '#/components/parameters/ColumnId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ColumnWrite'
+      responses:
+        '200':
+          description: The renamed column.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColumnEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+  /workspaces/{workspace_id}/boards/{board_id}/columns/{column_id}/move:
+    post:
+      operationId: moveColumn
+      tags: [boards]
+      summary: Move a column one place up or down.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/BoardId'
+        - $ref: '#/components/parameters/ColumnId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [direction]
+              properties:
+                direction:
+                  type: string
+                  enum: [up, down]
+      responses:
+        '200':
+          description: The reordered column.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColumnEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+  /workspaces/{workspace_id}/boards/{board_id}/columns/{column_id}/archive:
+    post:
+      operationId: archiveColumn
+      tags: [boards]
+      summary: Archive a custom column that has no tasks.
+      description: >
+        The five system columns stay. in_progress, in_review and done
+        remain outside human drag.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/BoardId'
+        - $ref: '#/components/parameters/ColumnId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: The archived column.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColumnEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+
   /workspaces/{workspace_id}/boards/{board_id}/tasks:
     get:
       operationId: listTasks
@@ -846,6 +999,13 @@ components:
       schema:
         type: string
         format: uuid
+    ColumnId:
+      name: column_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     TaskId:
       name: task_id
       in: path
@@ -1010,6 +1170,54 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
   schemas:
+    ColumnWrite:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+    Column:
+      type: object
+      additionalProperties: false
+      required: [id, board_id, name, key, position, archived, locked, system]
+      properties:
+        id:
+          type: string
+          format: uuid
+        board_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        key:
+          type: string
+        position:
+          type: integer
+        archived:
+          type: boolean
+        locked:
+          type: boolean
+        system:
+          type: boolean
+    ColumnEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Column'
+    ColumnList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Column'
     Problem:
       type: object
       additionalProperties: false

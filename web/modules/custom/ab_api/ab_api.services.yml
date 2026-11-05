@@ -82,3 +82,10 @@ services:
       - '@Drupal\ab_board\TaskManager'
       - '@Drupal\ab_agent\AgentOperationGate'
       - '@database'
+  Drupal\ab_api\Http\ColumnCommands:
+    arguments:
+      - '@Drupal\ab_api\Http\ApiCaller'
+      - '@Drupal\ab_api\Http\Catalog'
+      - '@Drupal\ab_api\IdempotencyService'
+      - '@Drupal\ab_board\ColumnManager'
+      - '@Drupal\ab_board\ColumnRepository'

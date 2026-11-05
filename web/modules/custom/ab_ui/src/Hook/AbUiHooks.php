@@ -145,6 +145,7 @@ final class AbUiHooks {
           'filter_empty' => FALSE,
           'archived' => FALSE,
           'archive_form' => NULL,
+          'column_form' => NULL,
           'panel' => NULL,
         ],
       ],

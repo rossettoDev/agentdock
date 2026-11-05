@@ -2,15 +2,17 @@
 
 O que fazer agora. O histórico com transcrições está congelado em `docs/implementation-status.md`. Evidência nova é uma linha aqui, sem colar a saída do PHPUnit.
 
-**Atualizado:** 2026-10-29
-**Marco:** Documentação in-site
-**Próxima história:** US-38 em `docs/backlog-ui-m10.md` (colunas do quadro).
+**Atualizado:** 2026-11-04
+**Marco:** Colunas do quadro
+**Próxima história:** a definir. US-38, em `docs/backlog-ui-m10.md`, está feita.
 
 ## Feito no M9
 
-US-29, US-30, US-31, US-32, US-33, US-34, US-35, US-36 e US-37 estão concluídas. M0–M8 estão concluídos no arquivo histórico.
+US-29, US-30, US-31, US-32, US-33, US-34, US-35, US-36, US-37 e US-38 estão concluídas. M0–M8 estão concluídos no arquivo histórico.
 
 ## Última evidência
+
+US-38, 2026-11-04: `ColumnManagerKernelTest`, `TaskTransitionKernelTest`, `BoardColumnsUiTest`, `TaskScreensUiTest`, `TaskKanbanUiTest`, `TaskKanbanMoveUiTest` e `TaskTransitionUiTest` OK. O criador gerencia as colunas no quadro; o responsável é um membro do workspace; o arraste cobre as colunas humanas e não entra em andamento, revisão ou concluída.
 
 Documentação, 2026-10-29: `WikiDocumentationTest` criado. Tipo de conteúdo wiki, vocabulário wiki_category, 7 páginas seed, View /docs, padrão Pathauto e estilização no tema. Módulo `ab_documentation` instalável via drush.
 

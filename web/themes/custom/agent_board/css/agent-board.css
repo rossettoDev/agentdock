@@ -430,6 +430,40 @@ body {
   outline: 2px solid var(--ab-focus);
 }
 
+.ab-kanban__hint {
+  margin: 0 0 8px;
+  color: var(--ab-muted);
+  font-size: 12px;
+}
+
+.ab-card[draggable="true"] {
+  cursor: grab;
+}
+
+.ab-card[draggable="true"] a {
+  -webkit-user-drag: none;
+}
+
+.ab-columns {
+  margin: 0 0 16px;
+  padding: 12px;
+  border: 1px solid var(--ab-border);
+  border-radius: 8px;
+}
+
+.ab-columns__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: end;
+  margin-bottom: 8px;
+}
+
+.ab-columns__help {
+  color: var(--ab-muted);
+  font-size: 13px;
+}
+
 .ab-kanban-filters {
   display: flex;
   flex-wrap: wrap;

@@ -8,6 +8,12 @@ config:
   database: postgres:16
   drush: ^13
 
+services:
+  appserver:
+    overrides:
+      ports:
+        - "127.0.0.1:50813:80"
+
 tooling:
   test:
     service: appserver

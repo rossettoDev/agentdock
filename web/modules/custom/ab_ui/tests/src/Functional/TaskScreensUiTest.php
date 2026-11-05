@@ -6,6 +6,7 @@ namespace Drupal\Tests\ab_ui\Functional;
 
 use Drupal\ab_board\Entity\Board;
 use Drupal\ab_board\Entity\Task;
+use Drupal\ab_core\Entity\Membership;
 use Drupal\ab_core\Entity\Workspace;
 use Drupal\ab_core\MembershipManager;
 use Drupal\Tests\BrowserTestBase;
@@ -57,9 +58,15 @@ class TaskScreensUiTest extends BrowserTestBase {
       'description' => 'Texto Ada',
     ], 'Criar board');
     $ada_board = $this->boardByName('Quadro Ada');
+    $this->container->get('current_user')->setAccount($ada);
+    $manager = $this->container->get(MembershipManager::class);
+    $this->assertInstanceOf(MembershipManager::class, $manager);
+    $manager->addMember($ada_workspace, $grace->getAccountName(), 'member');
 
     $this->drupalGet('boards/' . $ada_board->uuid() . '/tasks/add');
     $this->assertSession()->statusCodeEquals(200);
+    $this->assertSession()->selectExists('Responsável');
+    $this->assertSession()->optionExists('Responsável', $grace->getAccountName());
     $this->assertSession()->fieldNotExists('workspace');
     $this->assertSession()->fieldNotExists('status');
     $this->assertSession()->fieldNotExists('board');
@@ -72,7 +79,7 @@ class TaskScreensUiTest extends BrowserTestBase {
       'description' => $description,
       'acceptance_criteria' => 'Cabeçalho pronto',
       'priority' => 'high',
-      'human_owner' => $grace->getAccountName(),
+      'human_owner' => $grace->id(),
       'due_at' => '2026-10-20',
     ], 'Criar tarefa');
     $this->assertSession()->pageTextContains('Tarefa criada.');
@@ -118,6 +125,17 @@ class TaskScreensUiTest extends BrowserTestBase {
     $this->assertSession()->pageTextContains('A tarefa foi alterada. Recarregue e tente de novo.');
     $this->assertSession()->pageTextNotContains('Tarefa atualizada.');
     $this->assertSame('Pelo serviço', (string) $this->reload($task)->label());
+
+    $memberships = $this->container->get('entity_type.manager')->getStorage('ab_membership');
+    $membership_ids = $memberships->getQuery()
+      ->accessCheck(FALSE)
+      ->condition('workspace', $ada_workspace->id())
+      ->condition('user', $grace->id())
+      ->execute();
+    $membership = $memberships->load(reset($membership_ids));
+    $this->assertInstanceOf(Membership::class, $membership);
+    $membership->set('status', 'revoked');
+    $membership->save();
 
     $this->drupalLogin($grace);
     $this->drupalGet('workspaces/add');

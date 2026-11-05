@@ -8,7 +8,7 @@
 #}
 {% macro card(card) %}
   <article class="ab-card{% if card.current %} is-current{% endif %}{% if card.targets or card.reorder_form %} ab-card--movable{% endif %}" data-uuid="{{ card.uuid }}"{% if card.targets or card.reorder_form %} draggable="true"{% endif %}{% if card.targets %} data-targets="{{ card.targets|join(' ') }}"{% endif %}>
-    <h4 class="ab-card__title"><a href="{{ card.url }}"{% if card.current %} aria-current="page"{% endif %}>{{ card.label }}</a></h4>
+    <h4 class="ab-card__title"><a href="{{ card.url }}" draggable="false"{% if card.current %} aria-current="page"{% endif %}>{{ card.label }}</a></h4>
     <p class="ab-card__meta">
       <span class="ab-badge{% if card.priority_key in ['low', 'normal', 'high', 'urgent'] %} ab-badge--{{ card.priority_key }}{% endif %}">{{ card.priority }}</span>
       {% if card.blocked %}
@@ -59,6 +59,12 @@
   {% if archive_form %}
     {{ archive_form }}
   {% endif %}
+  {% if column_form %}
+    <details class="ab-columns" open>
+      <summary>{{ 'Colunas'|t }}</summary>
+      {{ column_form }}
+    </details>
+  {% endif %}
   {% if add_url %}
     <p>
       <a class="ab-button use-ajax" data-dialog-type="modal" data-dialog-options='{"width":480}' href="{{ add_url }}">{{ 'Criar tarefa'|t }}</a>
@@ -101,11 +107,14 @@
     {% endif %}
     <div class="ab-kanban">
       {% for column in columns %}
-        <section class="ab-kanban__column" data-status="{{ column.status }}">
+        <section class="ab-kanban__column" data-status="{{ column.status }}"{% if column.locked %} data-locked="true"{% endif %}>
           <h3>
             {{ column.label }}
             <span class="ab-kanban__count">{{ column.cards|length }}</span>
           </h3>
+          {% if column.hint %}
+            <p class="ab-kanban__hint">{{ column.hint }}</p>
+          {% endif %}
           <div class="ab-kanban__cards">
             {% for card in column.cards %}
               {{ kanban.card(card) }}

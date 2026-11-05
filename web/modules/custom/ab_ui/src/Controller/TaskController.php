@@ -6,6 +6,7 @@ namespace Drupal\ab_ui\Controller;
 
 use Drupal\ab_agent\Entity\Agent;
 use Drupal\ab_board\BoardRepository;
+use Drupal\ab_board\ColumnRepository;
 use Drupal\ab_board\Entity\Board;
 use Drupal\ab_board\Entity\Task;
 use Drupal\ab_board\TaskDayWindow;
@@ -24,6 +25,7 @@ use Drupal\ab_core\Authorization\ScopedResourceNotFoundException;
 use Drupal\ab_core\Authorization\WorkspacePermission;
 use Drupal\ab_core\Entity\Workspace;
 use Drupal\ab_ui\Form\BoardArchiveForm;
+use Drupal\ab_ui\Form\ColumnManageForm;
 use Drupal\ab_ui\Form\InputAnswerForm;
 use Drupal\ab_ui\Form\MessageComposeForm;
 use Drupal\ab_ui\Form\TaskDependencyForm;
@@ -66,6 +68,7 @@ final class TaskController implements ContainerInjectionInterface {
 
   public function __construct(
     private readonly BoardRepository $boards,
+    private readonly ColumnRepository $columns,
     private readonly TaskRepository $tasks,
     private readonly TaskDependencyManager $dependencies,
     private readonly MembershipScope $scope,
@@ -107,20 +110,41 @@ final class TaskController implements ContainerInjectionInterface {
     $agents = $this->agentsOnBoard($workspace, $tasks);
     $priority = $this->priorityQuery($request);
     $agent = $this->agentQuery($request, $agents);
+    $human = $this->columns->humanKeys($board);
+    $label_of = [];
     $columns = [];
-    foreach (self::COLUMN_STATUSES as $status) {
-      $columns[$status] = [
-        'status' => $status,
-        'label' => $this->statusLabel($status),
-        'cards' => [],
-      ];
+    $stored_columns = $this->columns->ensure($board);
+    if ($stored_columns === []) {
+      foreach (self::COLUMN_STATUSES as $status) {
+        $columns[$status] = [
+          'status' => $status,
+          'label' => $this->statusLabel($status),
+          'locked' => in_array($status, TaskTransitionPolicy::RESERVED, TRUE),
+          'hint' => $this->columnHint($status),
+          'cards' => [],
+        ];
+      }
+    }
+    else {
+      foreach ($stored_columns as $column) {
+        $status = $column->get('machine')->getString();
+        $locked = (int) $column->get('locked')->getString() === 1;
+        $label_of[$status] = $column->get('name')->getString();
+        $columns[$status] = [
+          'status' => $status,
+          'label' => $label_of[$status],
+          'locked' => $locked,
+          'hint' => $locked ? $this->columnHint($status) : '',
+          'cards' => [],
+        ];
+      }
     }
     $cancelled = [];
     foreach ($tasks as $task) {
       if (!$this->matchesFilters($task, $priority, $agent, $agents)) {
         continue;
       }
-      $card = $this->card($workspace, $board, $task, $can_write, $agents, $open);
+      $card = $this->card($workspace, $board, $task, $can_write, $agents, $open, $human);
       $status = $task->get('status')->getString();
       if ($status === 'cancelled') {
         if (!$today_only) {
@@ -150,6 +174,9 @@ final class TaskController implements ContainerInjectionInterface {
     }
     $shown = $cancelled_only ? count($cancelled) : $visible;
     $cache = $this->cacheMeta($workspace);
+    if ($board->id() !== NULL) {
+      $cache['tags'][] = 'ab_board_columns:' . $board->id();
+    }
     $cache['contexts'][] = 'url.query_args:cancelled';
     $cache['contexts'][] = 'url.query_args:today';
     $cache['contexts'][] = 'url.query_args:priority';
@@ -169,10 +196,13 @@ final class TaskController implements ContainerInjectionInterface {
       '#archive_form' => $can_manage && !$archived
         ? $this->formBuilder->getForm(BoardArchiveForm::class, $board->uuid())
         : NULL,
+      '#column_form' => $can_manage && !$archived
+        ? $this->formBuilder->getForm(ColumnManageForm::class, $board->uuid())
+        : NULL,
       '#add_url' => $can_write && !$archived ? Url::fromRoute('ab_ui.task_add', [
         'uuid' => $board->uuid(),
       ])->toString() : '',
-      '#panel' => $this->panel($board, $workspace, $open, $request, $can_write),
+      '#panel' => $this->panel($board, $workspace, $open, $request, $can_write, $label_of),
       '#columns' => $cancelled_only ? [] : $columns,
       '#cancelled' => $cancelled_only ? $cancelled : [],
       '#cancelled_only' => $cancelled_only,
@@ -214,7 +244,7 @@ final class TaskController implements ContainerInjectionInterface {
     $task = $this->visibleTask($uuid);
     $workspace = $this->workspaceOf($task);
     $can_write = $workspace instanceof Workspace && $this->canWrite($workspace);
-    $targets = (new TaskTransitionPolicy())->targets($task->get('status')->getString());
+    $targets = (new TaskTransitionPolicy())->targets($task->get('status')->getString(), $this->humanKeysOf($task));
     $board_id = $task->get('board')->getString();
     $board = $this->entityTypeManager->getStorage('ab_board')->load($board_id);
     $back = $board instanceof Board
@@ -250,7 +280,7 @@ final class TaskController implements ContainerInjectionInterface {
       '#theme' => 'ab_ui_task_view',
       '#label' => (string) $task->label(),
       '#uuid' => (string) $task->uuid(),
-      '#status' => $this->statusLabel($task->get('status')->getString()),
+      '#status' => $this->columnLabel($board instanceof Board ? $board : NULL, $task->get('status')->getString()),
       '#priority' => $this->priorityLabel($task->get('priority')->getString()),
       '#owner' => $this->ownerName($task),
       '#due' => $due,
@@ -877,6 +907,8 @@ final class TaskController implements ContainerInjectionInterface {
    *   Agents assigned to accessible tasks, keyed by uuid.
    * @param string|null $open
    *   Public id of the task selected on this page.
+   * @param string[] $human
+   *   Unlocked column keys the card may enter.
    *
    * @return array<string, mixed>
    *   Title, link, priority, due date, owner, blocked flag and move form.
@@ -888,6 +920,7 @@ final class TaskController implements ContainerInjectionInterface {
     bool $can_write,
     array $agents,
     ?string $open,
+    array $human,
   ): array {
     $agent_id = $task->get('assigned_agent')->getString();
     $agent_name = '';
@@ -898,7 +931,7 @@ final class TaskController implements ContainerInjectionInterface {
     }
     $assigned = $agent_id !== '' && $agent_id !== '0';
     $status = $task->get('status')->getString();
-    $targets = (new TaskTransitionPolicy())->targets($status);
+    $targets = (new TaskTransitionPolicy())->targets($status, $human);
     $move_form = [];
     if ($can_write && $targets !== []) {
       $move_form = $this->formBuilder->getForm(TaskTransitionForm::class, $task->uuid(), 'board');
@@ -1220,6 +1253,45 @@ final class TaskController implements ContainerInjectionInterface {
   }
 
   /**
+   * Returns the column label, or the fixed status label.
+   */
+  private function columnLabel(?Board $board, string $status): string {
+    if ($board instanceof Board) {
+      $label = $this->columns->label($board, $status);
+      if (is_string($label) && $label !== '') {
+        return $label;
+      }
+    }
+    return $this->statusLabel($status);
+  }
+
+  /**
+   * Unlocked keys for the board that owns the task.
+   *
+   * @return string[]
+   *   Machine keys a person may drag a card into.
+   */
+  private function humanKeysOf(Task $task): array {
+    $board = $this->entityTypeManager->getStorage('ab_board')->load($task->get('board')->getString());
+    if (!$board instanceof Board) {
+      return ['backlog', 'ready'];
+    }
+    return $this->columns->humanKeys($board);
+  }
+
+  /**
+   * Explains why a locked column does not accept a drag.
+   */
+  private function columnHint(string $status): string {
+    return match ($status) {
+      'in_progress' => (string) $this->t('Entra quando um agente assume a tarefa.'),
+      'in_review' => (string) $this->t('Entra quando o agente entrega.'),
+      'done' => (string) $this->t('Entra quando uma pessoa aprova.'),
+      default => '',
+    };
+  }
+
+  /**
    * Returns the Portuguese label of a status.
    */
   private function statusLabel(string $status): string {
@@ -1278,6 +1350,8 @@ final class TaskController implements ContainerInjectionInterface {
    *   The current request.
    * @param bool $canWrite
    *   Whether the account can comment.
+   * @param array<string, string> $labels
+   *   Column labels keyed by machine name.
    *
    * @return array<string, mixed>|null
    *   Title, sanitized text, messages and the compose form.
@@ -1288,6 +1362,7 @@ final class TaskController implements ContainerInjectionInterface {
     ?string $taskUuid,
     Request $request,
     bool $canWrite,
+    array $labels = [],
   ): ?array {
     if ($taskUuid === NULL || $taskUuid === '') {
       return NULL;
@@ -1310,7 +1385,7 @@ final class TaskController implements ContainerInjectionInterface {
     }
     return [
       'label' => (string) $task->label(),
-      'status' => $this->statusLabel($task->get('status')->getString()),
+      'status' => $labels[$task->get('status')->getString()] ?? $this->statusLabel($task->get('status')->getString()),
       'priority' => $this->priorityLabel($task->get('priority')->getString()),
       'owner' => $this->ownerName($task),
       'due' => $this->dueLabel($workspace, $task->get('due_at')->getString()),

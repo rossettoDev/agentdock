@@ -1,0 +1,1 @@
+<?php $t=\Drupal::entityTypeManager()->getStorage('ab_task')->load(95); $e=\Drupal::entityTypeManager()->getStorage('ab_execution')->load(52); echo 'task95='.$t->get('status')->value.' exec52='.$e->get('status')->value.PHP_EOL;

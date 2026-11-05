@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\ab_api\Controller;
 
 use Drupal\ab_api\Http\Catalog;
+use Drupal\ab_api\Http\ColumnCommands;
 use Drupal\ab_api\Http\TaskCommands;
 use Drupal\ab_api\StoredResponse;
 use Drupal\Core\Controller\ControllerBase;
@@ -25,6 +26,8 @@ final class ApiController extends ControllerBase {
     private readonly Catalog $catalog,
     #[Autowire(service: TaskCommands::class)]
     private readonly TaskCommands $commands,
+    #[Autowire(service: ColumnCommands::class)]
+    private readonly ColumnCommands $columns,
   ) {}
 
   /**
@@ -46,6 +49,43 @@ final class ApiController extends ControllerBase {
    */
   public function createBoard(Request $request, string $workspace_id): JsonResponse {
     return $this->stored($this->commands->createBoard($request, $workspace_id));
+  }
+
+  /**
+   * Lists columns.
+   */
+  public function columns(Request $request, string $workspace_id, string $board_id): JsonResponse {
+    return new JsonResponse([
+      'data' => $this->columns->list($request, $workspace_id, $board_id),
+    ]);
+  }
+
+  /**
+   * Creates a column.
+   */
+  public function createColumn(Request $request, string $workspace_id, string $board_id): JsonResponse {
+    return $this->stored($this->columns->create($request, $workspace_id, $board_id));
+  }
+
+  /**
+   * Renames a column.
+   */
+  public function renameColumn(Request $request, string $workspace_id, string $board_id, string $column_id): JsonResponse {
+    return $this->stored($this->columns->rename($request, $workspace_id, $board_id, $column_id));
+  }
+
+  /**
+   * Moves a column one place.
+   */
+  public function moveColumn(Request $request, string $workspace_id, string $board_id, string $column_id): JsonResponse {
+    return $this->stored($this->columns->move($request, $workspace_id, $board_id, $column_id));
+  }
+
+  /**
+   * Archives a custom column.
+   */
+  public function archiveColumn(Request $request, string $workspace_id, string $board_id, string $column_id): JsonResponse {
+    return $this->stored($this->columns->archive($request, $workspace_id, $board_id, $column_id));
   }
 
   /**

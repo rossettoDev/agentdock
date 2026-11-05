@@ -9,7 +9,9 @@ use Drupal\Core\Entity\ContentEntityBase;
 use Drupal\Core\Entity\EntityStorageException;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Entity\EntityTypeInterface;
+use Drupal\Core\Entity\FieldableEntityInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
+use Drupal\Core\Field\FieldStorageDefinitionInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 
 /**
@@ -81,14 +83,7 @@ class Task extends ContentEntityBase {
       ->setLabel(new TranslatableMarkup('Status'))
       ->setRequired(TRUE)
       ->setDefaultValue('backlog')
-      ->setSetting('allowed_values', [
-        'backlog' => 'Backlog',
-        'ready' => 'Ready',
-        'in_progress' => 'In progress',
-        'in_review' => 'In review',
-        'done' => 'Done',
-        'cancelled' => 'Cancelled',
-      ]);
+      ->setSetting('allowed_values_function', '\Drupal\ab_board\Entity\Task::statusAllowedValues');
 
     $fields['priority'] = BaseFieldDefinition::create('list_string')
       ->setLabel(new TranslatableMarkup('Priority'))
@@ -142,6 +137,41 @@ class Task extends ContentEntityBase {
       ->setLabel(new TranslatableMarkup('Changed'));
 
     return $fields;
+  }
+
+  /**
+   * Allowed task statuses, plus the columns of the board when it is known.
+   *
+   * @return array<string, string>
+   *   Stored value and label.
+   */
+  public static function statusAllowedValues(FieldStorageDefinitionInterface $definition, ?FieldableEntityInterface $entity = NULL, bool &$cacheable = TRUE): array {
+    $cacheable = FALSE;
+    $values = [
+      'backlog' => 'Backlog',
+      'ready' => 'Ready',
+      'in_progress' => 'In progress',
+      'in_review' => 'In review',
+      'done' => 'Done',
+      'cancelled' => 'Cancelled',
+    ];
+    if ($definition->getName() !== 'status') {
+      return $values;
+    }
+    if (!\Drupal::database()->schema()->tableExists('ab_column')) {
+      return $values;
+    }
+    $storage = \Drupal::entityTypeManager()->getStorage('ab_column');
+    $query = $storage->getQuery()->accessCheck(FALSE)->condition('archived', 0);
+    if ($entity instanceof self && $entity->get('board')->getString() !== '') {
+      $query->condition('board', $entity->get('board')->getString());
+    }
+    foreach ($storage->loadMultiple($query->execute()) as $column) {
+      if ($column instanceof Column) {
+        $values[$column->get('machine')->getString()] = $column->get('name')->getString();
+      }
+    }
+    return $values;
   }
 
   /**

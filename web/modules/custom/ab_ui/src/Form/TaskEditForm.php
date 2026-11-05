@@ -11,7 +11,6 @@ use Drupal\ab_core\Authorization\ScopedResourceNotFoundException;
 use Drupal\ab_core\Entity\Workspace;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Http\Exception\CacheableNotFoundHttpException;
-use Drupal\user\UserInterface;
 
 /**
  * Edits the whitelist fields of one readable task.
@@ -46,9 +45,9 @@ final class TaskEditForm extends TaskCreateForm {
       'description' => $task->get('description')->getString(),
       'acceptance_criteria' => $task->get('acceptance_criteria')->getString(),
       'priority' => $task->get('priority')->getString(),
-      'human_owner' => $this->ownerName($task),
+      'human_owner' => $task->get('human_owner')->getString(),
       'due_at' => $this->dueValue($workspace, $task->get('due_at')->getString()),
-    ]);
+    ], $this->ownerOptions($workspace));
     $form['actions'] = ['#type' => 'actions'];
     $form['actions']['submit'] = [
       '#type' => 'submit',
@@ -75,7 +74,7 @@ final class TaskEditForm extends TaskCreateForm {
         'description' => (string) $form_state->getValue('description'),
         'acceptance_criteria' => (string) $form_state->getValue('acceptance_criteria'),
         'priority' => (string) $form_state->getValue('priority'),
-        'human_owner' => $this->ownerId((string) $form_state->getValue('human_owner')),
+        'human_owner' => $this->ownerId((string) $form_state->getValue('human_owner'), $workspace),
         'due_at' => $this->dueTimestamp($workspace, (string) $form_state->getValue('due_at')),
       ], (int) $form_state->getValue('version'));
     }
@@ -120,18 +119,6 @@ final class TaskEditForm extends TaskCreateForm {
       throw new CacheableNotFoundHttpException($this->cache(NULL));
     }
     return $workspace;
-  }
-
-  /**
-   * Returns the responsible account name.
-   */
-  private function ownerName(Task $task): string {
-    $id = $task->get('human_owner')->getString();
-    if ($id === '') {
-      return '';
-    }
-    $user = $this->entityTypeManager->getStorage('user')->load($id);
-    return $user instanceof UserInterface ? $user->getAccountName() : '';
   }
 
   /**

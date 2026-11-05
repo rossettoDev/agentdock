@@ -6,6 +6,8 @@
  */
 
 use Drupal\ab_board\BoardSchemaInstaller;
+use Drupal\ab_board\ColumnSchemaInstaller;
+use Drupal\ab_board\Entity\Board;
 use Drupal\ab_board\TaskDependencySchemaInstaller;
 use Drupal\ab_board\TaskSchemaInstaller;
 
@@ -15,6 +17,7 @@ use Drupal\ab_board\TaskSchemaInstaller;
 function ab_board_install(): void {
   BoardSchemaInstaller::install();
   TaskSchemaInstaller::install();
+  ColumnSchemaInstaller::install();
 }
 
 /**
@@ -83,4 +86,27 @@ function ab_board_schema(): array {
  */
 function ab_board_update_11003(): string {
   return TaskDependencySchemaInstaller::installMissing();
+}
+
+/**
+ * Installs board columns and lets a task status name a custom column.
+ */
+function ab_board_update_11004(): string {
+  $installed = ColumnSchemaInstaller::install();
+  $manager = \Drupal::entityDefinitionUpdateManager();
+  $definitions = \Drupal::service('entity_field.manager')->getFieldStorageDefinitions('ab_task');
+  if (isset($definitions['status'])) {
+    $manager->updateFieldStorageDefinition($definitions['status']);
+  }
+  $storage = \Drupal::entityTypeManager()->getStorage('ab_board');
+  $repository = \Drupal::service('Drupal\ab_board\ColumnRepository');
+  $count = 0;
+  $ids = $storage->getQuery()->accessCheck(FALSE)->execute();
+  foreach ($storage->loadMultiple($ids) as $board) {
+    if ($board instanceof Board) {
+      $repository->ensure($board);
+      $count++;
+    }
+  }
+  return $installed . ' Seeded columns for ' . $count . ' boards.';
 }

@@ -40,7 +40,7 @@
 
         board.addEventListener('dragstart', function (event) {
           const card = event.target.closest('[data-uuid]');
-          if (!card || event.target.closest('button, summary, a, input, select')) {
+          if (!card || event.target.closest('button, summary, input, select, textarea')) {
             event.preventDefault();
             return;
           }

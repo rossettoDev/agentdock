@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\ab_ui\Form;
 
+use Drupal\ab_board\ColumnRepository;
 use Drupal\ab_board\Entity\Board;
 use Drupal\ab_board\Entity\Task;
 use Drupal\ab_board\TaskManager;
@@ -35,6 +36,7 @@ final class TaskTransitionForm extends FormBase {
     private readonly TaskManager $tasks,
     private readonly TaskRepository $repository,
     private readonly EntityTypeManagerInterface $entityTypeManager,
+    private readonly ColumnRepository $columns,
   ) {
     $this->policy = new TaskTransitionPolicy();
   }
@@ -60,6 +62,15 @@ final class TaskTransitionForm extends FormBase {
       return $form;
     }
     $from = $task->get('status')->getString();
+    $human = ['backlog', 'ready'];
+    $labels = [];
+    $board = $this->boardOf($task);
+    if ($board instanceof Board) {
+      $human = $this->columns->humanKeys($board);
+      foreach ($this->columns->ensure($board) as $column) {
+        $labels[$column->get('machine')->getString()] = $column->get('name')->getString();
+      }
+    }
     $form['#id'] = 'ab-ui-task-transition-' . $task_uuid;
     $form['task_uuid'] = [
       '#type' => 'hidden',
@@ -76,10 +87,10 @@ final class TaskTransitionForm extends FormBase {
       '#default_value' => $task->get('version')->getString(),
     ];
     $form['actions'] = ['#type' => 'actions'];
-    foreach ($this->policy->targets($from) as $target) {
+    foreach ($this->policy->targets($from, $human) as $target) {
       $form['actions'][$target] = [
         '#type' => 'submit',
-        '#value' => $this->buttonLabel($from, $target),
+        '#value' => $this->buttonLabel($from, $target, $labels[$target] ?? ''),
         '#name' => 'transition_' . $target,
         '#task_status' => $target,
         '#attributes' => ['class' => ['ab-button']],
@@ -156,9 +167,21 @@ final class TaskTransitionForm extends FormBase {
   }
 
   /**
+   * Loads the board stored on the task.
+   */
+  private function boardOf(Task $task): ?Board {
+    $board = $this->entityTypeManager->getStorage('ab_board')->load($task->get('board')->getString());
+    return $board instanceof Board ? $board : NULL;
+  }
+
+  /**
    * Returns the button label for one allowed target.
    */
-  private function buttonLabel(string $from, string $target): string {
+  private function buttonLabel(string $from, string $target, string $name = ''): string {
+    $custom = $name !== '' && !in_array($target, ['backlog', 'ready', 'cancelled'], TRUE);
+    if ($custom) {
+      return $name;
+    }
     if ($target === 'ready') {
       return $from === 'done'
         ? (string) $this->t('Reabrir')

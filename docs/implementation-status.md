@@ -3351,10 +3351,56 @@ Em `/agents` a sidebar mede 196px e a barra 60px. Não há busca no cabeçalho n
 
 ---
 
+## Fase 2 — Memória compartilhada
+
+Fonte: `docs/backlog-phase2.md` e `docs/architecture-phase2.md`. Os IDs US-29 a US-37 repetem histórias do M9. O prefixo **F2-** distingue os registros. Nenhuma entrada do M0–M9 foi reaberta.
+
+### F2-US-29 — Definir políticas de memória
+
+**Status:** em andamento
+**Objetivo:** Fechar escopo, visibilidade, revisão, publicação e retenção antes do módulo `ab_memory`.
+
+#### F2-US-29/T01 — Inventariar serviços existentes e documentar pontos de extensão
+
+**Status:** done
+**Entrega:** Inventário em `docs/phase2/F2-US-29-T01-inventario.md`. O módulo `ab_memory` não foi criado. A matriz visual `docs/US-29-T01-matriz.md` permanece a entrega do M9.
+
+**Evidências:**
+
+Serviços conferidos no código e reutilizáveis pelo módulo futuro:
+
+- `ActorContext`, `HumanActorContextFactory`, `WorkspaceRolePolicy`, `MembershipScope`, `WorkspaceBoundary`, `WorkspaceQueryScope`
+- `AgentActorContextFactory`, `AgentGrantManager`, `AgentOperationGate`, `AgentTokenScope`
+- `EventStoreInterface`, `EventDraft`, `OutboxProcessor`; filtro de feed em `SyncReader`
+- `ApiCaller`, `IdempotencyService`, `ApiLimits`, `ProblemDetails`, `ApiExceptionSubscriber`
+- `WorkspaceContext`, `TaskMarkdown`
+- `ToolCatalog`, `ToolGateway`, `Environment` em `tools/mcp-adapter`
+
+`WorkspaceAccessPolicy` não existe. O `ActorContext` do agente nasce com permissões vazias; a autorização do agente é o gate. Não há grant sem board nem escopo `memory:*`. `ab_memory` ainda não existe.
+
+**Validação:**
+
+```text
+$ python3 (conferência dos 45 caminhos citados no inventário)
+arquivos conferidos: 45
+ausentes: 0
+ausente como esperado web/modules/custom/ab_memory
+ausente como esperado web/modules/custom/ab_core/src/Authorization/WorkspaceAccessPolicy.php
+```
+
+Nenhum PHP, rota, serviço ou teste foi alterado. PHPUnit, PHPCS e PHPStan não foram executados.
+
+**Bloqueios:** a política de memória só de workspace, sem board, não cabe no `AgentOperationGate` atual. Fica para a F2-US-29/T02.
+
+**Próxima ação:** F2-US-29/T02, somente após autorização. O M9 segue na US-34.
+
+---
+
 ## Estatísticas
 
 - **Total de tasks do backlog M0–M8:** 83, todas registradas como done no corpo histórico
 - **M9:** US-29 done; US-30 done; US-31 done; US-32 done; US-33 done; US-37 done; US-34 em diante todo
+- **Fase 2:** F2-US-29/T01 done; F2-US-29/T02 em diante todo
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
@@ -3370,6 +3416,7 @@ Em `/agents` a sidebar mede 196px e a barra 60px. Não há busca no cabeçalho n
 ## Próximos Passos
 
 1. US-34 — central de mensagens, com as threads que já existem.
+2. Fase 2, aguardando autorização: F2-US-29/T02 — ADRs de escopo, visibilidade, revisão, publicação e retenção.
 
 ---
 

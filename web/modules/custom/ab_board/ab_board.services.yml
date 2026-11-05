@@ -14,6 +14,23 @@ services:
       - '@Drupal\ab_core\Authorization\MembershipScope'
       - '@Drupal\ab_core\Authorization\HumanActorContextFactory'
       - '@Drupal\ab_event\EventStoreInterface'
+  Drupal\ab_board\ColumnRepository:
+    arguments:
+      - '@current_user'
+      - '@entity_type.manager'
+      - '@Drupal\ab_core\Authorization\MembershipScope'
+      - '@Drupal\ab_core\UuidLookup'
+      - '@database'
+  Drupal\ab_board\ColumnManager:
+    arguments:
+      - '@database'
+      - '@entity_type.manager'
+      - '@current_user'
+      - '@Drupal\ab_core\Authorization\MembershipScope'
+      - '@Drupal\ab_core\Authorization\HumanActorContextFactory'
+      - '@Drupal\ab_event\EventStoreInterface'
+      - '@cache_tags.invalidator'
+      - '@Drupal\ab_board\ColumnRepository'
   Drupal\ab_board\TaskManager:
     arguments:
       - '@database'
@@ -22,6 +39,7 @@ services:
       - '@Drupal\ab_core\Authorization\MembershipScope'
       - '@Drupal\ab_core\Authorization\HumanActorContextFactory'
       - '@Drupal\ab_event\EventStoreInterface'
+      - '@Drupal\ab_board\ColumnRepository'
   Drupal\ab_board\TaskDependencyManager:
     arguments:
       - '@database'

@@ -56,6 +56,7 @@ class TaskManager {
     private readonly MembershipScope $scope,
     private readonly HumanActorContextFactory $actors,
     private readonly EventStoreInterface $events,
+    private readonly ?ColumnRepository $columns = NULL,
   ) {}
 
   /**
@@ -189,7 +190,8 @@ class TaskManager {
   public function transition(Task $task, string $target, int $expectedVersion): Task {
     $workspace = $this->workspaceOfTask($task);
     $this->assertWrite($workspace);
-    $this->assertHumanTarget($target);
+    $board = $this->boardOf($task);
+    $this->assertHumanTarget($board, $target);
     $transaction = $this->database->startTransaction();
     try {
       $this->lockWorkspace($workspace);
@@ -205,7 +207,8 @@ class TaskManager {
         throw new TaskTransitionRejectedException('An active execution owns this task.');
       }
       $from = $current->get('status')->getString();
-      if (!$this->transitionPolicy()->allows($from, $target)) {
+      $human = $this->humanKeys($board);
+      if (!$this->transitionPolicy()->allows($from, $target, $human)) {
         throw new TaskTransitionRejectedException('That status change is not a human transition.');
       }
       $current->set('status', $target);
@@ -605,22 +608,28 @@ class TaskManager {
   /**
    * Refuses statuses that belong to execution or approval.
    */
-  private function assertHumanTarget(string $target): void {
-    $known = [
-      'backlog',
-      'ready',
-      'in_progress',
-      'in_review',
-      'done',
-      'cancelled',
-    ];
-    if (!in_array($target, $known, TRUE)) {
-      throw new TaskTransitionRejectedException('That status is unknown.');
-    }
-    $reserved = in_array($target, TaskTransitionPolicy::RESERVED, TRUE);
-    if ($reserved) {
+  private function assertHumanTarget(Board $board, string $target): void {
+    if (in_array($target, TaskTransitionPolicy::RESERVED, TRUE)) {
       throw new TaskTransitionRejectedException('Execution status is not a human transition.');
     }
+    $known = ['backlog', 'ready', 'cancelled'];
+    if (in_array($target, $known, TRUE) || in_array($target, $this->humanKeys($board), TRUE)) {
+      return;
+    }
+    throw new TaskTransitionRejectedException('That status is unknown.');
+  }
+
+  /**
+   * Unlocked column keys. The original pair when columns are absent.
+   *
+   * @return string[]
+   *   Machine keys a person may drag a card into.
+   */
+  private function humanKeys(Board $board): array {
+    if (!$this->columns instanceof ColumnRepository) {
+      return ['backlog', 'ready'];
+    }
+    return $this->columns->humanKeys($board);
   }
 
   /**

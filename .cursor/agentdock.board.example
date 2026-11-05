@@ -1,0 +1,3 @@
+# Copie para .cursor/agentdock.board. So o UUID do quadro, sem o token.
+# O UUID esta na URL /boards/{uuid}.
+BOARD_ID=

@@ -12,6 +12,7 @@ use Drupal\ab_core\Authorization\MembershipScope;
 use Drupal\ab_core\Authorization\ScopedOperationDeniedException;
 use Drupal\ab_core\Authorization\ScopedResourceNotFoundException;
 use Drupal\ab_core\Authorization\WorkspacePermission;
+use Drupal\ab_core\Entity\Membership;
 use Drupal\ab_core\Entity\Workspace;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -19,6 +20,7 @@ use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Http\Exception\CacheableAccessDeniedHttpException;
 use Drupal\Core\Http\Exception\CacheableNotFoundHttpException;
+use Drupal\user\UserInterface;
 
 /**
  * Creates a task on a board the current user can edit.
@@ -52,7 +54,7 @@ class TaskCreateForm extends FormBase {
       '#type' => 'hidden',
       '#value' => $board->uuid(),
     ];
-    $this->fields($form, NULL);
+    $this->fields($form, NULL, $this->ownerOptions($workspace));
     $form['actions'] = ['#type' => 'actions'];
     $form['actions']['submit'] = [
       '#type' => 'submit',
@@ -78,7 +80,7 @@ class TaskCreateForm extends FormBase {
         'description' => (string) $form_state->getValue('description'),
         'acceptance_criteria' => (string) $form_state->getValue('acceptance_criteria'),
         'priority' => (string) $form_state->getValue('priority'),
-        'human_owner' => $this->ownerId((string) $form_state->getValue('human_owner')),
+        'human_owner' => $this->ownerId((string) $form_state->getValue('human_owner'), $workspace),
         'due_at' => $this->dueTimestamp($workspace, (string) $form_state->getValue('due_at')),
       ]);
     }
@@ -108,8 +110,10 @@ class TaskCreateForm extends FormBase {
    *   Form structure.
    * @param array<string, mixed>|null $defaults
    *   Stored values for an edit, or NULL when creating.
+   * @param array<string, string> $owners
+   *   Active workspace members, keyed by user id.
    */
-  protected function fields(array &$form, ?array $defaults): void {
+  protected function fields(array &$form, ?array $defaults, array $owners = []): void {
     $form['title'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Título'),
@@ -141,10 +145,11 @@ class TaskCreateForm extends FormBase {
       '#default_value' => $defaults['priority'] ?? 'normal',
     ];
     $form['human_owner'] = [
-      '#type' => 'textfield',
+      '#type' => 'select',
       '#title' => $this->t('Responsável'),
-      '#maxlength' => 60,
-      '#default_value' => $defaults['human_owner'] ?? '',
+      '#description' => $this->t('Membros do workspace deste quadro.'),
+      '#options' => ['' => $this->t('Nenhum')] + $owners,
+      '#default_value' => (string) ($defaults['human_owner'] ?? ''),
     ];
     $form['due_at'] = [
       '#type' => 'date',
@@ -154,23 +159,60 @@ class TaskCreateForm extends FormBase {
   }
 
   /**
-   * Resolves a username to an active account id.
+   * Resolves a member id. An empty choice stores no owner.
    */
-  protected function ownerId(string $name): ?int {
-    $name = trim($name);
-    if ($name === '') {
+  protected function ownerId(string $value, Workspace $workspace): ?int {
+    $value = trim($value);
+    if ($value === '') {
       return NULL;
     }
-    $ids = $this->entityTypeManager->getStorage('user')->getQuery()
-      ->accessCheck(FALSE)
-      ->condition('name', $name)
-      ->condition('status', 1)
-      ->execute();
-    $id = reset($ids);
-    if ($id === FALSE) {
+    if (preg_match('/^[1-9][0-9]*$/', $value) !== 1) {
       throw new \InvalidArgumentException('Human owner was not found.');
     }
-    return (int) $id;
+    $id = (int) $value;
+    $ids = $this->entityTypeManager->getStorage('ab_membership')->getQuery()
+      ->accessCheck(FALSE)
+      ->condition('workspace', $workspace->id())
+      ->condition('user', $id)
+      ->condition('status', 'active')
+      ->execute();
+    if ($ids === []) {
+      throw new \InvalidArgumentException('Human owner was not found.');
+    }
+    $user = $this->entityTypeManager->getStorage('user')->load($id);
+    $active = $user instanceof UserInterface && (int) $user->get('status')->getString() === 1;
+    if (!$active) {
+      throw new \InvalidArgumentException('Human owner was not found.');
+    }
+    return $id;
+  }
+
+  /**
+   * Active members of the workspace, keyed by user id.
+   *
+   * @return array<string, string>
+   *   User id and display name.
+   */
+  protected function ownerOptions(Workspace $workspace): array {
+    $storage = $this->entityTypeManager->getStorage('ab_membership');
+    $ids = $storage->getQuery()
+      ->accessCheck(FALSE)
+      ->condition('workspace', $workspace->id())
+      ->condition('status', 'active')
+      ->execute();
+    $options = [];
+    foreach ($storage->loadMultiple($ids) as $membership) {
+      if (!$membership instanceof Membership) {
+        continue;
+      }
+      $uid = $membership->get('user')->getString();
+      $user = $this->entityTypeManager->getStorage('user')->load($uid);
+      if ($user instanceof UserInterface && (int) $user->get('status')->getString() === 1) {
+        $options[$uid] = $user->getDisplayName();
+      }
+    }
+    asort($options);
+    return $options;
   }
 
   /**

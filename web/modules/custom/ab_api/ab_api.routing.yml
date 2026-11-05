@@ -25,6 +25,54 @@ ab_api.boards.create:
     # The controller returns 401 when the caller has no credential.
     _access: 'TRUE'
 
+ab_api.columns:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/boards/{board_id}/columns'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\ApiController::columns'
+  methods: [GET]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+
+ab_api.columns.create:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/boards/{board_id}/columns'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\ApiController::createColumn'
+  methods: [POST]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+
+ab_api.columns.rename:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/boards/{board_id}/columns/{column_id}'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\ApiController::renameColumn'
+  methods: [PATCH]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+    column_id: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+
+ab_api.columns.move:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/boards/{board_id}/columns/{column_id}/move'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\ApiController::moveColumn'
+  methods: [POST]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+    column_id: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+
+ab_api.columns.archive:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/boards/{board_id}/columns/{column_id}/archive'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\ApiController::archiveColumn'
+  methods: [POST]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+    column_id: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+
 ab_api.tasks:
   path: '/api/agent-board/v1/workspaces/{workspace_id}/boards/{board_id}/tasks'
   defaults:

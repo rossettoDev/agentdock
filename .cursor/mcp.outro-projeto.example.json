@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "agentdock": {
+      "command": "php",
+      "args": ["/CAMINHO/agentdock-cursor/tools/mcp-adapter/cursor.php"]
+    }
+  }
+}

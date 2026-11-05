@@ -1,17 +1,23 @@
 openapi: 3.0.3
 info:
   title: AgentDock API
-  version: 1.0.0
+  version: 1.1.0
   license:
     name: GPL-2.0-or-later
     url: https://www.gnu.org/licenses/gpl-2.0.html
   description: >
     HTTP contract for AgentDock. Dates are ISO 8601 UTC. Page size defaults
     to 50 and cannot exceed 100. A body above 256 KiB returns 413. A message
-    body cannot exceed 16 KiB. The actor comes from authentication, never
-    from the payload. A resource outside the workspace is 404. A forbidden
-    operation on a visible resource is 403. Errors are problem+json and do
-    not include a stack trace. Responses use Cache-Control private, no-store.
+    body cannot exceed 16 KiB. A memory revision body cannot exceed 64 KiB.
+    A memory title cannot exceed 255 characters. A memory search query cannot
+    exceed 256 characters and each excerpt cannot exceed 480 characters. The
+    actor comes from authentication, never from the payload. A resource
+    outside the workspace is 404. A forbidden operation on a visible resource
+    is 403. Errors are problem+json and do not include a stack trace.
+    Responses use Cache-Control private, no-store. Version 1.1.0 adds the
+    memory paths under the same /api/agent-board/v1 base without removing or
+    renaming existing operations. Agent tokens may carry memory:read and
+    memory:write in addition to the Phase 1 scopes.
 servers:
   - url: /api/agent-board/v1
 tags:
@@ -27,6 +33,11 @@ tags:
     description: Conversations and structured mentions.
   - name: events
     description: Incremental events and the agent inbox.
+  - name: memory
+    description: >
+      Shared workspace memory. Agents need board grants plus memory:read or
+      memory:write. Publish and archive are human-only. Export is not in this
+      contract revision.
 security:
   - bearerAuth: []
   - cookieAuth: []
@@ -954,13 +965,312 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  /workspaces/{workspace_id}/memory:
+    get:
+      operationId: searchMemory
+      tags: [memory]
+      summary: Search authorized memory entries.
+      description: >
+        Default search returns published entries only. Filters never widen
+        the caller's scope. Agents without a board grant cannot discover
+        workspace-only entries. Requires human read or agent memory:read
+        on the board filter when the caller is an agent.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/MemoryBoard'
+        - $ref: '#/components/parameters/MemoryQuery'
+        - $ref: '#/components/parameters/MemoryKindFilter'
+        - $ref: '#/components/parameters/MemoryStatusFilter'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Authorized hits. An empty list is still 200.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemorySearchPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '429':
+          $ref: '#/components/responses/TooMany'
+    post:
+      operationId: createMemoryDraft
+      tags: [memory]
+      summary: Create a memory draft.
+      description: >
+        Creates status draft. Rejects author_id, agent_id, workspace_id and
+        status in the body. Agents must supply board_id for a board they can
+        write with memory:write. Humans may omit board_id for workspace
+        visibility. Obvious secret patterns return 422. Does not claim a
+        task or touch a lease.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemoryCreate'
+      responses:
+        '201':
+          description: The created draft.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '429':
+          $ref: '#/components/responses/TooMany'
+
+  /workspaces/{workspace_id}/memory/{memory_id}:
+    get:
+      operationId: getMemory
+      tags: [memory]
+      summary: Read one memory entry and its current revision.
+      description: >
+        Agents need memory:read and a board grant when the entry has a
+        board. Workspace-only entries are human-scoped. Agents cannot read
+        drafts.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/MemoryId'
+      responses:
+        '200':
+          description: The memory entry.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooMany'
+    patch:
+      operationId: reviseMemory
+      tags: [memory]
+      summary: Create a new draft revision.
+      description: >
+        Appends an immutable revision. Requires If-Match. Rejects
+        author_id, agent_id, workspace_id, board_id and status. Status
+        changes use publish or archive.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/MemoryId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemoryPatch'
+      responses:
+        '200':
+          description: The entry after the new revision.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '429':
+          $ref: '#/components/responses/TooMany'
+
+  /workspaces/{workspace_id}/memory/{memory_id}/publish:
+    post:
+      operationId: publishMemory
+      tags: [memory]
+      summary: Publish a draft memory entry.
+      description: >
+        Human-only. Requires review permission. Agents receive 403 on a
+        visible entry or 404 when outside scope. Does not change lease or
+        task state.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/MemoryId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemoryStatusChange'
+      responses:
+        '200':
+          description: The published entry.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '429':
+          $ref: '#/components/responses/TooMany'
+
+  /workspaces/{workspace_id}/memory/{memory_id}/archive:
+    post:
+      operationId: archiveMemory
+      tags: [memory]
+      summary: Archive a memory entry.
+      description: >
+        Human-only. Removes the entry from default search. Revisions remain
+        readable by authorized humans. Hard delete is outside this contract.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/MemoryId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemoryStatusChange'
+      responses:
+        '200':
+          description: The archived entry.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '422':
+          $ref: '#/components/responses/Invalid'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '429':
+          $ref: '#/components/responses/TooMany'
+
+  /workspaces/{workspace_id}/memory/{memory_id}/revisions:
+    get:
+      operationId: listMemoryRevisions
+      tags: [memory]
+      summary: List immutable revisions of one memory entry.
+      description: >
+        History for an entry the caller can read. Agents with memory:read
+        see revisions of published board entries only.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/MemoryId'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Revision page.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryRevisionPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooMany'
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: ab_<public_id>.<secret>
-      description: Agent token. The query string is never accepted.
+      description: >
+        Agent token. The query string is never accepted. Phase 1 scopes remain
+        valid. Additive scopes memory:read and memory:write are required for
+        memory routes; existing tokens without them receive 403/404 until
+        rotated.
     cookieAuth:
       type: apiKey
       in: cookie
@@ -981,7 +1291,9 @@ components:
         type: integer
         minimum: 1
     ETag:
-      description: Quoted task version the caller must send back as If-Match.
+      description: >
+        Quoted optimistic version of the resource the caller must send back
+        as If-Match (task or memory entry).
       schema:
         type: string
   parameters:
@@ -1081,11 +1393,52 @@ components:
       in: header
       required: true
       description: >
-        Quoted task version the client last read. A missing or weak header
-        is 428. A version that is not the stored one is 412. The body
-        version must be the same integer.
+        Quoted optimistic version the client last read (task or memory). A
+        missing or weak header is 428. A version that is not the stored one
+        is 412. When the body also carries version, it must be the same
+        integer.
       schema:
         type: string
+    MemoryId:
+      name: memory_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    MemoryBoard:
+      name: board
+      in: query
+      required: false
+      description: >
+        Restrict results to one board. Agents should pass a board they can
+        read; omitting it does not reveal workspace-only entries to agents.
+      schema:
+        type: string
+        format: uuid
+    MemoryQuery:
+      name: q
+      in: query
+      required: false
+      description: Lexical search string.
+      schema:
+        type: string
+        maxLength: 256
+    MemoryKindFilter:
+      name: kind
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/MemoryKind'
+    MemoryStatusFilter:
+      name: status
+      in: query
+      required: false
+      description: >
+        Defaults to published for search. Agents may only use published.
+        Humans with review may request draft or archived.
+      schema:
+        $ref: '#/components/schemas/MemoryStatus'
     IdempotencyKey:
       name: Idempotency-Key
       in: header
@@ -1785,5 +2138,268 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/InboxItem'
+        page:
+          $ref: '#/components/schemas/Page'
+    MemoryKind:
+      type: string
+      enum: [decision, fact, procedure, lesson, summary]
+    MemoryStatus:
+      type: string
+      enum: [draft, published, archived]
+    MemorySourceType:
+      type: string
+      enum: [manual, task, execution, message]
+    MemoryTag:
+      type: string
+      minLength: 1
+      maxLength: 48
+    MemoryCreate:
+      type: object
+      additionalProperties: false
+      required: [title, content_markdown, kind]
+      description: >
+        author_id, agent_id, workspace_id and status are forbidden and
+        return 422 when present.
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        content_markdown:
+          type: string
+          minLength: 1
+          maxLength: 65536
+          description: At most 64 KiB. Obvious secret patterns return 422.
+        kind:
+          $ref: '#/components/schemas/MemoryKind'
+        board_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: >
+            Required for agents. When set, visibility is board. When null
+            for a human, visibility is workspace.
+        task_id:
+          type: string
+          format: uuid
+          nullable: true
+        tags:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/MemoryTag'
+        source_type:
+          $ref: '#/components/schemas/MemorySourceType'
+        source_id:
+          type: string
+          maxLength: 64
+          nullable: true
+        change_reason:
+          type: string
+          maxLength: 500
+    MemoryPatch:
+      type: object
+      additionalProperties: false
+      required: [version]
+      description: >
+        Creates a new immutable revision. author_id, agent_id, workspace_id,
+        board_id and status are forbidden.
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        content_markdown:
+          type: string
+          minLength: 1
+          maxLength: 65536
+        tags:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/MemoryTag'
+        change_reason:
+          type: string
+          maxLength: 500
+        version:
+          type: integer
+          minimum: 1
+    MemoryStatusChange:
+      type: object
+      additionalProperties: false
+      required: [version]
+      properties:
+        version:
+          type: integer
+          minimum: 1
+    MemorySource:
+      type: object
+      additionalProperties: false
+      required: [source_type]
+      properties:
+        source_type:
+          $ref: '#/components/schemas/MemorySourceType'
+        source_id:
+          type: string
+          maxLength: 64
+          nullable: true
+        available:
+          type: boolean
+          description: Whether the caller may still resolve the source.
+    MemoryRevision:
+      type: object
+      additionalProperties: false
+      required:
+        - version
+        - content_markdown
+        - content_hash
+        - author_type
+        - author_id
+        - created_at
+      properties:
+        version:
+          type: integer
+          minimum: 1
+        content_markdown:
+          type: string
+          maxLength: 65536
+        content_hash:
+          type: string
+          maxLength: 128
+        author_type:
+          type: string
+          enum: [human, agent, system]
+        author_id:
+          type: string
+        source_type:
+          $ref: '#/components/schemas/MemorySourceType'
+        source_id:
+          type: string
+          maxLength: 64
+          nullable: true
+        change_reason:
+          type: string
+          maxLength: 500
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    Memory:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - workspace_id
+        - title
+        - kind
+        - status
+        - version
+        - revision
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        board_id:
+          type: string
+          format: uuid
+          nullable: true
+        task_id:
+          type: string
+          format: uuid
+          nullable: true
+        title:
+          type: string
+          maxLength: 255
+        kind:
+          $ref: '#/components/schemas/MemoryKind'
+        status:
+          $ref: '#/components/schemas/MemoryStatus'
+        version:
+          type: integer
+          minimum: 1
+          description: Optimistic concurrency version of the entry.
+        tags:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/MemoryTag'
+        revision:
+          $ref: '#/components/schemas/MemoryRevision'
+        source:
+          $ref: '#/components/schemas/MemorySource'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    MemoryEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Memory'
+    MemorySearchHit:
+      type: object
+      additionalProperties: false
+      required:
+        - memory_id
+        - revision
+        - title
+        - excerpt
+        - updated_at
+        - kind
+        - status
+      properties:
+        memory_id:
+          type: string
+          format: uuid
+        revision:
+          type: integer
+          minimum: 1
+        title:
+          type: string
+          maxLength: 255
+        excerpt:
+          type: string
+          maxLength: 480
+        source:
+          $ref: '#/components/schemas/MemorySource'
+        board_id:
+          type: string
+          format: uuid
+          nullable: true
+        kind:
+          $ref: '#/components/schemas/MemoryKind'
+        status:
+          $ref: '#/components/schemas/MemoryStatus'
+        updated_at:
+          type: string
+          format: date-time
+    MemorySearchPage:
+      type: object
+      additionalProperties: false
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemorySearchHit'
+        page:
+          $ref: '#/components/schemas/Page'
+    MemoryRevisionPage:
+      type: object
+      additionalProperties: false
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemoryRevision'
         page:
           $ref: '#/components/schemas/Page'

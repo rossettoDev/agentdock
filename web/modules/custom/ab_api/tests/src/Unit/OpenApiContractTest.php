@@ -37,6 +37,7 @@ class OpenApiContractTest extends UnitTestCase {
    */
   public function testExecutionReadOmitsTheLeaseSecret(): void {
     $this->assertSame('3.0.3', $this->document['openapi']);
+    $this->assertSame('1.1.0', $this->document['info']['version']);
     $paths = $this->document['paths'];
     $this->assertIsArray($paths);
     $path = '/workspaces/{workspace_id}/executions/{execution_id}';
@@ -71,6 +72,56 @@ class OpenApiContractTest extends UnitTestCase {
     $this->assertArrayHasKey('ETag', $this->document['components']['headers']);
     $this->assertStringContainsString('256 KiB', (string) $this->document['info']['description']);
     $this->assertStringContainsString('16 KiB', (string) $this->document['info']['description']);
+  }
+
+  /**
+   * Memory routes are additive and never expose a lease secret.
+   */
+  public function testMemoryContractIsAdditiveWithoutLeaseSecrets(): void {
+    $paths = $this->document['paths'];
+    $this->assertIsArray($paths);
+    $this->assertArrayHasKey('/workspaces/{workspace_id}/memory', $paths);
+    $this->assertArrayHasKey('get', $paths['/workspaces/{workspace_id}/memory']);
+    $this->assertArrayHasKey('post', $paths['/workspaces/{workspace_id}/memory']);
+    $this->assertArrayHasKey('/workspaces/{workspace_id}/memory/{memory_id}', $paths);
+    $this->assertArrayHasKey('get', $paths['/workspaces/{workspace_id}/memory/{memory_id}']);
+    $this->assertArrayHasKey('patch', $paths['/workspaces/{workspace_id}/memory/{memory_id}']);
+    $this->assertArrayHasKey('/workspaces/{workspace_id}/memory/{memory_id}/publish', $paths);
+    $this->assertArrayHasKey('/workspaces/{workspace_id}/memory/{memory_id}/archive', $paths);
+    $this->assertArrayHasKey('/workspaces/{workspace_id}/memory/{memory_id}/revisions', $paths);
+    $this->assertArrayNotHasKey('/workspaces/{workspace_id}/memory/export', $paths);
+
+    $revise = $paths['/workspaces/{workspace_id}/memory/{memory_id}']['patch'];
+    $this->assertIsArray($revise);
+    $this->assertContains(
+      ['$ref' => '#/components/parameters/IfMatch'],
+      $revise['parameters'],
+    );
+
+    $schemas = $this->document['components']['schemas'];
+    $this->assertIsArray($schemas);
+    foreach (['Memory', 'MemoryCreate', 'MemoryPatch', 'MemorySearchHit', 'MemoryRevision'] as $name) {
+      $this->assertArrayHasKey($name, $schemas);
+      $properties = $schemas[$name]['properties'] ?? [];
+      $this->assertIsArray($properties);
+      $this->assertArrayNotHasKey('lease_token', $properties);
+      $this->assertArrayNotHasKey('author_id', $schemas['MemoryCreate']['properties'] ?? []);
+    }
+
+    $markdown = $schemas['MemoryCreate']['properties']['content_markdown'];
+    $this->assertIsArray($markdown);
+    $this->assertSame(65536, $markdown['maxLength']);
+    $query = $this->document['components']['parameters']['MemoryQuery']['schema'];
+    $this->assertIsArray($query);
+    $this->assertSame(256, $query['maxLength']);
+    $excerpt = $schemas['MemorySearchHit']['properties']['excerpt'];
+    $this->assertIsArray($excerpt);
+    $this->assertSame(480, $excerpt['maxLength']);
+    $this->assertStringContainsString('64 KiB', (string) $this->document['info']['description']);
+    $this->assertStringContainsString('memory:read', (string) $this->document['info']['description']);
+    $bearer = $this->document['components']['securitySchemes']['bearerAuth']['description'];
+    $this->assertIsString($bearer);
+    $this->assertStringContainsString('memory:write', $bearer);
   }
 
 }

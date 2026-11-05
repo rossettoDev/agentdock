@@ -3357,8 +3357,8 @@ Fonte: `docs/backlog-phase2.md` e `docs/architecture-phase2.md`. Os IDs US-29 a 
 
 ### F2-US-29 — Definir políticas de memória
 
-**Status:** em andamento
-**Objetivo:** Fechar escopo, visibilidade, revisão, publicação e retenção antes do módulo `ab_memory`.
+**Status:** done
+**Objetivo:** Fechar escopo, visibilidade, revisão, publicação, retenção e contrato HTTP antes do módulo `ab_memory`.
 
 #### F2-US-29/T01 — Inventariar serviços existentes e documentar pontos de extensão
 
@@ -3428,7 +3428,44 @@ Nenhum PHP, rota, serviço ou teste de produto foi alterado. PHPUnit, PHPCS e PH
 
 **Bloqueios:** nenhum para a T03. Escopos `memory:*` ainda não existem no código — entram no OpenAPI/plano de migração da F2-US-29/T03.
 
-**Próxima ação:** F2-US-29/T03, somente após autorização. O M9 segue na US-34.
+**Próxima ação:** F2-US-29/T03 (concluída abaixo). O M9 segue na US-34.
+
+#### F2-US-29/T03 — OpenAPI incremental, limites, erros e plano de migração
+
+**Status:** done
+**Entrega:** `docs/openapi.yaml` em **1.1.0** com tag e paths `memory` aditivos no mesmo `/api/agent-board/v1`; plano em `docs/phase2/F2-US-29-T03-openapi-migracao.md`. Aceite: lint do contrato e mudanças compatíveis com v1. Sem módulo `ab_memory`, sem rotas Drupal novas.
+
+**Evidências:**
+
+- Paths: `GET/POST .../memory`, `GET/PATCH .../memory/{id}`, `POST .../publish`, `POST .../archive`, `GET .../revisions`. Export fora do contrato.
+- Limites: Markdown 64 KiB (`maxLength` 65536), título 255, `q` 256, excerpt 480, tags 20×48; erros Problem Details reutilizados (404/403/412/413/422/428/429).
+- Escopos documentados `memory:read` / `memory:write` (aditivos); tokens antigos sem escopo até rotação na F2-US-33.
+- `OpenApiContractTest` cobre versão 1.1.0, paths de memória e ausência de `lease_token`/`author_id` no create.
+
+**Validação:**
+
+```text
+$ docker run --rm -v "$PWD:/spec" redocly/cli:1.25.11 lint /spec/docs/openapi.yaml
+No configurations were provided -- using built in recommended configuration by default.
+validating /docs/openapi.yaml...
+/docs/openapi.yaml: validated in 245ms
+Woohoo! Your API description is valid. 🎉
+(exit 0)
+
+$ lando exec appserver -- env SIMPLETEST_DB=... SIMPLETEST_BASE_URL=http://appserver \
+    php vendor/bin/phpunit web/modules/custom/ab_api/tests/src/Unit/OpenApiContractTest.php
+OK (2 tests, 68 assertions)
+
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php \
+    web/modules/custom/ab_api/tests/src/Unit/OpenApiContractTest.php
+(exit 0)
+```
+
+Nenhum endpoint HTTP de memória foi implementado. `AgentTokenScope` ainda não lista `memory:*` no PHP — só no contrato e no plano de migração.
+
+**Bloqueios:** nenhum para F2-US-30. Implementação de schema/serviço na F2-US-30; escopos no código na F2-US-33.
+
+**Próxima ação:** F2-US-30/T01, somente após autorização. O M9 segue na US-34.
 
 ---
 
@@ -3436,7 +3473,7 @@ Nenhum PHP, rota, serviço ou teste de produto foi alterado. PHPUnit, PHPCS e PH
 
 - **Total de tasks do backlog M0–M8:** 83, todas registradas como done no corpo histórico
 - **M9:** US-29 done; US-30 done; US-31 done; US-32 done; US-33 done; US-37 done; US-34 em diante todo
-- **Fase 2:** F2-US-29/T01 done; F2-US-29/T02 done; F2-US-29/T03 em diante todo
+- **Fase 2:** F2-US-29 done (T01–T03); F2-US-30 em diante todo
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
@@ -3452,7 +3489,7 @@ Nenhum PHP, rota, serviço ou teste de produto foi alterado. PHPUnit, PHPCS e PH
 ## Próximos Passos
 
 1. US-34 — central de mensagens, com as threads que já existem.
-2. Fase 2, aguardando autorização: F2-US-29/T03 — OpenAPI incremental, limites, erros e plano de migração.
+2. Fase 2, aguardando autorização: F2-US-30/T01 — criar `ab_memory` e schema de entries/revisions.
 
 ---
 

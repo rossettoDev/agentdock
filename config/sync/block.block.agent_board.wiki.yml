@@ -1,17 +1,12 @@
+uuid: fba16122-3198-4908-a29e-0761f66af240
 langcode: pt-br
 status: true
-dependencies: {}
+dependencies: {  }
 id: agent_board.wiki
 theme: agent_board
 region: primary_menu
 weight: 3
 provider: null
 plugin: 'menu_link_content:menu_link_content'
-menu_name: main
-parent: ''
-expanded: false
-enabled: true
-title: Documentação
-description: ''
-url: 'internal:/docs'
-link_title: Documentação
+settings: {  }
+visibility: {  }

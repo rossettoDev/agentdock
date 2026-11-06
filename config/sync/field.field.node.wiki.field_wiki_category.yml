@@ -1,3 +1,4 @@
+uuid: 03fc7293-37e2-4809-8a1b-5c48e06c4a73
 langcode: pt-br
 status: true
 dependencies:
@@ -13,7 +14,7 @@ label: Categoria
 description: 'Categoria da página de documentação'
 required: false
 translatable: true
-default_value: []
+default_value: {  }
 default_value_callback: ''
 settings:
   handler: default

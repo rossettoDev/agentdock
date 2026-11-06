@@ -1,3 +1,4 @@
+uuid: 5174659f-b416-40b6-aaab-a17e3a68aa43
 langcode: pt-br
 status: true
 dependencies:
@@ -12,7 +13,7 @@ label: Resumo
 description: 'Breve descrição da página (opcional)'
 required: false
 translatable: true
-default_value: []
+default_value: {  }
 default_value_callback: ''
-settings: {}
+settings: {  }
 field_type: string_long

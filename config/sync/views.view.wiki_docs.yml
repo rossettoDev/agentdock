@@ -1,3 +1,4 @@
+uuid: to-be-generated
 langcode: pt-br
 status: true
 dependencies:
@@ -78,7 +79,7 @@ display:
           empty_zero: false
           hide_alter_empty: true
           type: basic_string
-          settings: {}
+          settings: {  }
       pager:
         type: none
         options:
@@ -142,7 +143,7 @@ display:
           expose:
             label: ''
           exposed: false
-      arguments: {}
+      arguments: {  }
       filters:
         status:
           id: status
@@ -170,7 +171,8 @@ display:
         type: default
         options:
           grouping:
-            - field: field_wiki_category
+            -
+              field: field_wiki_category
               rendered: true
               rendered_strip: false
           row_class: wiki-page-row
@@ -179,7 +181,7 @@ display:
         type: fields
         options:
           default_field_elements: true
-          inline: {}
+          inline: {  }
           separator: ''
           hide_empty: false
       query:
@@ -189,32 +191,32 @@ display:
           disable_sql_rewrite: false
           distinct: false
           replica: false
-          query_tags: []
-      relationships: {}
-      header: {}
-      footer: {}
-      display_extenders: {}
+          query_tags: {  }
+      relationships: {  }
+      header: {  }
+      footer: {  }
+      display_extenders: {  }
     cache_metadata:
       max-age: -1
       contexts:
         - 'languages:language_content'
         - 'languages:language_interface'
         - url
-        - 'user.permissions'
-      tags: {}
+        - user.permissions
+      tags: {  }
   page_1:
     id: page_1
     display_title: Página
     display_plugin: page
     position: 1
     display_options:
+      display_extenders: {  }
       path: docs
-      display_extenders: {}
     cache_metadata:
       max-age: -1
       contexts:
         - 'languages:language_content'
         - 'languages:language_interface'
         - url
-        - 'user.permissions'
-      tags: {}
+        - user.permissions
+      tags: {  }

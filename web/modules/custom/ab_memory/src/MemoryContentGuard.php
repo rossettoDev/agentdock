@@ -10,13 +10,29 @@ namespace Drupal\ab_memory;
 final class MemoryContentGuard {
 
   /**
-   * Ensures title and markdown do not carry obvious secrets.
+   * Ensures title, markdown and optional fields do not carry secrets.
+   *
+   * @param string $title
+   *   Entry title.
+   * @param string $markdown
+   *   Markdown body.
+   * @param string[] $tags
+   *   Normalized tags.
+   * @param string|null $changeReason
+   *   Optional change reason.
    *
    * @throws \Drupal\ab_memory\MemoryRejectedException
    *   A sensitive pattern was detected.
    */
-  public function assertSafe(string $title, string $markdown): void {
-    $haystack = $title . "\n" . $markdown;
+  public function assertSafe(string $title, string $markdown, array $tags = [], ?string $changeReason = NULL): void {
+    $parts = [$title, $markdown];
+    foreach ($tags as $tag) {
+      $parts[] = $tag;
+    }
+    if ($changeReason !== NULL && $changeReason !== '') {
+      $parts[] = $changeReason;
+    }
+    $haystack = implode("\n", $parts);
     if ($this->looksSensitive($haystack)) {
       throw new MemoryRejectedException('Memory content looks sensitive.');
     }

@@ -51,4 +51,22 @@ class MemoryContentGuardTest extends UnitTestCase {
     $guard->assertSafe('x', "api_key=super-secret-value\n");
   }
 
+  /**
+   * Secrets in tags are refused.
+   */
+  public function testSecretInTagIsRejected(): void {
+    $guard = new MemoryContentGuard();
+    $this->expectException(MemoryRejectedException::class);
+    $guard->assertSafe('ok', 'corpo limpo', ['password=hunter2']);
+  }
+
+  /**
+   * Secrets in change_reason are refused.
+   */
+  public function testSecretInChangeReasonIsRejected(): void {
+    $guard = new MemoryContentGuard();
+    $this->expectException(MemoryRejectedException::class);
+    $guard->assertSafe('ok', 'corpo limpo', [], 'Authorization: Bearer abc.def');
+  }
+
 }

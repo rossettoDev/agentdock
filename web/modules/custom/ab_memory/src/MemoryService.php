@@ -15,7 +15,9 @@ use Drupal\ab_event\EventDraft;
 use Drupal\ab_event\EventStoreInterface;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Component\Uuid\UuidInterface;
+use Drupal\Core\Cache\CacheTagsInvalidatorInterface;
 use Drupal\Core\Database\Connection;
+use Drupal\Core\Database\IntegrityConstraintViolationException;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 
 /**
@@ -51,6 +53,7 @@ class MemoryService {
     private readonly MemoryContentGuard $guard,
     private readonly UuidInterface $uuid,
     private readonly TimeInterface $time,
+    private readonly CacheTagsInvalidatorInterface $cacheTagsInvalidator,
   ) {}
 
   /**
@@ -68,13 +71,13 @@ class MemoryService {
     $kind = $this->kind($input['kind'] ?? NULL);
     $tags = $this->tags($input['tags'] ?? []);
     $sourceType = $this->sourceType($input['source_type'] ?? 'manual');
-    $sourceId = $this->sourceId($input['source_id'] ?? NULL);
     $changeReason = $this->changeReason($input['change_reason'] ?? NULL);
-    $this->guard->assertSafe($title, $markdown);
+    $this->guard->assertSafe($title, $markdown, $tags, $changeReason);
 
     $workspace = $this->workspaceOfActor($actor);
     $board = $this->optionalBoard($workspace, $input['board_id'] ?? NULL);
     $task = $this->optionalTask($workspace, $board, $input['task_id'] ?? NULL);
+    $sourceId = $this->validatedSourceId($workspace, $sourceType, $input['source_id'] ?? NULL);
     $this->access->assertCanCreate($actor, $board);
 
     $transaction = $this->database->startTransaction();
@@ -115,16 +118,19 @@ class MemoryService {
         ->condition('id', $entryId)
         ->execute();
       $this->storeSource($entryId, $revisionId, $sourceType, $sourceId, $now);
-      $this->recordEvent($actor, $workspace, $entryUuid, 'memory.created', [
+      $createdPayload = [
         'revision' => 1,
         'status' => 'draft',
         'kind' => $kind,
-        'board_id' => $board instanceof Board ? (string) $board->uuid() : NULL,
-        'task_id' => $task instanceof Task ? (string) $task->uuid() : NULL,
         'source_type' => $sourceType,
         'source_id' => $sourceId,
-      ], $board);
+      ];
+      if ($board instanceof Board && $task instanceof Task) {
+        $createdPayload['task_id'] = (string) $task->uuid();
+      }
+      $this->recordEvent($actor, $workspace, $entryUuid, 'memory.created', $createdPayload, $board);
       $this->afterRecord();
+      $this->invalidate($workspace);
       $entry = $this->repository->entryByUuid($actor->workspaceId, $entryUuid);
       $revision = $this->repository->currentRevision($entry);
       return $this->present(
@@ -182,11 +188,12 @@ class MemoryService {
       $sourceType = array_key_exists('source_type', $input)
         ? $this->sourceType($input['source_type'])
         : (string) $current['source_type'];
+      $workspace = $this->workspaceOfActor($actor);
       $sourceId = array_key_exists('source_id', $input)
-        ? $this->sourceId($input['source_id'])
+        ? $this->validatedSourceId($workspace, $sourceType, $input['source_id'])
         : ($current['source_id'] !== NULL ? (string) $current['source_id'] : NULL);
       $changeReason = $this->changeReason($input['change_reason'] ?? NULL);
-      $this->guard->assertSafe($title, $markdown);
+      $this->guard->assertSafe($title, $markdown, $tags, $changeReason);
 
       $now = $this->time->getRequestTime();
       $revisionVersion = (int) $current['version'] + 1;
@@ -212,16 +219,15 @@ class MemoryService {
         ->condition('version', $expectedVersion)
         ->execute();
       $this->storeSource((int) $entry['id'], $revisionId, $sourceType, $sourceId, $now);
-      $workspace = $this->workspaceOfActor($actor);
       $this->recordEvent($actor, $workspace, $memoryUuid, 'memory.revised', [
         'revision' => $revisionVersion,
         'status' => 'draft',
         'kind' => (string) $entry['kind'],
-        'board_id' => $board instanceof Board ? (string) $board->uuid() : NULL,
         'source_type' => $sourceType,
         'source_id' => $sourceId,
       ], $board);
       $this->afterRecord();
+      $this->invalidate($workspace);
       $fresh = $this->repository->entryByUuid($actor->workspaceId, $memoryUuid);
       $revision = $this->repository->currentRevision($fresh);
       $taskUuid = $this->taskUuidOf($fresh);
@@ -260,11 +266,17 @@ class MemoryService {
     }
     $transaction = $this->database->startTransaction();
     try {
-      $from = $this->repository->lockEntry($actor->workspaceId, $fromUuid);
-      $to = $this->repository->lockEntry($actor->workspaceId, $toUuid);
-      if ((int) $from['workspace'] !== (int) $to['workspace']) {
+      $fromProbe = $this->repository->entryByUuid($actor->workspaceId, $fromUuid);
+      $toProbe = $this->repository->entryByUuid($actor->workspaceId, $toUuid);
+      if ((int) $fromProbe['workspace'] !== (int) $toProbe['workspace']) {
         throw new ScopedResourceNotFoundException();
       }
+      $firstUuid = (int) $fromProbe['id'] <= (int) $toProbe['id'] ? $fromUuid : $toUuid;
+      $secondUuid = $firstUuid === $fromUuid ? $toUuid : $fromUuid;
+      $first = $this->repository->lockEntry($actor->workspaceId, $firstUuid);
+      $second = $this->repository->lockEntry($actor->workspaceId, $secondUuid);
+      $from = $fromUuid === $firstUuid ? $first : $second;
+      $to = $toUuid === $secondUuid ? $second : $first;
       $now = $this->time->getRequestTime();
       try {
         $this->database->insert('ab_memory_link')
@@ -277,7 +289,7 @@ class MemoryService {
           ])
           ->execute();
       }
-      catch (\Exception $exception) {
+      catch (IntegrityConstraintViolationException $exception) {
         throw new MemoryRejectedException('Memory link already exists.', 0, $exception);
       }
       $workspace = $this->workspaceOfActor($actor);
@@ -287,9 +299,9 @@ class MemoryService {
         'relation' => $relation,
         'status' => (string) $from['status'],
         'kind' => (string) $from['kind'],
-        'board_id' => $board instanceof Board ? (string) $board->uuid() : NULL,
       ], $board);
       $this->afterRecord();
+      $this->invalidate($workspace);
     }
     catch (\Throwable $exception) {
       $transaction->rollBack();
@@ -302,6 +314,46 @@ class MemoryService {
    */
   public function get(ActorContext $actor, string $memoryUuid): MemoryRecord {
     return $this->loadRecord($actor, $memoryUuid);
+  }
+
+  /**
+   * Lists revisions after the entry passes the access policy.
+   *
+   * @return list<array<string, mixed>>
+   *   Revision rows newest first.
+   */
+  public function listRevisions(ActorContext $actor, string $memoryUuid, int $limit = 50): array {
+    $entry = $this->repository->entryByUuid($actor->workspaceId, $memoryUuid);
+    $board = $this->access->boardById(isset($entry['board_id']) ? (int) $entry['board_id'] : NULL);
+    $this->assertReadable($actor, $entry, $board);
+    return $this->repository->revisions((int) $entry['id'], $limit);
+  }
+
+  /**
+   * Counts entries the actor may discover without widening grants.
+   */
+  public function countVisible(ActorContext $actor): int {
+    $workspace = $this->workspaceOfActor($actor);
+    if ($actor->actorType === ActorContext::TYPE_AGENT) {
+      $boards = $this->access->readableBoardIds($actor, (int) $workspace->id());
+      return $this->repository->countForBoards((int) $workspace->id(), $boards, [
+        'published',
+        'archived',
+      ]);
+    }
+    if (!$actor->allows(WorkspacePermission::READ)) {
+      throw new ScopedOperationDeniedException();
+    }
+    $statuses = ['published', 'archived'];
+    if ($actor->allows(WorkspacePermission::REVIEW) || $actor->allows(WorkspacePermission::WRITE)) {
+      $statuses[] = 'draft';
+    }
+    return (int) $this->database->select('ab_memory_entry', 'e')
+      ->condition('e.workspace', (int) $workspace->id())
+      ->condition('e.status', $statuses, 'IN')
+      ->countQuery()
+      ->execute()
+      ->fetchField();
   }
 
   /**
@@ -325,16 +377,16 @@ class MemoryService {
     $transaction = $this->database->startTransaction();
     try {
       $entry = $this->repository->lockEntry($actor->workspaceId, $memoryUuid);
+      $board = $this->access->boardById(isset($entry['board_id']) ? (int) $entry['board_id'] : NULL);
       if ($status === 'published') {
-        $this->access->assertCanPublish($actor, $entry);
+        $this->access->assertCanPublish($actor, $entry, $board);
       }
       else {
-        $this->access->assertCanArchive($actor, $entry);
+        $this->access->assertCanArchive($actor, $entry, $board);
       }
       if ((int) $entry['version'] !== $expectedVersion) {
         throw new MemoryVersionConflictException('The memory version is stale.');
       }
-      $board = $this->access->boardById(isset($entry['board_id']) ? (int) $entry['board_id'] : NULL);
       if ($board instanceof Board) {
         $this->lockBoard((int) $board->id());
       }
@@ -357,11 +409,11 @@ class MemoryService {
         'revision' => (int) $revision['version'],
         'status' => $status,
         'kind' => (string) $entry['kind'],
-        'board_id' => $board instanceof Board ? (string) $board->uuid() : NULL,
         'source_type' => (string) $revision['source_type'],
         'source_id' => $revision['source_id'] !== NULL ? (string) $revision['source_id'] : NULL,
       ], $board);
       $this->afterRecord();
+      $this->invalidate($workspace);
       return $this->loadRecord($actor, $memoryUuid);
     }
     catch (\Throwable $exception) {
@@ -687,6 +739,64 @@ class MemoryService {
   }
 
   /**
+   * Validates source_id against the workspace when the type requires it.
+   *
+   * Task, execution and message ids must exist in the same workspace. Manual
+   * sources stay opaque. Message checks the schema table when present so
+   * ab_memory does not depend on ab_communication.
+   */
+  private function validatedSourceId(Workspace $workspace, string $sourceType, mixed $value): ?string {
+    $sourceId = $this->sourceId($value);
+    if ($sourceId === NULL) {
+      return NULL;
+    }
+    if ($sourceType === 'manual') {
+      return $sourceId;
+    }
+    if ($sourceType === 'task') {
+      $this->assertSourceInWorkspace('ab_task', $workspace, $sourceId);
+      return $sourceId;
+    }
+    if ($sourceType === 'execution') {
+      $this->assertSourceInWorkspace('ab_execution', $workspace, $sourceId);
+      return $sourceId;
+    }
+    if ($sourceType === 'message') {
+      if (!$this->database->schema()->tableExists('ab_message')) {
+        throw new ScopedResourceNotFoundException();
+      }
+      $found = $this->database->select('ab_message', 'm')
+        ->fields('m', ['id'])
+        ->condition('m.uuid', $sourceId)
+        ->condition('m.workspace', (int) $workspace->id())
+        ->range(0, 1)
+        ->execute()
+        ->fetchField();
+      if ($found === FALSE) {
+        throw new ScopedResourceNotFoundException();
+      }
+      return $sourceId;
+    }
+    throw new \InvalidArgumentException('Memory source type is invalid.');
+  }
+
+  /**
+   * Ensures a content entity UUID exists inside the workspace.
+   */
+  private function assertSourceInWorkspace(string $entityTypeId, Workspace $workspace, string $uuid): void {
+    $storage = $this->entityTypeManager->getStorage($entityTypeId);
+    $ids = $storage->getQuery()
+      ->accessCheck(FALSE)
+      ->condition('uuid', $uuid)
+      ->condition('workspace', (int) $workspace->id())
+      ->range(0, 1)
+      ->execute();
+    if ($ids === []) {
+      throw new ScopedResourceNotFoundException();
+    }
+  }
+
+  /**
    * Validates the optional change reason.
    */
   private function changeReason(mixed $value): ?string {
@@ -697,6 +807,43 @@ class MemoryService {
       throw new \InvalidArgumentException('Memory change reason is invalid.');
     }
     return $value;
+  }
+
+  /**
+   * Applies the same read policy used by get(), including own-draft humans.
+   *
+   * @param \Drupal\ab_core\Authorization\ActorContext $actor
+   *   Authenticated actor.
+   * @param array<string, mixed> $entry
+   *   Entry row.
+   * @param \Drupal\ab_board\Entity\Board|null $board
+   *   Board of the entry when present.
+   */
+  private function assertReadable(ActorContext $actor, array $entry, ?Board $board): void {
+    try {
+      $this->access->assertCanRead($actor, $entry, $board);
+    }
+    catch (ScopedOperationDeniedException $exception) {
+      if ((string) $entry['status'] === 'draft'
+        && $actor->actorType === ActorContext::TYPE_HUMAN
+        && $actor->allows(WorkspacePermission::WRITE)) {
+        $revision = $this->repository->currentRevision($entry);
+        if ($revision['author_type'] !== $actor->actorType || $revision['author_id'] !== $actor->actorId) {
+          throw $exception;
+        }
+        return;
+      }
+      throw $exception;
+    }
+  }
+
+  /**
+   * Busts workspace memory cache tags after a mutation.
+   */
+  private function invalidate(Workspace $workspace): void {
+    $this->cacheTagsInvalidator->invalidateTags([
+      'ab_workspace_memory:' . $workspace->id(),
+    ]);
   }
 
   /**

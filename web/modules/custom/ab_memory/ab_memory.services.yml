@@ -4,6 +4,7 @@ services:
     arguments:
       - '@entity_type.manager'
       - '@Drupal\ab_agent\AgentOperationGate'
+      - '@database'
   Drupal\ab_memory\MemoryRepository:
     arguments:
       - '@database'
@@ -18,3 +19,4 @@ services:
       - '@Drupal\ab_memory\MemoryContentGuard'
       - '@uuid'
       - '@datetime.time'
+      - '@cache_tags.invalidator'

@@ -160,6 +160,7 @@ class MemoryServiceKernelTest extends KernelTestBase {
       $this->container->get(MemoryContentGuard::class),
       $this->container->get('uuid'),
       $this->container->get('datetime.time'),
+      $this->container->get('cache_tags.invalidator'),
     ) extends MemoryService {
 
       /**
@@ -210,12 +211,19 @@ class MemoryServiceKernelTest extends KernelTestBase {
       'content_markdown' => 'Heartbeat a cada 30s.',
       'kind' => 'lesson',
       'board_id' => (string) $board->uuid(),
-      'source_type' => 'execution',
-      'source_id' => '11111111-1111-4111-8111-111111111111',
+      'source_type' => 'manual',
     ]);
     $this->assertSame('agent', $draft->authorType);
     $this->assertSame((string) $agent->uuid(), $draft->authorId);
-    $this->assertSame('execution', $draft->sourceType);
+    $this->assertSame('manual', $draft->sourceType);
+
+    try {
+      $this->memory()->get($actor, $draft->uuid);
+      $this->fail('An agent read its own draft.');
+    }
+    catch (ScopedResourceNotFoundException) {
+      $this->assertSame('draft', $draft->status);
+    }
 
     try {
       $this->memory()->publish($actor, $draft->uuid, $draft->version);

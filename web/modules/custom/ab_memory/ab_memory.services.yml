@@ -1,0 +1,20 @@
+services:
+  Drupal\ab_memory\MemoryContentGuard: {}
+  Drupal\ab_memory\MemoryAccessPolicy:
+    arguments:
+      - '@entity_type.manager'
+      - '@Drupal\ab_agent\AgentOperationGate'
+  Drupal\ab_memory\MemoryRepository:
+    arguments:
+      - '@database'
+      - '@entity_type.manager'
+  Drupal\ab_memory\MemoryService:
+    arguments:
+      - '@database'
+      - '@entity_type.manager'
+      - '@Drupal\ab_event\EventStoreInterface'
+      - '@Drupal\ab_memory\MemoryAccessPolicy'
+      - '@Drupal\ab_memory\MemoryRepository'
+      - '@Drupal\ab_memory\MemoryContentGuard'
+      - '@uuid'
+      - '@datetime.time'

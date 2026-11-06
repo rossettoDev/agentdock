@@ -3461,11 +3461,63 @@ $ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php \
 (exit 0)
 ```
 
-Nenhum endpoint HTTP de memória foi implementado. `AgentTokenScope` ainda não lista `memory:*` no PHP — só no contrato e no plano de migração.
+Nenhum endpoint HTTP de memória foi implementado nesta task. Os escopos `memory:*` entraram no PHP na F2-US-30 (abaixo), junto com `MemoryAccessPolicy`.
 
-**Bloqueios:** nenhum para F2-US-30. Implementação de schema/serviço na F2-US-30; escopos no código na F2-US-33.
+**Bloqueios:** nenhum.
 
-**Próxima ação:** F2-US-30/T01, somente após autorização. O M9 segue na US-34.
+**Próxima ação:** F2-US-30 (concluída abaixo). O M9 segue na US-34.
+
+### F2-US-30 — Persistir memória versionada
+
+**Status:** done
+**Objetivo:** Schema, `MemoryService` (draft/revise/publish/archive), hash, versão otimista, EventStore/outbox, autoria `ActorContext` e links de origem — sem API HTTP nem UI.
+
+#### F2-US-30/T01 — Criar `ab_memory` e schema
+
+**Status:** done
+**Entrega:** Módulo `web/modules/custom/ab_memory` com `hook_schema` + `ab_memory_update_11001` / `MemorySchema::install()` idempotente. Tabelas: `ab_memory_entry`, `ab_memory_revision`, `ab_memory_source`, `ab_memory_link`.
+
+**Evidências:** `lando drush en ab_memory -y` → sucesso; tabelas presentes no PostgreSQL local.
+
+#### F2-US-30/T02 — MemoryService (draft, revise, publish, archive)
+
+**Status:** done
+**Entrega:** `MemoryService` + `MemoryAccessPolicy` + `MemoryContentGuard` + `MemoryVersionConflictException`. Revisões imutáveis, `content_hash` SHA-256, otimista via `version`, publish/archive só humano com `review`.
+
+#### F2-US-30/T03 — EventStore, autoria e origem
+
+**Status:** done
+**Entrega:** Eventos `memory.created|revised|published|archived|linked` na mesma transação (ADR 002); payload sem Markdown; `board_id` quando board-scoped; autor só de `ActorContext`; `ab_memory_source` + `link()` (`supersedes` etc.). Escopos `memory:read` / `memory:write` em `AgentTokenScope`.
+
+**Validação:**
+
+```text
+$ lando exec appserver -- env SIMPLETEST_DB=... SIMPLETEST_BASE_URL=http://appserver \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_memory/tests/src/Unit/MemoryContentGuardTest.php \
+    web/modules/custom/ab_memory/tests/src/Kernel/MemorySchemaKernelTest.php \
+    web/modules/custom/ab_memory/tests/src/Kernel/MemoryServiceKernelTest.php
+OK (10 tests, 119 assertions)
+
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,yml \
+    web/modules/custom/ab_memory web/modules/custom/ab_agent/src/AgentTokenScope.php
+(exit 0)
+
+$ lando drush en ab_memory -y
+[success] Module ab_memory has been installed.
+
+$ lando drush sql:query "SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name LIKE 'ab_memory%' ORDER BY 1"
+ab_memory_entry
+ab_memory_link
+ab_memory_revision
+ab_memory_source
+```
+
+Sem rotas HTTP, MCP, UI, índice lexical ou embeddings. Isolamento cross-workspace aprofundado fica na F2-US-31.
+
+**Bloqueios:** nenhum para F2-US-31.
+
+**Próxima ação:** F2-US-31/T01, somente após autorização. O M9 segue na US-34.
 
 ---
 
@@ -3473,7 +3525,7 @@ Nenhum endpoint HTTP de memória foi implementado. `AgentTokenScope` ainda não 
 
 - **Total de tasks do backlog M0–M8:** 83, todas registradas como done no corpo histórico
 - **M9:** US-29 done; US-30 done; US-31 done; US-32 done; US-33 done; US-37 done; US-34 em diante todo
-- **Fase 2:** F2-US-29 done (T01–T03); F2-US-30 em diante todo
+- **Fase 2:** F2-US-29 done; F2-US-30 done (T01–T03); F2-US-31 em diante todo
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
@@ -3489,7 +3541,7 @@ Nenhum endpoint HTTP de memória foi implementado. `AgentTokenScope` ainda não 
 ## Próximos Passos
 
 1. US-34 — central de mensagens, com as threads que já existem.
-2. Fase 2, aguardando autorização: F2-US-30/T01 — criar `ab_memory` e schema de entries/revisions.
+2. Fase 2, aguardando autorização: F2-US-31/T01 — policy de acesso por workspace/board e papel.
 
 ---
 

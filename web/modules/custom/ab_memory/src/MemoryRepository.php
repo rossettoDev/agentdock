@@ -1,0 +1,128 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\ab_memory;
+
+use Drupal\ab_core\Authorization\ScopedResourceNotFoundException;
+use Drupal\ab_core\Entity\Workspace;
+use Drupal\Core\Database\Connection;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
+
+/**
+ * Reads memory rows always filtered by workspace.
+ */
+final class MemoryRepository {
+
+  public function __construct(
+    private readonly Connection $database,
+    private readonly EntityTypeManagerInterface $entityTypeManager,
+  ) {}
+
+  /**
+   * Loads an entry by public UUID inside one workspace.
+   *
+   * @return array<string, mixed>
+   *   Entry row.
+   *
+   * @throws \Drupal\ab_core\Authorization\ScopedResourceNotFoundException
+   */
+  public function entryByUuid(string $workspaceUuid, string $memoryUuid): array {
+    $workspace = $this->workspace($workspaceUuid);
+    $row = $this->database->select('ab_memory_entry', 'e')
+      ->fields('e')
+      ->condition('e.workspace', (int) $workspace->id())
+      ->condition('e.uuid', $memoryUuid)
+      ->execute()
+      ->fetchAssoc();
+    if ($row === FALSE) {
+      throw new ScopedResourceNotFoundException();
+    }
+    return $row;
+  }
+
+  /**
+   * Locks one entry row for update inside the caller's transaction.
+   *
+   * @return array<string, mixed>
+   *   Locked entry row.
+   *
+   * @throws \Drupal\ab_core\Authorization\ScopedResourceNotFoundException
+   */
+  public function lockEntry(string $workspaceUuid, string $memoryUuid): array {
+    $workspace = $this->workspace($workspaceUuid);
+    $row = $this->database->query(
+      'SELECT * FROM {ab_memory_entry} WHERE workspace = :workspace AND uuid = :uuid FOR UPDATE',
+      [
+        ':workspace' => (int) $workspace->id(),
+        ':uuid' => $memoryUuid,
+      ],
+    )->fetchAssoc();
+    if ($row === FALSE) {
+      throw new ScopedResourceNotFoundException();
+    }
+    return $row;
+  }
+
+  /**
+   * Loads the current revision for an entry id.
+   *
+   * @return array<string, mixed>
+   *   Revision row.
+   *
+   * @throws \Drupal\ab_core\Authorization\ScopedResourceNotFoundException
+   */
+  public function currentRevision(array $entry): array {
+    $revisionId = (int) ($entry['current_revision_id'] ?? 0);
+    if ($revisionId <= 0) {
+      throw new ScopedResourceNotFoundException();
+    }
+    $row = $this->database->select('ab_memory_revision', 'r')
+      ->fields('r')
+      ->condition('r.id', $revisionId)
+      ->condition('r.entry_id', (int) $entry['id'])
+      ->execute()
+      ->fetchAssoc();
+    if ($row === FALSE) {
+      throw new ScopedResourceNotFoundException();
+    }
+    return $row;
+  }
+
+  /**
+   * Lists revisions for an entry, newest first.
+   *
+   * @return list<array<string, mixed>>
+   *   Revision rows.
+   */
+  public function revisions(int $entryId, int $limit = 50): array {
+    $limit = max(1, min(100, $limit));
+    return $this->database->select('ab_memory_revision', 'r')
+      ->fields('r')
+      ->condition('r.entry_id', $entryId)
+      ->orderBy('r.version', 'DESC')
+      ->range(0, $limit)
+      ->execute()
+      ->fetchAll(\PDO::FETCH_ASSOC);
+  }
+
+  /**
+   * Resolves the workspace entity for a public UUID.
+   *
+   * @throws \Drupal\ab_core\Authorization\ScopedResourceNotFoundException
+   */
+  public function workspace(string $workspaceUuid): Workspace {
+    $storage = $this->entityTypeManager->getStorage('ab_workspace');
+    $ids = $storage->getQuery()
+      ->accessCheck(FALSE)
+      ->condition('uuid', $workspaceUuid)
+      ->range(0, 1)
+      ->execute();
+    $workspace = $ids === [] ? NULL : $storage->load(reset($ids));
+    if (!$workspace instanceof Workspace) {
+      throw new ScopedResourceNotFoundException();
+    }
+    return $workspace;
+  }
+
+}

@@ -1,0 +1,28 @@
+<?php
+
+/**
+ * @file
+ * Install and update hooks for shared agent memory.
+ */
+
+declare(strict_types=1);
+
+use Drupal\ab_memory\MemorySchema;
+
+/**
+ * Implements hook_schema().
+ */
+function ab_memory_schema(): array {
+  $schema['ab_memory_entry'] = MemorySchema::entryTable();
+  $schema['ab_memory_revision'] = MemorySchema::revisionTable();
+  $schema['ab_memory_source'] = MemorySchema::sourceTable();
+  $schema['ab_memory_link'] = MemorySchema::linkTable();
+  return $schema;
+}
+
+/**
+ * Installs memory tables on sites that already have the module enabled.
+ */
+function ab_memory_update_11001(): string {
+  return MemorySchema::install();
+}

@@ -1,0 +1,10 @@
+name: 'AgentDock Memory'
+type: module
+description: 'Memória compartilhada versionada entre humanos e agentes'
+package: 'AgentDock'
+core_version_requirement: ^11
+dependencies:
+  - ab_core:ab_core
+  - ab_event:ab_event
+  - ab_board:ab_board
+  - ab_agent:ab_agent

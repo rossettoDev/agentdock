@@ -30,6 +30,10 @@ final class AgentTokenScope {
 
   public const EVENTS_READ = 'events:read';
 
+  public const MEMORY_READ = 'memory:read';
+
+  public const MEMORY_WRITE = 'memory:write';
+
   /**
    * Returns every scope a token may store.
    *
@@ -46,6 +50,8 @@ final class AgentTokenScope {
       self::MESSAGES_READ,
       self::MESSAGES_WRITE,
       self::EVENTS_READ,
+      self::MEMORY_READ,
+      self::MEMORY_WRITE,
     ];
   }
 
@@ -57,11 +63,13 @@ final class AgentTokenScope {
       self::BOARDS_READ,
       self::TASKS_READ,
       self::MESSAGES_READ,
-      self::EVENTS_READ => WorkspacePermission::READ,
+      self::EVENTS_READ,
+      self::MEMORY_READ => WorkspacePermission::READ,
       self::TASKS_WRITE,
       self::MESSAGES_WRITE,
       self::TASKS_CLAIM,
-      self::EXECUTIONS_WRITE => WorkspacePermission::WRITE,
+      self::EXECUTIONS_WRITE,
+      self::MEMORY_WRITE => WorkspacePermission::WRITE,
       default => throw new \InvalidArgumentException('Unknown token scope.'),
     };
   }

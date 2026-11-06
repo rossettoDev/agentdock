@@ -1,6 +1,6 @@
 # AgentDock — Backlog da Fase 2 (proposta)
 
-Versão 0.1 — 03/11/2026. **Todos os itens abaixo estão `todo`**. Não altera o status da Fase 1.
+Versão 0.2 — 06/11/2026. O status de cada task está em `docs/implementation-status.md`. F2-US-29 e F2-US-30 estão `done`. Não altera o status da Fase 1.
 
 Arquitetura de referência: `docs/architecture-phase2.md`. Padrão de execução: uma task por interação com o Cursor, com evidências e atualização de `docs/implementation-status.md`. Não declarar testes que não foram executados.
 
@@ -17,11 +17,12 @@ Arquitetura de referência: `docs/architecture-phase2.md`. Padrão de execução
 - **US-30/T01:** criar `ab_memory` e schema de entries/revisions com updates. Aceite: instalação nova e atualização existente.
 - **US-30/T02:** implementar `MemoryService` (draft, revise, publish, archive), hash e versão otimista. Aceite: revisão imutável, conflito e rollback.
 - **US-30/T03:** integrar EventStore/outbox, autoria ActorContext e links de origem. Aceite: evento transacional sem segredo.
+- Residuais da validação de 06/11/2026 não reabrem esta história. Fecham na US-31.
 
 ### US-31 — Aplicar isolamento de conhecimento
-- **US-31/T01:** criar policy de acesso por workspace/board e papel. Aceite: consultas por UUID protegidas.
-- **US-31/T02:** filtrar queries, contagens, revisões e cache. Aceite: agente sem grant não descobre memória.
-- **US-31/T03:** testes funcionais e kernel de cross-workspace, revogação e conteúdo malicioso. Aceite: nenhuma leitura após revogação.
+- **US-31/T01:** corrigir `MemoryAccessPolicy` no padrão de `Catalog::visible()`. Sem grant `read`, responder 404 antes de `AgentOperationGate`; o gate sozinho devolve 403 e confirma o recurso. `publish` e `archive` de entry que o agente não pode ver (sem board ou sem grant) também respondem 404. Agente com `memory:read` e grant lê entry `archived` por UUID (ADR 004); rascunho continua 404 para agente, inclusive o próprio. Aceite: consultas por UUID protegidas.
+- **US-31/T02:** filtrar queries, contagens, revisões e cache. Evento de entry sem board não leva `task_id` nem `thread_id` — `memory.created` hoje deixa `task_id` e o `SyncReader` deriva o board. `MemoryRepository::revisions()` não é caminho de leitura; a listagem passa pela policy. Aceite: agente sem grant não descobre memória por query, contagem, revisão, cache nem feed.
+- **US-31/T03:** testes funcionais e kernel de cross-workspace, revogação e conteúdo malicioso. `source_id` de task, execution ou message existe no mesmo workspace; UUID solto é recusado. `link()` trava as duas entries pelo menor id e só trata violação de unicidade como link duplicado. `MemoryContentGuard` também recusa segredo em tags e `change_reason`. Aceite: nenhuma leitura após revogação, com teste dos residuais acima.
 
 ## F2-M2 — Interface humana
 

@@ -23,11 +23,12 @@ Arquitetura de referência: `docs/architecture-phase2.md`. Padrão de execução
 - **US-31/T01:** corrigir `MemoryAccessPolicy` no padrão de `Catalog::visible()`. Sem grant `read`, responder 404 antes de `AgentOperationGate`; o gate sozinho devolve 403 e confirma o recurso. `publish` e `archive` de entry que o agente não pode ver (sem board ou sem grant) também respondem 404. Agente com `memory:read` e grant lê entry `archived` por UUID (ADR 004); rascunho continua 404 para agente, inclusive o próprio. Aceite: consultas por UUID protegidas.
 - **US-31/T02:** filtrar queries, contagens, revisões e cache. Evento de entry sem board não leva `task_id` nem `thread_id` — `memory.created` hoje deixa `task_id` e o `SyncReader` deriva o board. `MemoryRepository::revisions()` não é caminho de leitura; a listagem passa pela policy. Aceite: agente sem grant não descobre memória por query, contagem, revisão, cache nem feed.
 - **US-31/T03:** testes funcionais e kernel de cross-workspace, revogação e conteúdo malicioso. `source_id` de task, execution ou message existe no mesmo workspace; UUID solto é recusado. `link()` trava as duas entries pelo menor id e só trata violação de unicidade como link duplicado. `MemoryContentGuard` também recusa segredo em tags e `change_reason`. Aceite: nenhuma leitura após revogação, com teste dos residuais acima.
+- Residual da validação de 06/11/2026: `countVisible()` ainda não passa pelo gate. Não reabre esta história. Fecha no início da US-32/T01.
 
 ## F2-M2 — Interface humana
 
 ### US-32 — Central de Memória
-- **US-32/T01:** listar, filtrar e abrir memórias com status, origem e última revisão. Aceite: estados vazio, erro, loading e acessibilidade.
+- **US-32/T01:** antes da tela, fazer `countVisible()` passar pelo mesmo gate de `get()`: grant `read`, escopo `memory:read` e token ainda válido. Sem isso a contagem revela memória que a leitura recusa. A listagem usa a tag `ab_workspace_memory:{id}` ao renderizar; hoje ela só é invalidada. Depois, listar, filtrar e abrir memórias com status, origem e última revisão. Aceite: estados vazio, erro, loading e acessibilidade; contagem e lista obedecem ao gate.
 - **US-32/T02:** criar/editar rascunho e revisar alterações com diff simples. Aceite: render Markdown sanitizado.
 - **US-32/T03:** publicar, arquivar e navegar por versões. Aceite: policy respeitada, ação auditável.
 

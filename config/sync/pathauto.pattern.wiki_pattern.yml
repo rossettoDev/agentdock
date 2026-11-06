@@ -1,3 +1,4 @@
+uuid: dff6cd24-c6a4-479d-91c5-80947aeaaf73
 langcode: pt-br
 status: true
 dependencies:
@@ -6,18 +7,19 @@ dependencies:
 id: wiki_pattern
 label: 'Padrão Wiki'
 type: 'canonical_entities:node'
-pattern: 'docs/[node:title]'
+pattern: '/docs/[node:title]'
 selection_criteria:
-  - id: 'entity_bundle:node'
+  -
+    id: 'entity_bundle:node'
     negate: false
+    bundles:
+      wiki: wiki
     contexts_mapping:
       node: node
     context_definitions:
       node:
         type: 'entity:node'
         label: Node
-    bundles:
-      wiki: wiki
 selection_logic: and
 weight: -5
-relationships: {}
+relationships: {  }

@@ -3515,9 +3515,47 @@ ab_memory_source
 
 Sem rotas HTTP, MCP, UI, índice lexical ou embeddings. Isolamento cross-workspace aprofundado fica na F2-US-31.
 
-**Bloqueios:** nenhum para F2-US-31.
+### F2-US-31 — Aplicar isolamento de conhecimento
 
-**Próxima ação:** F2-US-31/T01, somente após autorização. O M9 segue na US-34.
+**Status:** done
+**Objetivo:** 404-before-gate, filtros de descoberta, eventos sem vazamento de board, validação de `source_id`, link por menor id e guard em tags/`change_reason`.
+
+#### F2-US-31/T01 — MemoryAccessPolicy (Catalog::visible)
+
+**Status:** done
+**Entrega:** Sem grant `read` → 404 antes do `AgentOperationGate`. Agente lê `published`/`archived` por UUID; draft (inclusive próprio) → 404. `publish`/`archive` em entry invisível → 404; visível sem review → 403.
+
+#### F2-US-31/T02 — Queries, revisões, eventos e cache
+
+**Status:** done
+**Entrega:** `countVisible` / `uuidsForBoards` filtrados por grant; `listRevisions` passa pela policy; evento sem board omite `task_id`/`board_id`; cache tag `ab_workspace_memory:{id}`.
+
+#### F2-US-31/T03 — Testes de isolamento e residuais
+
+**Status:** done
+**Entrega:** `MemoryIsolationKernelTest` (cross-WS, revoke, archived, source_id, link, guard). `source_id` de task/execution/message validado no workspace; `link()` trava pelo menor id interno; ContentGuard em tags e `change_reason`.
+
+**Validação:**
+
+```text
+$ lando exec appserver -- env SIMPLETEST_DB=... SIMPLETEST_BASE_URL=http://appserver \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_memory/tests/src/Unit/MemoryContentGuardTest.php \
+    web/modules/custom/ab_memory/tests/src/Kernel/MemorySchemaKernelTest.php \
+    web/modules/custom/ab_memory/tests/src/Kernel/MemoryServiceKernelTest.php \
+    web/modules/custom/ab_memory/tests/src/Kernel/MemoryIsolationKernelTest.php
+OK (15 tests, 207 assertions)
+
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,yml \
+    web/modules/custom/ab_memory
+(exit 0)
+```
+
+Sem rotas HTTP, MCP, UI, índice lexical ou embeddings.
+
+**Bloqueios:** nenhum para F2-US-32.
+
+**Próxima ação:** F2-US-32/T01, somente após autorização.
 
 ---
 
@@ -3525,7 +3563,7 @@ Sem rotas HTTP, MCP, UI, índice lexical ou embeddings. Isolamento cross-workspa
 
 - **Total de tasks do backlog M0–M8:** 83, todas registradas como done no corpo histórico
 - **M9:** US-29 done; US-30 done; US-31 done; US-32 done; US-33 done; US-37 done; US-34 em diante todo
-- **Fase 2:** F2-US-29 done; F2-US-30 done (T01–T03); F2-US-31 em diante todo
+- **Fase 2:** F2-US-29 done; F2-US-30 done; F2-US-31 done (T01–T03); F2-US-32 em diante todo
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done

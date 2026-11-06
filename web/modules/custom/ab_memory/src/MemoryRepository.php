@@ -90,7 +90,9 @@ final class MemoryRepository {
   }
 
   /**
-   * Lists revisions for an entry, newest first.
+   * Lists revisions for an entry the caller already authorized, newest first.
+   *
+   * Callers must run MemoryAccessPolicy before invoking this method.
    *
    * @return list<array<string, mixed>>
    *   Revision rows.
@@ -104,6 +106,58 @@ final class MemoryRepository {
       ->range(0, $limit)
       ->execute()
       ->fetchAll(\PDO::FETCH_ASSOC);
+  }
+
+  /**
+   * Counts entries visible to an agent on granted boards.
+   *
+   * @param int $workspaceId
+   *   Internal workspace id.
+   * @param int[] $boardIds
+   *   Internal board ids with read grant.
+   * @param string[] $statuses
+   *   Allowed statuses.
+   */
+  public function countForBoards(int $workspaceId, array $boardIds, array $statuses): int {
+    if ($boardIds === [] || $statuses === []) {
+      return 0;
+    }
+    $query = $this->database->select('ab_memory_entry', 'e');
+    $query->condition('e.workspace', $workspaceId);
+    $query->condition('e.board_id', $boardIds, 'IN');
+    $query->condition('e.status', $statuses, 'IN');
+    return (int) $query->countQuery()->execute()->fetchField();
+  }
+
+  /**
+   * Lists entry UUIDs visible to an agent on granted boards.
+   *
+   * @param int $workspaceId
+   *   Internal workspace id.
+   * @param int[] $boardIds
+   *   Internal board ids with read grant.
+   * @param string[] $statuses
+   *   Allowed statuses.
+   * @param int $limit
+   *   Maximum UUIDs to return.
+   *
+   * @return string[]
+   *   Entry UUIDs.
+   */
+  public function uuidsForBoards(int $workspaceId, array $boardIds, array $statuses, int $limit = 50): array {
+    if ($boardIds === [] || $statuses === []) {
+      return [];
+    }
+    $limit = max(1, min(100, $limit));
+    return $this->database->select('ab_memory_entry', 'e')
+      ->fields('e', ['uuid'])
+      ->condition('e.workspace', $workspaceId)
+      ->condition('e.board_id', $boardIds, 'IN')
+      ->condition('e.status', $statuses, 'IN')
+      ->orderBy('e.changed', 'DESC')
+      ->range(0, $limit)
+      ->execute()
+      ->fetchCol();
   }
 
   /**

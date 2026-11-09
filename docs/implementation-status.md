@@ -3590,7 +3590,51 @@ $ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,y
 
 **Bloqueios:** nenhum para F2-US-32/T02.
 
-**Próxima ação:** F2-US-32/T02, somente após autorização.
+**Próxima ação:** F2-US-32/T02 permanece no backlog de UI; a API HTTP seguiu na F2-US-33 (abaixo).
+
+### F2-US-33 — API de memória
+
+**Status:** done
+**Objetivo:** Endpoints HTTP de busca/leitura e draft/revisão/publish/archive com escopo, idempotência, If-Match e Problem Details. OpenAPI 1.1.0 já documentava as rotas.
+
+#### F2-US-33/T01 — Busca e leitura
+
+**Status:** done
+**Entrega:** `GET .../memory` (status padrão `published`, filtros `kind`/`q`/`board`, cursor opaco) e `GET .../memory/{id}` + `GET .../revisions`. Resultados passam por `MemoryService`/`MemoryAccessPolicy`; fora de escopo → 404; sem `memory:read` → 403.
+
+#### F2-US-33/T02 — Draft, revisão, publish e archive
+
+**Status:** done
+**Entrega:** `POST .../memory`, `PATCH .../memory/{id}`, `POST .../publish`, `POST .../archive` via `MemoryCommands` + `IdempotencyService`. Whitelist de campos (sem `author_id`/`agent_id`); agentes exigem `board_id` e `memory:write`; publish/archive só humano com `review`. If-Match + `version` no body; 412 em conflito; CSRF para sessão humana.
+
+#### F2-US-33/T03 — Testes HTTP e OpenAPI
+
+**Status:** done
+**Entrega:** `ApiMemoryTest` (escopo, idempotência, autoria forjada, segredo, If-Match, publish negado a agente). OpenAPI inalterado (contrato aditivo da F2-US-29/T03). `ab_api` depende de `ab_memory`.
+
+**Validação:**
+
+```text
+$ lando exec appserver -- env SIMPLETEST_DB=... SIMPLETEST_BASE_URL=http://appserver \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_api/tests/src/Functional/ApiMemoryTest.php \
+    web/modules/custom/ab_api/tests/src/Unit/OpenApiContractTest.php
+OK (3 tests, 190 assertions)
+
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,yml \
+    web/modules/custom/ab_api/src/Controller/MemoryController.php \
+    web/modules/custom/ab_api/src/Http/MemoryCommands.php \
+    web/modules/custom/ab_api/src/Http/MemoryDocument.php \
+    web/modules/custom/ab_api/tests/src/Functional/ApiMemoryTest.php \
+    web/modules/custom/ab_api/ab_api.info.yml \
+    web/modules/custom/ab_api/ab_api.routing.yml \
+    web/modules/custom/ab_api/ab_api.services.yml
+(exit 0)
+```
+
+**Bloqueios:** nenhum.
+
+**Próxima ação:** F2-US-34 — MCP de memória, somente após autorização.
 
 ---
 
@@ -3598,7 +3642,7 @@ $ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,y
 
 - **Total de tasks do backlog M0–M8:** 83, todas registradas como done no corpo histórico
 - **M9:** US-29 done; US-30 done; US-31 done; US-32 done; US-33 done; US-37 done; US-34 em diante todo
-- **Fase 2:** F2-US-29 done; F2-US-30 done; F2-US-31 done; F2-US-32/T01 done; F2-US-32/T02 em diante todo
+- **Fase 2:** F2-US-29 done; F2-US-30 done; F2-US-31 done; F2-US-32/T01 done; F2-US-33 done; F2-US-32/T02 e F2-US-34 em diante todo
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
@@ -3613,8 +3657,9 @@ $ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,y
 
 ## Próximos Passos
 
-1. Fase 2, aguardando autorização: F2-US-32/T02 — criar/editar rascunho e diff.
-2. M9 segue no histórico; a UI de colunas (US-38) já está done.
+1. Fase 2, aguardando autorização: F2-US-34 — MCP de memória (search/get/revisions + create_memory_draft).
+2. Residual de UI: F2-US-32/T02–T03 (draft/diff e publish/archive na Central).
+3. M9 segue no histórico; a UI de colunas (US-38) já está done.
 
 ---
 

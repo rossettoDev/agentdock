@@ -9,3 +9,4 @@ dependencies:
   - ab_agent:ab_agent
   - ab_communication:ab_communication
   - ab_event:ab_event
+  - ab_memory:ab_memory

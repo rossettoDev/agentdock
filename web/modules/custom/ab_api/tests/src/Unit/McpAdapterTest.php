@@ -47,6 +47,10 @@ class McpAdapterTest extends UnitTestCase {
       'fail_execution',
       'release_task',
       'get_agent_inbox',
+      'search_memory',
+      'get_memory',
+      'list_memory_revisions',
+      'create_memory_draft',
     ], $names);
 
     $client = new RecordingClient();
@@ -56,6 +60,7 @@ class McpAdapterTest extends UnitTestCase {
     $execution = '44444444-4444-4444-8444-444444444444';
     $key = '55555555-5555-4555-8555-555555555555';
     $thread = '66666666-6666-4666-8666-666666666666';
+    $memory = '77777777-7777-4777-8777-777777777777';
     $lease = 'ab_lease_' . str_repeat('ab', 16) . '.' . str_repeat('cd', 32);
     $prefix = '/workspaces/' . self::WORKSPACE;
 
@@ -107,6 +112,24 @@ class McpAdapterTest extends UnitTestCase {
       'idempotency_key' => $key,
     ]);
     $gateway->call('get_agent_inbox', []);
+    $gateway->call('search_memory', [
+      'q' => 'heartbeat',
+      'board_id' => $board,
+      'limit' => 20,
+    ]);
+    $gateway->call('get_memory', ['memory_id' => $memory]);
+    $gateway->call('list_memory_revisions', ['memory_id' => $memory]);
+    $client->response = ['status' => 201, 'json' => ['data' => [
+      'id' => $memory,
+      'status' => 'draft',
+    ]]];
+    $drafted = $gateway->call('create_memory_draft', [
+      'idempotency_key' => $key,
+      'title' => 'Lição',
+      'content_markdown' => 'Heartbeat a cada 30s.',
+      'kind' => 'lesson',
+      'board_id' => $board,
+    ]);
 
     $paths = array_column($client->calls, 'path');
     $this->assertSame([
@@ -122,7 +145,16 @@ class McpAdapterTest extends UnitTestCase {
       $prefix . '/executions/' . $execution . '/fail',
       $prefix . '/executions/' . $execution . '/release',
       $prefix . '/agent-inbox',
+      $prefix . '/memory?limit=20&q=heartbeat&board=' . $board,
+      $prefix . '/memory/' . $memory,
+      $prefix . '/memory/' . $memory . '/revisions',
+      $prefix . '/memory',
     ], $paths);
+    $this->assertFalse($drafted['isError']);
+    $this->assertSame('POST', $client->calls[15]['method']);
+    $this->assertSame($key, $client->calls[15]['headers']['Idempotency-Key']);
+    $this->assertStringContainsString('"board_id":"' . $board . '"', (string) $client->calls[15]['body']);
+    $this->assertStringNotContainsString('author_id', (string) $client->calls[15]['body']);
     $this->assertSame('{}', $client->calls[3]['body']);
     $this->assertSame($key, $client->calls[3]['headers']['Idempotency-Key']);
     $this->assertArrayNotHasKey('Authorization', $client->calls[3]['headers']);
@@ -159,6 +191,20 @@ class McpAdapterTest extends UnitTestCase {
         'agent_id' => $execution,
       ]);
       $this->fail('An agent id was accepted.');
+    }
+    catch (ProtocolException $exception) {
+      $this->assertSame(-32602, $exception->rpcCode);
+    }
+    try {
+      $gateway->call('create_memory_draft', [
+        'idempotency_key' => $key,
+        'title' => 'x',
+        'content_markdown' => 'y',
+        'kind' => 'fact',
+        'board_id' => $board,
+        'author_id' => 'forged',
+      ]);
+      $this->fail('A forged author_id was accepted.');
     }
     catch (ProtocolException $exception) {
       $this->assertSame(-32602, $exception->rpcCode);

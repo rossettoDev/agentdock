@@ -104,7 +104,7 @@ class McpAdapterHttpTest extends BrowserTestBase {
     $this->assertStringNotContainsString($issued->token, $opened['stderr']);
     $replies = $this->replies($opened['stdout']);
     $this->assertSame('2024-11-05', $replies[1]['result']['protocolVersion']);
-    $this->assertCount(12, $replies[2]['result']['tools']);
+    $this->assertCount(16, $replies[2]['result']['tools']);
     $this->assertSame(-32602, $replies[3]['error']['code']);
     $this->assertContains($taskId, array_column($replies[4]['result']['structuredContent']['data'], 'id'));
     $claim = $replies[5]['result']['structuredContent']['data'];

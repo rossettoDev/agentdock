@@ -3773,6 +3773,15 @@ $ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,y
 (exit 0)
 ```
 
+Correção posterior do contrato: `info.version` em `docs/openapi.yaml` estava aninhado sob o título e o YAML não parseava. O recuo foi alinhado a 1.1.1 e `OpenApiContractTest` passou a exigir essa versão e `Task.related_memories` (máx. 5).
+
+```text
+$ lando exec appserver -- env SIMPLETEST_DB=... SIMPLETEST_BASE_URL=http://appserver \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_api/tests/src/Unit/OpenApiContractTest.php
+OK (2 tests, 71 assertions)
+```
+
 **Bloqueios:** nenhum.
 
 **Próxima ação:** F2-US-37 — captura assistida, somente após autorização.

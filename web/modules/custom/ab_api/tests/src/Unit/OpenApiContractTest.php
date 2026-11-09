@@ -37,7 +37,7 @@ class OpenApiContractTest extends UnitTestCase {
    */
   public function testExecutionReadOmitsTheLeaseSecret(): void {
     $this->assertSame('3.0.3', $this->document['openapi']);
-    $this->assertSame('1.1.0', $this->document['info']['version']);
+    $this->assertSame('1.1.1', $this->document['info']['version']);
     $paths = $this->document['paths'];
     $this->assertIsArray($paths);
     $path = '/workspaces/{workspace_id}/executions/{execution_id}';
@@ -117,6 +117,10 @@ class OpenApiContractTest extends UnitTestCase {
     $excerpt = $schemas['MemorySearchHit']['properties']['excerpt'];
     $this->assertIsArray($excerpt);
     $this->assertSame(480, $excerpt['maxLength']);
+    $task = $schemas['Task']['properties']['related_memories'] ?? NULL;
+    $this->assertIsArray($task);
+    $this->assertSame(5, $task['maxItems']);
+    $this->assertSame('#/components/schemas/MemorySearchHit', $task['items']['$ref'] ?? NULL);
     $this->assertStringContainsString('64 KiB', (string) $this->document['info']['description']);
     $this->assertStringContainsString('memory:read', (string) $this->document['info']['description']);
     $bearer = $this->document['components']['securitySchemes']['bearerAuth']['description'];

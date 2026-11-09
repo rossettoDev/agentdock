@@ -177,6 +177,37 @@ final class MemoryRepository {
   }
 
   /**
+   * Lists published entry UUIDs linked to one task.
+   *
+   * @param int $workspaceId
+   *   Internal workspace id.
+   * @param int $taskId
+   *   Internal task id.
+   * @param string[] $statuses
+   *   Allowed statuses.
+   * @param int $limit
+   *   Maximum UUIDs to return.
+   *
+   * @return string[]
+   *   Entry UUIDs newest first.
+   */
+  public function uuidsForTask(int $workspaceId, int $taskId, array $statuses, int $limit = 50): array {
+    if ($statuses === [] || $taskId <= 0) {
+      return [];
+    }
+    $limit = max(1, min(100, $limit));
+    return $this->database->select('ab_memory_entry', 'e')
+      ->fields('e', ['uuid'])
+      ->condition('e.workspace', $workspaceId)
+      ->condition('e.task_id', $taskId)
+      ->condition('e.status', $statuses, 'IN')
+      ->orderBy('e.changed', 'DESC')
+      ->range(0, $limit)
+      ->execute()
+      ->fetchCol();
+  }
+
+  /**
    * Lists entry UUIDs for a human reader inside one workspace.
    *
    * @param int $workspaceId

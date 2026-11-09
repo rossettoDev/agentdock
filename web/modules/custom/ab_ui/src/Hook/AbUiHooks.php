@@ -199,6 +199,7 @@ final class AbUiHooks {
           'tabs' => [],
           'description' => [],
           'criteria' => [],
+          'related_memories' => [],
           'edit_url' => '',
           'transition_form' => NULL,
           'blocked' => FALSE,

@@ -45,6 +45,11 @@ class MemoryService {
 
   public const RELATIONS = ['related', 'supersedes', 'contradicts', 'supports'];
 
+  /**
+   * Maximum related memories returned for one task context.
+   */
+  public const RELATED_LIMIT = 5;
+
   public function __construct(
     private readonly Connection $database,
     private readonly EntityTypeManagerInterface $entityTypeManager,
@@ -473,6 +478,98 @@ class MemoryService {
    */
   public function reindex(?int $workspaceId = NULL): int {
     return $this->searchIndex->rebuild($workspaceId);
+  }
+
+  /**
+   * Suggests published memories related to one task without claiming it.
+   *
+   * Prefers entries linked to the task, then fills with lexical hits on the
+   * same board. Never creates an execution or touches a lease.
+   *
+   * @param \Drupal\ab_core\Authorization\ActorContext $actor
+   *   Authenticated actor.
+   * @param string $taskUuid
+   *   Public task id in the actor workspace.
+   * @param int $limit
+   *   Maximum suggestions (capped at RELATED_LIMIT).
+   *
+   * @return list<\Drupal\ab_memory\MemoryRecord>
+   *   Visible published records.
+   */
+  public function relatedForTask(ActorContext $actor, string $taskUuid, int $limit = self::RELATED_LIMIT): array {
+    $limit = max(1, min(self::RELATED_LIMIT, $limit));
+    $workspace = $this->workspaceOfActor($actor);
+    $task = $this->taskInWorkspace($workspace, $taskUuid);
+    $board = $this->access->boardById((int) $task->get('board')->getString());
+    if (!$board instanceof Board) {
+      throw new ScopedResourceNotFoundException();
+    }
+    if ($actor->actorType === ActorContext::TYPE_AGENT) {
+      $boards = $this->access->readableBoardIds($actor, (int) $workspace->id());
+      if (!in_array((int) $board->id(), $boards, TRUE)) {
+        // Task itself may still be readable; memory enrichment stays optional.
+        return [];
+      }
+    }
+    elseif (!$actor->allows(WorkspacePermission::READ)) {
+      throw new ScopedOperationDeniedException();
+    }
+
+    $statuses = ['published'];
+    $ordered = [];
+    $seen = [];
+    foreach ($this->repository->uuidsForTask((int) $workspace->id(), (int) $task->id(), $statuses, $limit) as $uuid) {
+      $uuid = (string) $uuid;
+      if (isset($seen[$uuid])) {
+        continue;
+      }
+      try {
+        $ordered[] = $this->loadRecord($actor, $uuid);
+        $seen[$uuid] = TRUE;
+      }
+      catch (ScopedOperationDeniedException | ScopedResourceNotFoundException | AgentAccessDeniedException) {
+        // Grant may have changed.
+      }
+      if (count($ordered) >= $limit) {
+        return $ordered;
+      }
+    }
+
+    $query = $this->suggestionQuery((string) $task->label(), (string) $task->get('description')->getString());
+    if ($query === NULL) {
+      return $ordered;
+    }
+    try {
+      $hits = $this->searchIndex->search(
+        (int) $workspace->id(),
+        [(int) $board->id()],
+        $statuses,
+        $query,
+        NULL,
+        $limit * 2,
+      );
+    }
+    catch (\Throwable) {
+      return $ordered;
+    }
+    foreach ($hits as $hit) {
+      $uuid = $hit['uuid'];
+      if (isset($seen[$uuid])) {
+        continue;
+      }
+      try {
+        $record = $this->loadRecord($actor, $uuid);
+        $ordered[] = $record->withSearchExcerpt($hit['excerpt']);
+        $seen[$uuid] = TRUE;
+      }
+      catch (ScopedOperationDeniedException | ScopedResourceNotFoundException | AgentAccessDeniedException) {
+        // Skip.
+      }
+      if (count($ordered) >= $limit) {
+        break;
+      }
+    }
+    return $ordered;
   }
 
   /**
@@ -1002,6 +1099,38 @@ class MemoryService {
   }
 
   /**
+   * Builds a short lexical query from the task title and description.
+   */
+  private function suggestionQuery(string $title, string $description): ?string {
+    $text = trim($title . ' ' . $description);
+    if ($text === '') {
+      return NULL;
+    }
+    $parts = preg_split('/\s+/u', mb_strtolower($text)) ?: [];
+    $stop = [
+      'a', 'as', 'ao', 'aos', 'com', 'da', 'das', 'de', 'do', 'dos', 'e', 'em',
+      'na', 'nas', 'no', 'nos', 'o', 'os', 'ou', 'para', 'por', 'que', 'se',
+      'um', 'uma', 'the', 'and', 'for', 'from', 'with', 'this', 'that',
+    ];
+    $picked = [];
+    foreach ($parts as $part) {
+      $word = preg_replace('/[^\p{L}\p{N}-]+/u', '', $part) ?? '';
+      if ($word === '' || mb_strlen($word) < 3 || isset($stop[$word]) || in_array($word, $stop, TRUE)) {
+        continue;
+      }
+      $picked[$word] = TRUE;
+      if (count($picked) >= 8) {
+        break;
+      }
+    }
+    $query = $picked !== []
+      ? implode(' ', array_keys($picked))
+      : trim($title);
+    $query = mb_substr($query, 0, MemorySearchIndex::QUERY_MAX);
+    return $query !== '' ? $query : NULL;
+  }
+
+  /**
    * Validates the optional change reason.
    */
   private function changeReason(mixed $value): ?string {
@@ -1103,6 +1232,17 @@ class MemoryService {
       throw new ScopedResourceNotFoundException();
     }
     return $board;
+  }
+
+  /**
+   * Loads a required task inside the workspace.
+   */
+  private function taskInWorkspace(Workspace $workspace, string $taskUuid): Task {
+    $task = $this->optionalTask($workspace, NULL, $taskUuid);
+    if (!$task instanceof Task) {
+      throw new ScopedResourceNotFoundException();
+    }
+    return $task;
   }
 
   /**

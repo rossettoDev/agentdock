@@ -7,6 +7,7 @@ namespace Drupal\ab_api\Controller;
 use Drupal\ab_api\Http\Catalog;
 use Drupal\ab_api\Http\ColumnCommands;
 use Drupal\ab_api\Http\TaskCommands;
+use Drupal\ab_api\Http\TaskMemoryContext;
 use Drupal\ab_api\StoredResponse;
 use Drupal\Core\Controller\ControllerBase;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -28,6 +29,8 @@ final class ApiController extends ControllerBase {
     private readonly TaskCommands $commands,
     #[Autowire(service: ColumnCommands::class)]
     private readonly ColumnCommands $columns,
+    #[Autowire(service: TaskMemoryContext::class)]
+    private readonly TaskMemoryContext $taskMemory,
   ) {}
 
   /**
@@ -106,7 +109,9 @@ final class ApiController extends ControllerBase {
    * Reads one task.
    */
   public function task(Request $request, string $workspace_id, string $task_id): JsonResponse {
-    return $this->taskResponse($this->catalog->task($request, $workspace_id, $task_id));
+    $document = $this->catalog->task($request, $workspace_id, $task_id);
+    $document = $this->taskMemory->enrich($request, $workspace_id, $task_id, $document);
+    return $this->taskResponse($document);
   }
 
   /**

@@ -47,7 +47,7 @@ final class MemoryDocument {
       'memory_id' => $record->uuid,
       'revision' => $record->revisionVersion,
       'title' => $record->title,
-      'excerpt' => $this->excerpt($record->contentMarkdown),
+      'excerpt' => $record->searchExcerpt ?? $this->excerpt($record->contentMarkdown),
       'source' => $this->source($record->sourceType, $record->sourceId),
       'board_id' => $record->boardUuid,
       'kind' => $record->kind,

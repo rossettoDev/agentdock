@@ -49,7 +49,7 @@ A API e a UI utilizam os mesmos serviços. A pesquisa deve filtrar por workspace
 - `ab_memory_revision`: id, entry_id, version inteiro, content_markdown, content_hash, author_type, author_id, source_type (`manual`, `task`, `execution`, `message`), source_id, created_at, change_reason. Unicidade `(entry_id, version)`.
 - `ab_memory_link`: from_entry, to_entry, relation (`related`, `supersedes`, `contradicts`, `supports`); somente mesmo workspace; sem links duplicados.
 - `ab_memory_source`: referência tipada à origem, com snapshot mínimo e indicação se a fonte ainda pode ser consultada; não duplicar conversas completas.
-- `ab_memory_search_index`: projeção reconstruível para busca lexical; não é fonte de verdade.
+- `ab_memory_search_index`: projeção reconstruível para busca lexical (F2-US-35); tsvector no PostgreSQL; não é fonte de verdade.
 - Futuro `ab_memory_embedding`: entry_id, revision_id, model, vector, indexed_at, estado; manter isolado do schema inicial.
 
 Revisões publicadas são imutáveis. Edição cria nova revisão; arquivamento não apaga histórico. Exclusão definitiva e retenção exigem política específica, incluindo direito de remoção e limpeza de índices/exportações. Não guardar tokens, chaves, credenciais ou dados pessoais desnecessários.

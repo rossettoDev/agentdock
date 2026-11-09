@@ -38,15 +38,22 @@ class MemorySchemaKernelTest extends KernelTestBase {
       'ab_memory_revision',
       'ab_memory_source',
       'ab_memory_link',
+      'ab_memory_search_index',
     ]);
   }
 
   /**
-   * Hook schema creates the four memory tables with uniqueness.
+   * Hook schema creates the memory tables with uniqueness.
    */
   public function testSchemaDefinesEntriesAndRevisions(): void {
     $schema = $this->container->get('database')->schema();
-    foreach (['ab_memory_entry', 'ab_memory_revision', 'ab_memory_source', 'ab_memory_link'] as $table) {
+    foreach ([
+      'ab_memory_entry',
+      'ab_memory_revision',
+      'ab_memory_source',
+      'ab_memory_link',
+      'ab_memory_search_index',
+    ] as $table) {
       $this->assertTrue($schema->tableExists($table), $table);
     }
     $this->assertTrue($schema->fieldExists('ab_memory_entry', 'version'));
@@ -59,16 +66,19 @@ class MemorySchemaKernelTest extends KernelTestBase {
    */
   public function testInstallIsIdempotentAfterDrop(): void {
     $schema = $this->container->get('database')->schema();
+    $schema->dropTable('ab_memory_search_index');
     $schema->dropTable('ab_memory_link');
     $schema->dropTable('ab_memory_source');
     $schema->dropTable('ab_memory_revision');
     $schema->dropTable('ab_memory_entry');
     $first = MemorySchema::install();
     $this->assertStringContainsString('Created the ab_memory_entry table.', $first);
+    $this->assertStringContainsString('Created the ab_memory_search_index table.', $first);
     $second = MemorySchema::install();
     $this->assertSame('Memory schema already present.', $second);
     $this->assertTrue($schema->tableExists('ab_memory_entry'));
     $this->assertTrue($schema->tableExists('ab_memory_revision'));
+    $this->assertTrue($schema->tableExists('ab_memory_search_index'));
   }
 
 }

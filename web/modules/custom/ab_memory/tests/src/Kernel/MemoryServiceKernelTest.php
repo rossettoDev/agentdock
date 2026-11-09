@@ -7,6 +7,7 @@ namespace Drupal\Tests\ab_memory\Kernel;
 use Drupal\ab_memory\MemoryContentGuard;
 use Drupal\ab_memory\MemoryRepository;
 use Drupal\ab_memory\MemoryAccessPolicy;
+use Drupal\ab_memory\MemorySearchIndex;
 use Drupal\ab_agent\AgentGrantManager;
 use Drupal\ab_agent\AgentManager;
 use Drupal\ab_agent\AgentTokenManager;
@@ -76,6 +77,7 @@ class MemoryServiceKernelTest extends KernelTestBase {
       'ab_memory_revision',
       'ab_memory_source',
       'ab_memory_link',
+      'ab_memory_search_index',
     ]);
   }
 
@@ -158,6 +160,7 @@ class MemoryServiceKernelTest extends KernelTestBase {
       $this->container->get(MemoryAccessPolicy::class),
       $this->container->get(MemoryRepository::class),
       $this->container->get(MemoryContentGuard::class),
+      $this->container->get(MemorySearchIndex::class),
       $this->container->get('uuid'),
       $this->container->get('datetime.time'),
       $this->container->get('cache_tags.invalidator'),

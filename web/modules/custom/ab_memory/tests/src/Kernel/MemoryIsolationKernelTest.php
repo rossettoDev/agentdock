@@ -69,6 +69,7 @@ class MemoryIsolationKernelTest extends KernelTestBase {
       'ab_execution_lease',
     ]);
     $this->installSchema('ab_memory', [
+      'ab_memory_search_index',
       'ab_memory_entry',
       'ab_memory_revision',
       'ab_memory_source',

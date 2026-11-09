@@ -8,6 +8,7 @@
 declare(strict_types=1);
 
 use Drupal\ab_memory\MemorySchema;
+use Drupal\ab_memory\MemorySearchIndex;
 
 /**
  * Implements hook_schema().
@@ -17,7 +18,15 @@ function ab_memory_schema(): array {
   $schema['ab_memory_revision'] = MemorySchema::revisionTable();
   $schema['ab_memory_source'] = MemorySchema::sourceTable();
   $schema['ab_memory_link'] = MemorySchema::linkTable();
+  $schema['ab_memory_search_index'] = MemorySchema::searchIndexTable();
   return $schema;
+}
+
+/**
+ * Implements hook_install().
+ */
+function ab_memory_install(): void {
+  \Drupal::service(MemorySearchIndex::class)->ensureFts();
 }
 
 /**
@@ -25,4 +34,16 @@ function ab_memory_schema(): array {
  */
 function ab_memory_update_11001(): string {
   return MemorySchema::install();
+}
+
+/**
+ * Adds the lexical search projection and rebuilds it.
+ */
+function ab_memory_update_11002(): string {
+  $created = MemorySchema::install();
+  /** @var \Drupal\ab_memory\MemorySearchIndex $index */
+  $index = \Drupal::service(MemorySearchIndex::class);
+  $index->ensureFts();
+  $count = $index->rebuild();
+  return $created . ' Indexed ' . $count . ' memory rows.';
 }

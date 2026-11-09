@@ -3639,9 +3639,56 @@ $ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,y
 (exit 0)
 ```
 
-**Bloqueios:** nenhum para F2-US-34. Dois residuais ficam registrados e não reabrem a história: a busca pagina só dentro das 100 entries mais recentes e o filtro `board` corre depois desse corte; publish/archive com bearer de agente responde 403 antes do serviço, também fora do grant (o OpenAPI descreve 404 nesse caso; a resposta é a mesma para UUID inexistente).
+**Bloqueios:** nenhum. Residuais da listagem sem `q` (corte 100 + filtro `board` pós-corte) e do 403 de publish/archive com bearer permanecem documentados e não reabrem a história.
 
-**Próxima ação:** F2-US-34 — MCP de memória, somente após autorização.
+**Próxima ação:** F2-US-35 (concluída abaixo). F2-US-34 (MCP) segue em branch própria se ainda não mergeada.
+
+### F2-US-35 — Busca de memória
+
+**Status:** done
+**Objetivo:** Índice lexical reconstruível em PostgreSQL, com filtros de acesso antes do ranking, snippets/fonte/versão, reindexação e testes de concorrência/revogação.
+
+#### F2-US-35/T01 — Índice e ranking
+
+**Status:** done
+**Entrega:** Tabela `ab_memory_search_index` + `MemorySearchIndex` (tsvector/`ts_rank` no PostgreSQL). `listVisible` com `q` consulta o índice; workspace/boards/status entram no SQL antes do rank. Busca padrão = `published` apenas.
+
+#### F2-US-35/T02 — Snippets e limites
+
+**Status:** done
+**Entrega:** Excerpt ≤ 480 (`ts_headline` ou projeção), revisão e fonte no hit; `MemoryRecord::searchExcerpt`. Benchmark em `MemorySearchKernelTest` com consultas conhecidas.
+
+#### F2-US-35/T03 — Reindex, revogação e concorrência
+
+**Status:** done
+**Entrega:** `MemoryService::reindex()` + Drush `ab-memory:reindex`; sync em publish/archive; arquivado fora da busca padrão; grant revogado some do resultado; upsert idempotente por `entry_id`. Update `ab_memory_update_11002`.
+
+**Validação:**
+
+```text
+$ lando exec appserver -- env SIMPLETEST_DB=... SIMPLETEST_BASE_URL=http://appserver \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_memory/tests/src/Kernel/MemorySearchKernelTest.php \
+    web/modules/custom/ab_memory/tests/src/Kernel/MemorySchemaKernelTest.php \
+    web/modules/custom/ab_memory/tests/src/Kernel/MemoryServiceKernelTest.php \
+    web/modules/custom/ab_memory/tests/src/Kernel/MemoryIsolationKernelTest.php
+OK (13 tests, 283 assertions)
+
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,yml \
+    web/modules/custom/ab_memory/src/MemorySearchIndex.php \
+    web/modules/custom/ab_memory/src/MemorySchema.php \
+    web/modules/custom/ab_memory/src/MemoryService.php \
+    web/modules/custom/ab_memory/src/MemoryRecord.php \
+    web/modules/custom/ab_memory/src/Drush/Commands/MemoryReindexCommands.php \
+    web/modules/custom/ab_memory/ab_memory.install \
+    web/modules/custom/ab_memory/ab_memory.services.yml \
+    web/modules/custom/ab_memory/tests/src/Kernel/MemorySearchKernelTest.php
+(exit 0)
+```
+
+**Bloqueios:** nenhum.
+
+**Próxima ação:** F2-US-36 — contexto de tarefa e piloto, somente após autorização (e merge da F2-US-34 se ainda aberta).
 
 ---
 
@@ -3649,7 +3696,7 @@ $ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,y
 
 - **Total de tasks do backlog M0–M8:** 83, todas registradas como done no corpo histórico
 - **M9:** US-29 done; US-30 done; US-31 done; US-32 done; US-33 done; US-37 done; US-34 em diante todo
-- **Fase 2:** F2-US-29 done; F2-US-30 done; F2-US-31 done; F2-US-32 done (T01–T03); F2-US-33 done; F2-US-34 em diante todo
+- **Fase 2:** F2-US-29 done; F2-US-30 done; F2-US-31 done; F2-US-32 done (T01–T03); F2-US-33 done; F2-US-35 done; F2-US-34/36 em diante conforme merge
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
@@ -3664,8 +3711,9 @@ $ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,y
 
 ## Próximos Passos
 
-1. Fase 2, aguardando autorização: F2-US-34 — MCP de memória (search/get/revisions + create_memory_draft).
-2. M9 segue no histórico; a UI de colunas (US-38) já está done.
+1. Fase 2, aguardando autorização: F2-US-36 — contexto de tarefa e piloto (A → humano → B).
+2. Se a F2-US-34 ainda não estiver na main, mergear o MCP de memória antes do piloto HTTP/MCP.
+3. M9 segue no histórico; a UI de colunas (US-38) já está done.
 
 ---
 

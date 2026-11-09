@@ -280,6 +280,124 @@ final class MemorySchema {
   }
 
   /**
+   * Reconstructible lexical search projection.
+   *
+   * @return array<string, mixed>
+   *   A hook_schema table definition.
+   */
+  public static function searchIndexTable(): array {
+    return [
+      'description' => 'Lexical search projection rebuilt from published revisions.',
+      'fields' => [
+        'entry_id' => [
+          'description' => 'Memory entry id (primary key of the projection).',
+          'type' => 'int',
+          'size' => 'big',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'entry_uuid' => [
+          'description' => 'Public entry UUID.',
+          'type' => 'varchar',
+          'length' => 128,
+          'not null' => TRUE,
+        ],
+        'workspace' => [
+          'description' => 'Workspace that owns the entry.',
+          'type' => 'int',
+          'size' => 'big',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'board_id' => [
+          'description' => 'Board id when visibility is board-scoped.',
+          'type' => 'int',
+          'size' => 'big',
+          'unsigned' => TRUE,
+          'not null' => FALSE,
+        ],
+        'revision_id' => [
+          'description' => 'Indexed revision id.',
+          'type' => 'int',
+          'size' => 'big',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'revision_version' => [
+          'description' => 'Indexed revision number.',
+          'type' => 'int',
+          'size' => 'big',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'status' => [
+          'description' => 'published or archived.',
+          'type' => 'varchar',
+          'length' => 16,
+          'not null' => TRUE,
+        ],
+        'kind' => [
+          'description' => 'Memory kind.',
+          'type' => 'varchar',
+          'length' => 32,
+          'not null' => TRUE,
+        ],
+        'title' => [
+          'description' => 'Entry title.',
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => TRUE,
+        ],
+        'document' => [
+          'description' => 'Title and markdown used to build the lexical vector.',
+          'type' => 'text',
+          'size' => 'big',
+          'not null' => TRUE,
+        ],
+        'excerpt' => [
+          'description' => 'Plain excerpt under the API limit.',
+          'type' => 'varchar',
+          'length' => 480,
+          'not null' => TRUE,
+        ],
+        'source_type' => [
+          'description' => 'Source type of the indexed revision.',
+          'type' => 'varchar',
+          'length' => 16,
+          'not null' => TRUE,
+        ],
+        'source_id' => [
+          'description' => 'Opaque source id.',
+          'type' => 'varchar',
+          'length' => 64,
+          'not null' => FALSE,
+        ],
+        'changed' => [
+          'description' => 'Entry changed timestamp used for recency.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'indexed_at' => [
+          'description' => 'When this projection row was written.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+      ],
+      'primary key' => ['entry_id'],
+      'unique keys' => [
+        'entry_uuid' => ['entry_uuid'],
+      ],
+      'indexes' => [
+        'workspace_status' => ['workspace', 'status'],
+        'workspace_board' => ['workspace', 'board_id'],
+        'workspace_changed' => ['workspace', 'changed'],
+      ],
+    ];
+  }
+
+  /**
    * Schema for relations between entries in the same workspace.
    *
    * @return array<string, mixed>
@@ -352,6 +470,7 @@ final class MemorySchema {
       'ab_memory_revision' => self::revisionTable(),
       'ab_memory_source' => self::sourceTable(),
       'ab_memory_link' => self::linkTable(),
+      'ab_memory_search_index' => self::searchIndexTable(),
     ];
     foreach ($tables as $name => $definition) {
       if (!$schema->tableExists($name)) {

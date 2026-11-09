@@ -112,6 +112,36 @@ class TaskKanbanMoveUiTest extends BrowserTestBase {
   }
 
   /**
+   * Liberar on a later card does not consume another card's version.
+   */
+  public function testLaterCardKeepsItsOwnTransition(): void {
+    $ada = $this->drupalCreateUser();
+    $this->drupalLogin($ada);
+    $this->drupalGet('workspaces/add');
+    $this->submitForm([
+      'name' => 'Casa Beta',
+      'timezone' => 'America/Sao_Paulo',
+    ], 'Criar workspace');
+    $this->drupalGet('boards/add');
+    $this->submitForm([
+      'name' => 'Quadro Beta',
+      'description' => 'Texto Beta',
+    ], 'Criar board');
+    $board = $this->boardByName('Quadro Beta');
+    $alfa = $this->storeTask($board, 'Alfa', 'backlog');
+    $beta = $this->storeTask($board, 'Beta', 'backlog');
+
+    $this->drupalGet('boards/' . $board->uuid() . '/tasks');
+    $this->submitForm([], 'Liberar', 'ab-ui-task-transition-' . $beta->uuid());
+    $this->assertSession()->pageTextContains('Tarefa liberada.');
+    $this->assertSession()->pageTextNotContains('A tarefa foi alterada. Recarregue e tente de novo.');
+    $this->assertSame('backlog', $this->reload($alfa)->get('status')->getString());
+    $this->assertSame('ready', $this->reload($beta)->get('status')->getString());
+    $this->assertSame('1', $this->reload($alfa)->get('version')->getString());
+    $this->assertSame('2', $this->reload($beta)->get('version')->getString());
+  }
+
+  /**
    * XPath of the column whose heading is the given label.
    */
   private function column(string $label): string {

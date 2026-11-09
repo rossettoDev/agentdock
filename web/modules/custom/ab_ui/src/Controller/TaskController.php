@@ -38,6 +38,7 @@ use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Database\Connection;
 use Drupal\Core\DependencyInjection\AutowireTrait;
+use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormBuilderInterface;
@@ -83,6 +84,7 @@ final class TaskController implements ContainerInjectionInterface {
     private readonly HumanActorContextFactory $actors,
     private readonly MessageService $messageService,
     private readonly MemoryService $memory,
+    private readonly ClassResolverInterface $classResolver,
   ) {}
 
   /**
@@ -334,10 +336,7 @@ final class TaskController implements ContainerInjectionInterface {
       );
     }
     if ($can_write && $targets !== []) {
-      $build['#transition_form'] = $this->formBuilder->getForm(
-        TaskTransitionForm::class,
-        $task->uuid(),
-      );
+      $build['#transition_form'] = $this->transitionForm($task->uuid());
     }
     if ($can_write) {
       $build['#dependency_form'] = $this->formBuilder->getForm(
@@ -712,6 +711,53 @@ final class TaskController implements ContainerInjectionInterface {
   }
 
   /**
+   * Builds the move form bound to one task.
+   *
+   * The instance carries the task id into the form id. The board renders
+   * one of these for every card the person may move.
+   *
+   * @return array<string, mixed>
+   *   The transition form.
+   */
+  private function transitionForm(string $task_uuid, string $return_to = ''): array {
+    $form = $this->classResolver->getInstanceFromDefinition(TaskTransitionForm::class);
+    if ($form instanceof TaskTransitionForm) {
+      $form->setTaskUuid($task_uuid);
+    }
+    if ($return_to === '') {
+      return $this->formBuilder->getForm($form, $task_uuid);
+    }
+    return $this->formBuilder->getForm($form, $task_uuid, $return_to);
+  }
+
+  /**
+   * Builds the reorder form bound to one task.
+   *
+   * @return array<string, mixed>
+   *   The reorder form.
+   */
+  private function reorderForm(
+    string $task_uuid,
+    string $before_up,
+    string $before_down,
+    string $can_down,
+    string $return_to,
+  ): array {
+    $form = $this->classResolver->getInstanceFromDefinition(TaskReorderForm::class);
+    if ($form instanceof TaskReorderForm) {
+      $form->setTaskUuid($task_uuid);
+    }
+    return $this->formBuilder->getForm(
+      $form,
+      $task_uuid,
+      $before_up,
+      $before_down,
+      $can_down,
+      $return_to,
+    );
+  }
+
+  /**
    * Adds the reorder form when the column has another card.
    *
    * @param array<int, array<string, mixed>> $cards
@@ -736,8 +782,7 @@ final class TaskController implements ContainerInjectionInterface {
       if ($can_down && isset($cards[$index + 2]['uuid'])) {
         $before_down = (string) $cards[$index + 2]['uuid'];
       }
-      $cards[$index]['reorder_form'] = $this->formBuilder->getForm(
-        TaskReorderForm::class,
+      $cards[$index]['reorder_form'] = $this->reorderForm(
         (string) $card['uuid'],
         $before_up,
         $before_down,
@@ -982,7 +1027,7 @@ final class TaskController implements ContainerInjectionInterface {
     $targets = (new TaskTransitionPolicy())->targets($status, $human);
     $move_form = [];
     if ($can_write && $targets !== []) {
-      $move_form = $this->formBuilder->getForm(TaskTransitionForm::class, $task->uuid(), 'board');
+      $move_form = $this->transitionForm($task->uuid(), 'board');
     }
     $priority = $task->get('priority')->getString();
     $execution = $this->executionLine($workspace, $task);

@@ -15,6 +15,7 @@ use Drupal\ab_board\TaskVersionConflictException;
 use Drupal\ab_core\Authorization\ScopedOperationDeniedException;
 use Drupal\ab_core\Authorization\ScopedResourceNotFoundException;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Form\BaseFormIdInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 
@@ -24,13 +25,22 @@ use Drupal\Core\Form\FormStateInterface;
  * The buttons come from the policy. The in_progress, in_review and done
  * statuses are not choices, so the screen cannot imitate an execution.
  * The hidden version is the one rendered for this editor.
+ *
+ * Each card gets its own form id. Drupal rebuilds a POST against every
+ * form that shares an id, and the task id on this form is not taken from
+ * the browser. One shared id would move whichever card was built first.
  */
-final class TaskTransitionForm extends FormBase {
+final class TaskTransitionForm extends FormBase implements BaseFormIdInterface {
 
   /**
    * Allowed human targets for the task being shown.
    */
   private readonly TaskTransitionPolicy $policy;
+
+  /**
+   * Task this instance edits. Empty until the board binds a card.
+   */
+  private string $taskUuid = '';
 
   public function __construct(
     private readonly TaskManager $tasks,
@@ -42,10 +52,27 @@ final class TaskTransitionForm extends FormBase {
   }
 
   /**
+   * Binds this instance to one task before the form id is chosen.
+   */
+  public function setTaskUuid(string $uuid): void {
+    $this->taskUuid = $uuid;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getBaseFormId() {
+    return 'ab_ui_task_transition';
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function getFormId() {
-    return 'ab_ui_task_transition';
+    if ($this->taskUuid === '') {
+      return 'ab_ui_task_transition';
+    }
+    return 'ab_ui_task_transition_' . str_replace('-', '', $this->taskUuid);
   }
 
   /**

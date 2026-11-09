@@ -60,6 +60,8 @@ class AgentTokenUiTest extends BrowserTestBase {
       'enabled' => TRUE,
     ], 'Criar agente');
     $agent = $this->agentByName('Cursor local');
+    $this->assertSession()->pageTextContains('Ler memória');
+    $this->assertSession()->pageTextContains('Escrever memória');
     $this->submitForm([], 'Criar token');
     $this->assertSession()->pageTextContains('Escolha um escopo.');
     $this->assertSession()->pageTextNotContains('Copie o token agora.');

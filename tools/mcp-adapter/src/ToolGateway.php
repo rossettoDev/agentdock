@@ -62,8 +62,136 @@ final class ToolGateway {
       'fail_execution' => $this->leaseWrite($arguments, '/fail', $this->failBody($arguments)),
       'release_task' => $this->leaseWrite($arguments, '/release', []),
       'get_agent_inbox' => $this->read('/agent-inbox', $this->pageQuery($arguments)),
+      'search_memory' => $this->searchMemory($arguments),
+      'get_memory' => $this->one($arguments, 'memory_id', '/memory/'),
+      'list_memory_revisions' => $this->memoryRevisions($arguments),
+      'create_memory_draft' => $this->createMemoryDraft($arguments),
       default => throw new ProtocolException(-32602, 'Unknown tool.'),
     };
+  }
+
+  /**
+   * Searches memory through the HTTP API.
+   *
+   * @param array<string, mixed> $arguments
+   *   Tool arguments.
+   *
+   * @return array<string, mixed>
+   *   MCP tool result.
+   */
+  private function searchMemory(array $arguments): array {
+    $this->only($arguments, ['q', 'kind', 'status', 'board_id', 'cursor', 'limit']);
+    $query = $this->pageQuery($arguments, ['q', 'kind', 'status', 'board_id']);
+    if (array_key_exists('q', $arguments)) {
+      $query['q'] = $this->text($arguments, 'q', 256, TRUE);
+    }
+    if (array_key_exists('kind', $arguments)) {
+      $query['kind'] = $this->text($arguments, 'kind', 32, TRUE);
+    }
+    if (array_key_exists('status', $arguments)) {
+      $status = $this->text($arguments, 'status', 32, TRUE);
+      if (!in_array($status, ['draft', 'published', 'archived'], TRUE)) {
+        throw new ProtocolException(-32602, 'Invalid arguments.');
+      }
+      $query['status'] = $status;
+    }
+    if (array_key_exists('board_id', $arguments)) {
+      $query['board'] = $this->uuid($arguments, 'board_id');
+    }
+    return $this->read('/memory', $query);
+  }
+
+  /**
+   * Lists revisions of one memory entry.
+   *
+   * @param array<string, mixed> $arguments
+   *   Tool arguments.
+   *
+   * @return array<string, mixed>
+   *   MCP tool result.
+   */
+  private function memoryRevisions(array $arguments): array {
+    $this->only($arguments, ['memory_id', 'cursor', 'limit']);
+    return $this->read(
+      '/memory/' . $this->uuid($arguments, 'memory_id') . '/revisions',
+      $this->pageQuery($arguments, ['memory_id']),
+    );
+  }
+
+  /**
+   * Creates a draft. Authorship stays on the process credential.
+   *
+   * @param array<string, mixed> $arguments
+   *   Tool arguments.
+   *
+   * @return array<string, mixed>
+   *   MCP tool result.
+   */
+  private function createMemoryDraft(array $arguments): array {
+    $this->only($arguments, [
+      'idempotency_key',
+      'title',
+      'content_markdown',
+      'kind',
+      'board_id',
+      'task_id',
+      'tags',
+      'source_type',
+      'source_id',
+      'change_reason',
+    ]);
+    $body = [
+      'title' => $this->text($arguments, 'title', 255, TRUE),
+      'content_markdown' => $this->text($arguments, 'content_markdown', 65536, TRUE),
+      'kind' => $this->text($arguments, 'kind', 32, TRUE),
+    ];
+    if (array_key_exists('board_id', $arguments)) {
+      $body['board_id'] = $this->uuid($arguments, 'board_id');
+    }
+    if (array_key_exists('task_id', $arguments)) {
+      $body['task_id'] = $this->uuid($arguments, 'task_id');
+    }
+    if (array_key_exists('tags', $arguments)) {
+      $body['tags'] = $this->tags($arguments['tags']);
+    }
+    if (array_key_exists('source_type', $arguments)) {
+      $body['source_type'] = $this->text($arguments, 'source_type', 32, TRUE);
+    }
+    if (array_key_exists('source_id', $arguments)) {
+      $body['source_id'] = $this->text($arguments, 'source_id', 64, TRUE);
+    }
+    if (array_key_exists('change_reason', $arguments)) {
+      $body['change_reason'] = $this->text($arguments, 'change_reason', 500, FALSE);
+    }
+    return $this->write(
+      '/memory',
+      $body,
+      $this->uuid($arguments, 'idempotency_key'),
+      NULL,
+    );
+  }
+
+  /**
+   * Reads tag strings the memory API accepts.
+   *
+   * @param mixed $value
+   *   Raw tags argument.
+   *
+   * @return list<string>
+   *   Tags forwarded as given.
+   */
+  private function tags(mixed $value): array {
+    if (!is_array($value) || count($value) > 20) {
+      throw new ProtocolException(-32602, 'Invalid arguments.');
+    }
+    $clean = [];
+    foreach ($value as $tag) {
+      if (!is_string($tag) || $tag === '' || strlen($tag) > 48 || str_contains($tag, "\0")) {
+        throw new ProtocolException(-32602, 'Invalid arguments.');
+      }
+      $clean[] = $tag;
+    }
+    return $clean;
   }
 
   /**

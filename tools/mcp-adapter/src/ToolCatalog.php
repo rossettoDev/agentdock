@@ -147,6 +147,73 @@ final class ToolCatalog {
         'cursor' => $cursor,
         'limit' => $limit,
       ], []),
+      self::tool('search_memory', 'Search published memory the agent can read.', [
+        'q' => [
+          'type' => 'string',
+          'maxLength' => 256,
+          'description' => 'Full-text query forwarded to the API.',
+        ],
+        'kind' => [
+          'type' => 'string',
+          'maxLength' => 32,
+          'description' => 'Memory kind filter.',
+        ],
+        'status' => [
+          'type' => 'string',
+          'enum' => ['draft', 'published', 'archived'],
+          'description' => 'Status filter. The API defaults to published.',
+        ],
+        'board_id' => $uuid + ['description' => 'Board UUID filter.'],
+        'cursor' => $cursor,
+        'limit' => $limit,
+      ], []),
+      self::tool('get_memory', 'Read one memory entry the agent can see.', [
+        'memory_id' => $uuid + ['description' => 'Memory UUID.'],
+      ], ['memory_id']),
+      self::tool('list_memory_revisions', 'List revisions of one memory entry.', [
+        'memory_id' => $uuid + ['description' => 'Memory UUID.'],
+        'cursor' => $cursor,
+        'limit' => $limit,
+      ], ['memory_id']),
+      self::tool('create_memory_draft', 'Create a memory draft. Authorship comes from the process credential.', [
+        'idempotency_key' => $key,
+        'title' => [
+          'type' => 'string',
+          'minLength' => 1,
+          'maxLength' => 255,
+        ],
+        'content_markdown' => [
+          'type' => 'string',
+          'minLength' => 1,
+          'maxLength' => 65536,
+        ],
+        'kind' => [
+          'type' => 'string',
+          'maxLength' => 32,
+        ],
+        'board_id' => $uuid + ['description' => 'Board UUID. Required for agents.'],
+        'task_id' => $uuid + ['description' => 'Optional task UUID.'],
+        'tags' => [
+          'type' => 'array',
+          'maxItems' => 20,
+          'items' => [
+            'type' => 'string',
+            'maxLength' => 48,
+          ],
+        ],
+        'source_type' => [
+          'type' => 'string',
+          'maxLength' => 32,
+        ],
+        'source_id' => [
+          'type' => 'string',
+          'maxLength' => 64,
+        ],
+        'change_reason' => [
+          'type' => 'string',
+          'maxLength' => 500,
+        ],
+      ], ['idempotency_key', 'title', 'content_markdown', 'kind']),
     ];
   }
 

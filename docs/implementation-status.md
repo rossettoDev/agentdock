@@ -3641,7 +3641,50 @@ $ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,y
 
 **Bloqueios:** nenhum. Residuais da listagem sem `q` (corte 100 + filtro `board` pós-corte) e do 403 de publish/archive com bearer permanecem documentados e não reabrem a história.
 
-**Próxima ação:** F2-US-35 (concluída abaixo). F2-US-34 (MCP) segue em branch própria se ainda não mergeada.
+**Próxima ação:** F2-US-34 (concluída abaixo), depois F2-US-35 (também abaixo).
+
+### F2-US-34 — MCP de memória
+
+**Status:** done
+**Objetivo:** Ferramentas MCP sobre a API de memória, sem banco no adaptador e sem publish/archive no piloto.
+
+#### F2-US-34/T01 — Leitura
+
+**Status:** done
+**Entrega:** `search_memory`, `get_memory` e `list_memory_revisions` em `ToolCatalog`/`ToolGateway`, cada uma um GET HTTP sob `/workspaces/{w}/memory`.
+
+#### F2-US-34/T02 — Draft
+
+**Status:** done
+**Entrega:** `create_memory_draft` encaminha POST com idempotência; `rejectIdentity` recusa `author_id`/`agent_id`/`workspace_id` antes da API.
+
+#### F2-US-34/T03 — Dois agentes
+
+**Status:** done
+**Entrega:** `McpMemoryAdapterHttpTest` — agente A cria rascunho via MCP; B não lê o draft; humano publica; B recupera por search/get/revisions. `McpAdapterTest` e `McpAdapterHttpTest` atualizados (16 ferramentas).
+
+**Validação:**
+
+```text
+$ lando exec appserver -- env SIMPLETEST_DB=... SIMPLETEST_BASE_URL=http://appserver \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_api/tests/src/Unit/McpAdapterTest.php \
+    web/modules/custom/ab_api/tests/src/Functional/McpAdapterHttpTest.php \
+    web/modules/custom/ab_api/tests/src/Functional/McpMemoryAdapterHttpTest.php
+OK (5 tests, 154 assertions)
+
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php \
+    web/modules/custom/ab_api/tests/src/Unit/McpAdapterTest.php \
+    web/modules/custom/ab_api/tests/src/Functional/McpAdapterHttpTest.php \
+    web/modules/custom/ab_api/tests/src/Functional/McpMemoryAdapterHttpTest.php \
+    tools/mcp-adapter/src/ToolCatalog.php \
+    tools/mcp-adapter/src/ToolGateway.php
+(exit 0)
+```
+
+**Bloqueios:** nenhum.
+
+**Próxima ação:** F2-US-35 (concluída abaixo).
 
 ### F2-US-35 — Busca de memória
 
@@ -3688,7 +3731,7 @@ $ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,y
 
 **Bloqueios:** nenhum.
 
-**Próxima ação:** F2-US-36 — contexto de tarefa e piloto, somente após autorização (e merge da F2-US-34 se ainda aberta).
+**Próxima ação:** F2-US-36 — contexto de tarefa e piloto, somente após autorização.
 
 ---
 
@@ -3696,7 +3739,7 @@ $ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,y
 
 - **Total de tasks do backlog M0–M8:** 83, todas registradas como done no corpo histórico
 - **M9:** US-29 done; US-30 done; US-31 done; US-32 done; US-33 done; US-37 done; US-34 em diante todo
-- **Fase 2:** F2-US-29 done; F2-US-30 done; F2-US-31 done; F2-US-32 done (T01–T03); F2-US-33 done; F2-US-35 done; F2-US-34/36 em diante conforme merge
+- **Fase 2:** F2-US-29 done; F2-US-30 done; F2-US-31 done; F2-US-32 done (T01–T03); F2-US-33 done; F2-US-34 done; F2-US-35 done; F2-US-36 em diante todo
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
@@ -3712,8 +3755,7 @@ $ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,y
 ## Próximos Passos
 
 1. Fase 2, aguardando autorização: F2-US-36 — contexto de tarefa e piloto (A → humano → B).
-2. Se a F2-US-34 ainda não estiver na main, mergear o MCP de memória antes do piloto HTTP/MCP.
-3. M9 segue no histórico; a UI de colunas (US-38) já está done.
+2. M9 segue no histórico; a UI de colunas (US-38) já está done.
 
 ---
 

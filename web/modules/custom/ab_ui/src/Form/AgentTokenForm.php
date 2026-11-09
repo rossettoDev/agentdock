@@ -76,6 +76,8 @@ final class AgentTokenForm extends FormBase {
         AgentTokenScope::MESSAGES_READ => $this->t('Ler mensagens'),
         AgentTokenScope::MESSAGES_WRITE => $this->t('Escrever mensagens'),
         AgentTokenScope::EVENTS_READ => $this->t('Ler eventos'),
+        AgentTokenScope::MEMORY_READ => $this->t('Ler memória'),
+        AgentTokenScope::MEMORY_WRITE => $this->t('Escrever memória'),
       ],
     ];
     $form['token_id'] = [

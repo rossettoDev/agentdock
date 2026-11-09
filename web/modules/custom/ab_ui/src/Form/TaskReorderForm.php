@@ -13,6 +13,7 @@ use Drupal\ab_board\TaskVersionConflictException;
 use Drupal\ab_core\Authorization\ScopedOperationDeniedException;
 use Drupal\ab_core\Authorization\ScopedResourceNotFoundException;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Form\BaseFormIdInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 
@@ -22,8 +23,16 @@ use Drupal\Core\Form\FormStateInterface;
  * The hidden version is the one rendered for this editor. Dropping a
  * card on the same column submits this form with the card that should
  * follow it.
+ *
+ * Each card gets its own form id. A shared id would reorder whichever
+ * card was built first, using the version of the card the person moved.
  */
-final class TaskReorderForm extends FormBase {
+final class TaskReorderForm extends FormBase implements BaseFormIdInterface {
+
+  /**
+   * Task this instance edits. Empty until the board binds a card.
+   */
+  private string $taskUuid = '';
 
   public function __construct(
     private readonly TaskManager $tasks,
@@ -32,10 +41,27 @@ final class TaskReorderForm extends FormBase {
   ) {}
 
   /**
+   * Binds this instance to one task before the form id is chosen.
+   */
+  public function setTaskUuid(string $uuid): void {
+    $this->taskUuid = $uuid;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getBaseFormId() {
+    return 'ab_ui_task_reorder';
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function getFormId() {
-    return 'ab_ui_task_reorder';
+    if ($this->taskUuid === '') {
+      return 'ab_ui_task_reorder';
+    }
+    return 'ab_ui_task_reorder_' . str_replace('-', '', $this->taskUuid);
   }
 
   /**

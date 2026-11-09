@@ -9,6 +9,10 @@ services:
     arguments:
       - '@database'
       - '@entity_type.manager'
+  Drupal\ab_memory\MemorySearchIndex:
+    arguments:
+      - '@database'
+      - '@datetime.time'
   Drupal\ab_memory\MemoryService:
     arguments:
       - '@database'
@@ -17,6 +21,7 @@ services:
       - '@Drupal\ab_memory\MemoryAccessPolicy'
       - '@Drupal\ab_memory\MemoryRepository'
       - '@Drupal\ab_memory\MemoryContentGuard'
+      - '@Drupal\ab_memory\MemorySearchIndex'
       - '@uuid'
       - '@datetime.time'
       - '@cache_tags.invalidator'

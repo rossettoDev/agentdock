@@ -52,6 +52,7 @@ class MemoryService {
     private readonly MemoryAccessPolicy $access,
     private readonly MemoryRepository $repository,
     private readonly MemoryContentGuard $guard,
+    private readonly MemorySearchIndex $searchIndex,
     private readonly UuidInterface $uuid,
     private readonly TimeInterface $time,
     private readonly CacheTagsInvalidatorInterface $cacheTagsInvalidator,
@@ -359,10 +360,14 @@ class MemoryService {
   /**
    * Lists entries the actor may discover, newest first.
    *
+   * When q is set, the lexical index is used. Default search status is
+   * published only; archived requires an explicit status filter. Access
+   * filters run in SQL before ranking.
+   *
    * @param \Drupal\ab_core\Authorization\ActorContext $actor
    *   Authenticated actor.
    * @param array{status?: string, kind?: string, q?: string} $filters
-   *   Optional status, kind and title query. Status must be allowed for the
+   *   Optional status, kind and lexical query. Status must be allowed for the
    *   actor; unknown values yield an empty list.
    * @param int $limit
    *   Maximum entries to return.
@@ -380,44 +385,70 @@ class MemoryService {
     if ($query === '') {
       $query = NULL;
     }
+    if ($query !== NULL && strlen($query) > MemorySearchIndex::QUERY_MAX) {
+      return [];
+    }
     if ($kind !== NULL && $kind !== '' && !in_array($kind, self::KINDS, TRUE)) {
       return [];
     }
     if ($actor->actorType === ActorContext::TYPE_AGENT) {
-      $statuses = ['published', 'archived'];
+      $statuses = $query !== NULL ? ['published'] : ['published', 'archived'];
       if ($statusFilter !== '') {
-        if (!in_array($statusFilter, $statuses, TRUE)) {
+        if (!in_array($statusFilter, ['published', 'archived'], TRUE)) {
           return [];
         }
         $statuses = [$statusFilter];
       }
       $boards = $this->access->readableBoardIds($actor, (int) $workspace->id());
+      if ($query !== NULL) {
+        return $this->recordsFromSearch(
+          $actor,
+          (int) $workspace->id(),
+          $boards,
+          $statuses,
+          $query,
+          $kind !== '' ? $kind : NULL,
+          $limit,
+        );
+      }
       $uuids = $this->repository->uuidsForBoards(
         (int) $workspace->id(),
         $boards,
         $statuses,
         $limit,
         $kind !== '' ? $kind : NULL,
-        $query,
+        NULL,
       );
       return $this->recordsForUuids($actor, $uuids);
     }
     if (!$actor->allows(WorkspacePermission::READ)) {
       throw new ScopedOperationDeniedException();
     }
-    $statuses = $this->humanListStatuses($actor);
+    $statuses = $query !== NULL ? ['published'] : $this->humanListStatuses($actor);
     if ($statusFilter !== '') {
-      if (!in_array($statusFilter, $statuses, TRUE)) {
+      $allowed = $this->humanListStatuses($actor);
+      if (!in_array($statusFilter, $allowed, TRUE)) {
         return [];
       }
       $statuses = [$statusFilter];
+    }
+    if ($query !== NULL) {
+      return $this->recordsFromSearch(
+        $actor,
+        (int) $workspace->id(),
+        NULL,
+        $statuses,
+        $query,
+        $kind !== '' ? $kind : NULL,
+        $limit,
+      );
     }
     $uuids = $this->repository->uuidsForWorkspace(
       (int) $workspace->id(),
       $statuses,
       $limit,
       $kind !== '' ? $kind : NULL,
-      $query,
+      NULL,
     );
     $records = [];
     foreach ($uuids as $uuid) {
@@ -429,6 +460,19 @@ class MemoryService {
       }
     }
     return $records;
+  }
+
+  /**
+   * Rebuilds the lexical index for one workspace or every workspace.
+   *
+   * @param int|null $workspaceId
+   *   Internal workspace id, or NULL for all.
+   *
+   * @return int
+   *   Indexed rows.
+   */
+  public function reindex(?int $workspaceId = NULL): int {
+    return $this->searchIndex->rebuild($workspaceId);
   }
 
   /**
@@ -464,6 +508,50 @@ class MemoryService {
       }
       catch (ScopedOperationDeniedException | ScopedResourceNotFoundException | AgentAccessDeniedException) {
         // Gate may have changed between list and load.
+      }
+    }
+    return $records;
+  }
+
+  /**
+   * Runs lexical search then re-checks object access on each hit.
+   *
+   * @param \Drupal\ab_core\Authorization\ActorContext $actor
+   *   Authenticated actor.
+   * @param int $workspaceId
+   *   Internal workspace id.
+   * @param int[]|null $boardIds
+   *   Agent board filter, or NULL for humans.
+   * @param string[] $statuses
+   *   Statuses allowed in this search.
+   * @param string $query
+   *   Lexical query.
+   * @param string|null $kind
+   *   Optional kind filter.
+   * @param int $limit
+   *   Maximum hits.
+   *
+   * @return list<\Drupal\ab_memory\MemoryRecord>
+   *   Visible records with search excerpts when available.
+   */
+  private function recordsFromSearch(
+    ActorContext $actor,
+    int $workspaceId,
+    ?array $boardIds,
+    array $statuses,
+    string $query,
+    ?string $kind,
+    int $limit,
+  ): array {
+    $hits = $this->searchIndex->search($workspaceId, $boardIds, $statuses, $query, $kind, $limit);
+    $records = [];
+    foreach ($hits as $hit) {
+      try {
+        $record = $this->loadRecord($actor, $hit['uuid']);
+        $records[] = $record->withSearchExcerpt($hit['excerpt']);
+      }
+      catch (ScopedOperationDeniedException | ScopedResourceNotFoundException | AgentAccessDeniedException) {
+        // Grant may have changed between search and load.
       }
     }
     return $records;
@@ -525,6 +613,10 @@ class MemoryService {
         'source_type' => (string) $revision['source_type'],
         'source_id' => $revision['source_id'] !== NULL ? (string) $revision['source_id'] : NULL,
       ], $board);
+      $entry['status'] = $status;
+      $entry['version'] = $expectedVersion + 1;
+      $entry['changed'] = $now;
+      $this->searchIndex->sync($entry, $revision);
       $this->afterRecord();
       $this->invalidate($workspace);
       return $this->loadRecord($actor, $memoryUuid);

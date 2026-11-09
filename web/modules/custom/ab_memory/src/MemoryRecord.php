@@ -50,6 +50,8 @@ final class MemoryRecord {
    *   Entry created timestamp.
    * @param int $changed
    *   Entry changed timestamp.
+   * @param string|null $searchExcerpt
+   *   Optional snippet from lexical search.
    */
   public function __construct(
     public readonly string $uuid,
@@ -71,6 +73,35 @@ final class MemoryRecord {
     public readonly ?string $changeReason,
     public readonly int $created,
     public readonly int $changed,
+    public readonly ?string $searchExcerpt = NULL,
   ) {}
+
+  /**
+   * Returns a copy with a search snippet for list/hit projections.
+   */
+  public function withSearchExcerpt(string $excerpt): self {
+    return new self(
+      $this->uuid,
+      $this->workspaceUuid,
+      $this->boardUuid,
+      $this->taskUuid,
+      $this->title,
+      $this->kind,
+      $this->status,
+      $this->version,
+      $this->tags,
+      $this->revisionVersion,
+      $this->contentMarkdown,
+      $this->contentHash,
+      $this->authorType,
+      $this->authorId,
+      $this->sourceType,
+      $this->sourceId,
+      $this->changeReason,
+      $this->created,
+      $this->changed,
+      $excerpt,
+    );
+  }
 
 }

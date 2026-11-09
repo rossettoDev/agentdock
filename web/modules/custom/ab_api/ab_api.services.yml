@@ -89,3 +89,10 @@ services:
       - '@Drupal\ab_api\IdempotencyService'
       - '@Drupal\ab_board\ColumnManager'
       - '@Drupal\ab_board\ColumnRepository'
+  Drupal\ab_api\Http\MemoryDocument: {}
+  Drupal\ab_api\Http\MemoryCommands:
+    arguments:
+      - '@Drupal\ab_api\Http\ApiCaller'
+      - '@Drupal\ab_api\IdempotencyService'
+      - '@Drupal\ab_memory\MemoryService'
+      - '@Drupal\ab_api\Http\MemoryDocument'

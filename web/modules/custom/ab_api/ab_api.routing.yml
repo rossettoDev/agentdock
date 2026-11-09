@@ -261,3 +261,71 @@ ab_api.messages.create:
   requirements:
     # The controller returns 401 when the caller has no credential.
     _access: 'TRUE'
+
+ab_api.memory.search:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/memory'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\MemoryController::search'
+  methods: [GET]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+
+ab_api.memory.create:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/memory'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\MemoryController::createDraft'
+  methods: [POST]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+
+ab_api.memory.get:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/memory/{memory_id}'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\MemoryController::view'
+  methods: [GET]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+    memory_id: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+
+ab_api.memory.revise:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/memory/{memory_id}'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\MemoryController::revise'
+  methods: [PATCH]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+    memory_id: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+
+ab_api.memory.publish:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/memory/{memory_id}/publish'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\MemoryController::publish'
+  methods: [POST]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+    memory_id: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+
+ab_api.memory.archive:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/memory/{memory_id}/archive'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\MemoryController::archive'
+  methods: [POST]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+    memory_id: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+
+ab_api.memory.revisions:
+  path: '/api/agent-board/v1/workspaces/{workspace_id}/memory/{memory_id}/revisions'
+  defaults:
+    _controller: '\Drupal\ab_api\Controller\MemoryController::revisions'
+  methods: [GET]
+  requirements:
+    # The controller returns 401 when the caller has no credential.
+    _access: 'TRUE'
+    memory_id: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'

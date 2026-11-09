@@ -3605,7 +3605,7 @@ $ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,y
 
 - **Total de tasks do backlog M0–M8:** 83, todas registradas como done no corpo histórico
 - **M9:** US-29 done; US-30 done; US-31 done; US-32 done; US-33 done; US-37 done; US-34 em diante todo
-- **Fase 2:** F2-US-29 done; F2-US-30 done; F2-US-31 done; F2-US-32 done (T01–T03); F2-US-33 em diante todo
+- **Fase 2:** F2-US-29 done; F2-US-30 done; F2-US-31 done; F2-US-32/T01 done; F2-US-33 done; F2-US-32/T02 e F2-US-34 em diante todo
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
@@ -3620,8 +3620,9 @@ $ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,y
 
 ## Próximos Passos
 
-1. Fase 2, aguardando autorização: F2-US-33/T01 — API de memória (busca/leitura).
-2. M9 segue no histórico; a UI de colunas (US-38) já está done.
+1. Fase 2, aguardando autorização: F2-US-34 — MCP de memória (search/get/revisions + create_memory_draft).
+2. Residual de UI: F2-US-32/T02–T03 (draft/diff e publish/archive na Central).
+3. M9 segue no histórico; a UI de colunas (US-38) já está done.
 
 ---
 

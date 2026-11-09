@@ -1,6 +1,6 @@
 # AgentDock — Fase 2: Memória compartilhada de agentes
 
-Versão: proposta 0.1 — 03/11/2026. Status: planejamento, não implementado.
+Versão: implementada 1.0 — 09/11/2026. Status: implementado (F2-US-29 até F2-US-36).
 
 ## 1. Contexto e objetivo
 
@@ -52,7 +52,7 @@ A API e a UI utilizam os mesmos serviços. A pesquisa deve filtrar por workspace
 - `ab_memory_search_index`: projeção reconstruível para busca lexical (F2-US-35); tsvector no PostgreSQL; não é fonte de verdade.
 - Futuro `ab_memory_embedding`: entry_id, revision_id, model, vector, indexed_at, estado; manter isolado do schema inicial.
 
-Revisões publicadas são imutáveis. Edição cria nova revisão; arquivamento não apaga histórico. Exclusão definitiva e retenção exigem política específica, incluindo direito de remoção e limpeza de índices/exportações. Não guardar tokens, chaves, credenciais ou dados pessoais desnecessários.
+Revisões publicadas são imutáveis. Apenas rascunhos podem receber nova revisão via PATCH (ADR 004); memória publicada não pode ser editada no piloto. Arquivamento não apaga histórico. Exclusão definitiva e retenção exigem política específica, incluindo direito de remoção e limpeza de índices/exportações. Não guardar tokens, chaves, credenciais ou dados pessoais desnecessários.
 
 ## 5. Fluxo mínimo de ponta a ponta
 
@@ -69,9 +69,9 @@ API, caminhos relativos à base existente:
 - `GET /workspaces/{w}/memory?board={uuid}&q=...` — busca autorizada, paginada.
 - `POST /workspaces/{w}/memory` — cria rascunho; idempotência obrigatória.
 - `GET /workspaces/{w}/memory/{id}` — conteúdo, revisão e fontes.
-- `PATCH /workspaces/{w}/memory/{id}` — cria revisão com `If-Match`.
-- `POST /workspaces/{w}/memory/{id}/publish` — publicação autorizada.
-- `POST /workspaces/{w}/memory/{id}/archive` — arquivamento autorizado.
+- `PATCH /workspaces/{w}/memory/{id}` — cria nova revisão em rascunho com `If-Match`; retorna 422 se status não for `draft`.
+- `POST /workspaces/{w}/memory/{id}/publish` — publicação autorizada (apenas humano com `review`).
+- `POST /workspaces/{w}/memory/{id}/archive` — arquivamento autorizado (apenas humano com `review`).
 - `GET /workspaces/{w}/memory/{id}/revisions` — histórico.
 - `GET /workspaces/{w}/memory/export` — exportação de escopo autorizado (assíncrona para coleções grandes, futura).
 

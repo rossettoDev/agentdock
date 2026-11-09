@@ -49,16 +49,23 @@ class MemoryUiTest extends BrowserTestBase {
 
     $this->drupalLogin($ada);
     $this->drupalGet('workspaces/add');
+    $this->assertSession()->statusCodeEquals(200);
     $this->submitForm([
       'name' => 'Casa Ada',
       'timezone' => 'America/Sao_Paulo',
     ], 'Criar workspace');
+    $this->assertSession()->statusCodeEquals(200);
+    $this->assertSession()->pageTextContains('Casa Ada');
     $workspace = $this->workspaceByName('Casa Ada');
     $this->drupalGet('boards/add');
+    $this->assertSession()->statusCodeEquals(200);
+    $this->assertSession()->pageTextContains('Criar board');
     $this->submitForm([
       'name' => 'Quadro Ada',
       'description' => '',
     ], 'Criar board');
+    $this->assertSession()->statusCodeEquals(200);
+    $this->assertSession()->pageTextContains('Quadro Ada');
     $board = $this->boardByName('Quadro Ada');
 
     $this->drupalGet('memory');
@@ -69,6 +76,9 @@ class MemoryUiTest extends BrowserTestBase {
 
     $this->seedMemory($ada, $workspace, $board, 'Decisão do claim', 'Usamos claim atômico.', 'decision', 'published');
     $this->seedMemory($ada, $workspace, $board, 'Rascunho interno', 'Ainda em edição.', 'fact', 'draft');
+    
+    // Ensure memory entries are visible in the UI.
+    $this->getSession()->reload();
 
     $this->drupalGet('memory');
     $this->assertSession()->pageTextContains('Total visível: 2');
@@ -85,11 +95,13 @@ class MemoryUiTest extends BrowserTestBase {
     $this->assertSession()->elementExists('css', 'nav.ab-memory-filters a[aria-current="page"]');
 
     $this->drupalGet('memory', ['query' => ['q' => 'claim']]);
+    $this->assertSession()->statusCodeEquals(200);
     $this->assertSession()->linkExists('Decisão do claim');
     $this->assertSession()->linkNotExists('Rascunho interno');
 
     $this->clickLink('Decisão do claim');
     $this->assertSession()->statusCodeEquals(200);
+    $this->assertSession()->addressMatches('/\/memory\/[a-f0-9-]+$/');
     $this->assertSession()->pageTextContains('Decisão do claim');
     $this->assertSession()->pageTextContains('Publicada');
     $this->assertSession()->pageTextContains('Decisão');
@@ -100,11 +112,15 @@ class MemoryUiTest extends BrowserTestBase {
 
     $this->drupalLogin($grace);
     $this->drupalGet('workspaces/add');
+    $this->assertSession()->statusCodeEquals(200);
     $this->submitForm([
       'name' => 'Casa Grace',
       'timezone' => 'America/Sao_Paulo',
     ], 'Criar workspace');
+    $this->assertSession()->statusCodeEquals(200);
+    $this->assertSession()->pageTextContains('Casa Grace');
     $this->drupalGet('memory');
+    $this->assertSession()->statusCodeEquals(200);
     $this->assertSession()->pageTextContains('Nenhuma memória neste workspace.');
     $this->assertSession()->pageTextNotContains('Decisão do claim');
 
@@ -127,21 +143,30 @@ class MemoryUiTest extends BrowserTestBase {
 
     $this->drupalLogin($ada);
     $this->drupalGet('workspaces/add');
+    $this->assertSession()->statusCodeEquals(200);
     $this->submitForm([
       'name' => 'Casa Memória',
       'timezone' => 'America/Sao_Paulo',
     ], 'Criar workspace');
+    $this->assertSession()->statusCodeEquals(200);
+    $this->assertSession()->pageTextContains('Casa Memória');
     $workspace = $this->workspaceByName('Casa Memória');
     $this->drupalGet('boards/add');
+    $this->assertSession()->statusCodeEquals(200);
+    $this->assertSession()->pageTextContains('Criar board');
     $this->submitForm([
       'name' => 'Quadro Memória',
       'description' => '',
     ], 'Criar board');
+    $this->assertSession()->statusCodeEquals(200);
+    $this->assertSession()->pageTextContains('Quadro Memória');
     $board = $this->boardByName('Quadro Memória');
 
     $this->drupalGet('memory');
+    $this->assertSession()->statusCodeEquals(200);
     $this->assertSession()->linkExists('Criar memória');
     $this->clickLink('Criar memória');
+    $this->assertSession()->statusCodeEquals(200);
     $this->submitForm([
       'title' => 'Política de claim',
       'kind' => 'decision',
@@ -149,6 +174,7 @@ class MemoryUiTest extends BrowserTestBase {
       'board_id' => (string) $board->uuid(),
       'tags' => 'claim, lease',
     ], 'Criar rascunho');
+    $this->assertSession()->statusCodeEquals(200);
     $this->assertSession()->pageTextContains('Rascunho criado.');
     $this->assertSession()->pageTextContains('Política de claim');
     $this->assertSession()->pageTextContains('Rascunho');
@@ -159,6 +185,7 @@ class MemoryUiTest extends BrowserTestBase {
     $this->assertSession()->linkExists('Editar rascunho');
 
     $this->clickLink('Editar rascunho');
+    $this->assertSession()->statusCodeEquals(200);
     $this->assertSession()->fieldValueEquals('title', 'Política de claim');
     $this->submitForm([
       'title' => 'Política de claim',
@@ -166,6 +193,7 @@ class MemoryUiTest extends BrowserTestBase {
       'tags' => 'claim, lease',
       'change_reason' => 'Detalhe do lease',
     ], 'Salvar revisão');
+    $this->assertSession()->statusCodeEquals(200);
     $this->assertSession()->pageTextContains('Revisão salva.');
     $this->assertSession()->pageTextContains('Usamos claim e lease.');
     $this->assertSession()->pageTextContains('Revisão 2');
@@ -173,6 +201,7 @@ class MemoryUiTest extends BrowserTestBase {
     $this->assertSession()->pageTextContains('Diff entre revisões');
 
     $this->submitForm([], 'Publicar');
+    $this->assertSession()->statusCodeEquals(200);
     $this->assertSession()->pageTextContains('Memória publicada.');
     $this->assertSession()->pageTextContains('Publicada');
     $this->assertSession()->linkNotExists('Editar rascunho');
@@ -184,7 +213,9 @@ class MemoryUiTest extends BrowserTestBase {
     $this->assertSession()->statusCodeEquals(403);
 
     $this->drupalGet('memory/' . $uuid);
+    $this->assertSession()->statusCodeEquals(200);
     $this->submitForm([], 'Arquivar');
+    $this->assertSession()->statusCodeEquals(200);
     $this->assertSession()->pageTextContains('Memória arquivada.');
     $this->assertSession()->pageTextContains('Arquivada');
     $this->assertSession()->buttonNotExists('Arquivar');
@@ -194,10 +225,13 @@ class MemoryUiTest extends BrowserTestBase {
     $manager->addMember($workspace, $viewer->getAccountName(), 'viewer');
     $this->drupalLogin($viewer);
     $this->drupalGet('workspaces');
+    $this->assertSession()->statusCodeEquals(200);
     $this->submitForm([
       'workspace' => $workspace->uuid(),
     ], 'Usar este workspace');
+    $this->assertSession()->statusCodeEquals(200);
     $this->drupalGet('memory');
+    $this->assertSession()->statusCodeEquals(200);
     $this->assertSession()->linkExists('Política de claim');
     $this->assertSession()->linkNotExists('Criar memória');
     $this->drupalGet('memory/add');
@@ -235,9 +269,13 @@ class MemoryUiTest extends BrowserTestBase {
       'board_id' => (string) $board->uuid(),
       'source_type' => 'manual',
     ]);
+    $this->assertNotNull($created);
+    $this->assertNotEmpty($created->uuid);
     if ($status === 'published') {
       $memory->publish($actor, $created->uuid, $created->version);
     }
+    // Ensure transaction is committed before continuing.
+    \Drupal::database()->query('SELECT 1')->fetchField();
   }
 
   /**

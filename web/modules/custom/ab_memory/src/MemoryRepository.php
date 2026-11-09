@@ -140,24 +140,83 @@ final class MemoryRepository {
    *   Allowed statuses.
    * @param int $limit
    *   Maximum UUIDs to return.
+   * @param string|null $kind
+   *   Optional kind filter.
+   * @param string|null $query
+   *   Optional title substring (case-insensitive).
    *
    * @return string[]
    *   Entry UUIDs.
    */
-  public function uuidsForBoards(int $workspaceId, array $boardIds, array $statuses, int $limit = 50): array {
+  public function uuidsForBoards(
+    int $workspaceId,
+    array $boardIds,
+    array $statuses,
+    int $limit = 50,
+    ?string $kind = NULL,
+    ?string $query = NULL,
+  ): array {
     if ($boardIds === [] || $statuses === []) {
       return [];
     }
     $limit = max(1, min(100, $limit));
-    return $this->database->select('ab_memory_entry', 'e')
+    $select = $this->database->select('ab_memory_entry', 'e')
       ->fields('e', ['uuid'])
       ->condition('e.workspace', $workspaceId)
       ->condition('e.board_id', $boardIds, 'IN')
       ->condition('e.status', $statuses, 'IN')
       ->orderBy('e.changed', 'DESC')
-      ->range(0, $limit)
-      ->execute()
-      ->fetchCol();
+      ->range(0, $limit);
+    if ($kind !== NULL && $kind !== '') {
+      $select->condition('e.kind', $kind);
+    }
+    if ($query !== NULL && $query !== '') {
+      $select->condition('e.title', '%' . $this->database->escapeLike($query) . '%', 'LIKE');
+    }
+    return $select->execute()->fetchCol();
+  }
+
+  /**
+   * Lists entry UUIDs for a human reader inside one workspace.
+   *
+   * @param int $workspaceId
+   *   Internal workspace id.
+   * @param string[] $statuses
+   *   Allowed statuses.
+   * @param int $limit
+   *   Maximum UUIDs to return.
+   * @param string|null $kind
+   *   Optional kind filter.
+   * @param string|null $query
+   *   Optional title substring (case-insensitive).
+   *
+   * @return string[]
+   *   Entry UUIDs newest first.
+   */
+  public function uuidsForWorkspace(
+    int $workspaceId,
+    array $statuses,
+    int $limit = 50,
+    ?string $kind = NULL,
+    ?string $query = NULL,
+  ): array {
+    if ($statuses === []) {
+      return [];
+    }
+    $limit = max(1, min(100, $limit));
+    $select = $this->database->select('ab_memory_entry', 'e')
+      ->fields('e', ['uuid'])
+      ->condition('e.workspace', $workspaceId)
+      ->condition('e.status', $statuses, 'IN')
+      ->orderBy('e.changed', 'DESC')
+      ->range(0, $limit);
+    if ($kind !== NULL && $kind !== '') {
+      $select->condition('e.kind', $kind);
+    }
+    if ($query !== NULL && $query !== '') {
+      $select->condition('e.title', '%' . $this->database->escapeLike($query) . '%', 'LIKE');
+    }
+    return $select->execute()->fetchCol();
   }
 
   /**

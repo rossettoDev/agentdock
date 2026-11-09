@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\ab_memory;
 
+use Drupal\ab_agent\AgentAccessDeniedException;
 use Drupal\ab_agent\AgentOperationGate;
 use Drupal\ab_agent\AgentTokenScope;
 use Drupal\ab_board\Entity\Board;
@@ -192,10 +193,14 @@ final class MemoryAccessPolicy {
   }
 
   /**
-   * Board ids the agent may read in one workspace.
+   * Board ids the agent may discover via the same gate as get().
+   *
+   * Grant read alone is not enough: memory:read and a usable token are
+   * required. Boards that fail the gate are omitted so counts do not reveal
+   * entries the caller cannot load.
    *
    * @return int[]
-   *   Internal board ids with a read grant.
+   *   Internal board ids that pass AgentOperationGate for memory:read.
    */
   public function readableBoardIds(ActorContext $actor, int $workspaceId): array {
     if ($actor->actorType !== ActorContext::TYPE_AGENT) {
@@ -210,9 +215,20 @@ final class MemoryAccessPolicy {
     )->fetchCol();
     $readable = [];
     foreach ($ids as $boardId) {
+      $board = $this->boardById((int) $boardId);
+      if (!$board instanceof Board) {
+        continue;
+      }
       $stored = $this->grantPermissions($actor->actorId, (int) $boardId);
-      if ($stored !== NULL && in_array('read', $stored, TRUE)) {
+      if ($stored === NULL || !in_array('read', $stored, TRUE)) {
+        continue;
+      }
+      try {
+        $this->gate->assert($actor, $board, AgentTokenScope::MEMORY_READ);
         $readable[] = (int) $boardId;
+      }
+      catch (AgentAccessDeniedException) {
+        // Same intersection as get(): omit without confirming the entry.
       }
     }
     return $readable;

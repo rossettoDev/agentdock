@@ -102,6 +102,23 @@ ab_ui.task_view:
     _user_is_logged_in: 'TRUE'
     uuid: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
 
+ab_ui.memory:
+  path: '/memory'
+  defaults:
+    _controller: '\Drupal\ab_ui\Controller\MemoryController::listing'
+    _title: 'Memória'
+  requirements:
+    _user_is_logged_in: 'TRUE'
+
+ab_ui.memory_view:
+  path: '/memory/{uuid}'
+  defaults:
+    _controller: '\Drupal\ab_ui\Controller\MemoryController::view'
+    _title: 'Memória'
+  requirements:
+    _user_is_logged_in: 'TRUE'
+    uuid: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+
 ab_ui.agents:
   path: '/agents'
   defaults:

@@ -1,6 +1,6 @@
 # AgentDock — Backlog da Fase 2 (proposta)
 
-Versão 0.2 — 06/11/2026. O status de cada task está em `docs/implementation-status.md`. F2-US-29, F2-US-30, F2-US-31 e F2-US-32/T01 estão `done`. Não altera o status da Fase 1.
+Versão 0.2 — 06/11/2026. O status de cada task está em `docs/implementation-status.md`. F2-US-29, F2-US-30, F2-US-31 e F2-US-32 estão `done`. Não altera o status da Fase 1.
 
 Arquitetura de referência: `docs/architecture-phase2.md`. Padrão de execução: uma task por interação com o Cursor, com evidências e atualização de `docs/implementation-status.md`. Não declarar testes que não foram executados.
 

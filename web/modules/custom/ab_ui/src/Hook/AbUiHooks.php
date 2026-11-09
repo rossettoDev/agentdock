@@ -93,6 +93,7 @@ final class AbUiHooks {
       'ab_ui_memory_list' => [
         'variables' => [
           'workspace_label' => NULL,
+          'add_url' => '',
           'items' => [],
           'filters' => [],
           'status' => '',
@@ -116,6 +117,11 @@ final class AbUiHooks {
           'version' => '',
           'tags' => [],
           'body' => [],
+          'edit_url' => '',
+          'status_form' => NULL,
+          'revisions' => [],
+          'diff' => [],
+          'diff_empty' => FALSE,
           'back_url' => '',
         ],
       ],
@@ -468,7 +474,9 @@ final class AbUiHooks {
       'url' => Url::fromRoute('ab_ui.memory')->toString(),
       'active' => in_array($route, [
         'ab_ui.memory',
+        'ab_ui.memory_add',
         'ab_ui.memory_view',
+        'ab_ui.memory_edit',
       ], TRUE),
       'icon' => 'board',
     ];
@@ -650,7 +658,7 @@ final class AbUiHooks {
     if (in_array($route, $conversation, TRUE)) {
       $links = [Link::createFromRoute($this->t('Conversas'), 'ab_ui.conversations')];
     }
-    if (in_array($route, ['ab_ui.memory_view'], TRUE)) {
+    if (in_array($route, ['ab_ui.memory_add', 'ab_ui.memory_view', 'ab_ui.memory_edit'], TRUE)) {
       $links = [Link::createFromRoute($this->t('Memória'), 'ab_ui.memory')];
     }
     if (in_array($route, ['ab_ui.agent_add', 'ab_ui.agent_view'], TRUE)) {

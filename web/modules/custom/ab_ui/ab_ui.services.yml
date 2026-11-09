@@ -11,6 +11,9 @@ services:
       - { name: cache.context }
   Drupal\ab_ui\TaskMarkdown:
     class: Drupal\ab_ui\TaskMarkdown
+  Drupal\ab_ui\MemoryDiff:
+    arguments:
+      - '@diff.formatter'
   Drupal\ab_ui\DashboardReader:
     arguments:
       - '@database'

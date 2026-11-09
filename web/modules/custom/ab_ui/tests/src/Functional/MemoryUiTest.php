@@ -7,6 +7,7 @@ namespace Drupal\Tests\ab_ui\Functional;
 use Drupal\ab_board\Entity\Board;
 use Drupal\ab_core\Authorization\HumanActorContextFactory;
 use Drupal\ab_core\Entity\Workspace;
+use Drupal\ab_core\MembershipManager;
 use Drupal\ab_memory\MemoryService;
 use Drupal\Tests\BrowserTestBase;
 use Drupal\user\UserInterface;
@@ -115,6 +116,96 @@ class MemoryUiTest extends BrowserTestBase {
       'query' => ['workspace' => $workspace->uuid()],
     ]);
     $this->assertSession()->pageTextNotContains('Decisão do claim');
+  }
+
+  /**
+   * Create, revise with diff, publish, archive and revision nav respect policy.
+   */
+  public function testMemoryDraftEditPublishAndRevisions(): void {
+    $ada = $this->drupalCreateUser();
+    $viewer = $this->drupalCreateUser();
+
+    $this->drupalLogin($ada);
+    $this->drupalGet('workspaces/add');
+    $this->submitForm([
+      'name' => 'Casa Memória',
+      'timezone' => 'America/Sao_Paulo',
+    ], 'Criar workspace');
+    $workspace = $this->workspaceByName('Casa Memória');
+    $this->drupalGet('boards/add');
+    $this->submitForm([
+      'name' => 'Quadro Memória',
+      'description' => '',
+    ], 'Criar board');
+    $board = $this->boardByName('Quadro Memória');
+
+    $this->drupalGet('memory');
+    $this->assertSession()->linkExists('Criar memória');
+    $this->clickLink('Criar memória');
+    $this->submitForm([
+      'title' => 'Política de claim',
+      'kind' => 'decision',
+      'content_markdown' => "Usamos claim.\n<script>alert(1)</script>",
+      'board_id' => (string) $board->uuid(),
+      'tags' => 'claim, lease',
+    ], 'Criar rascunho');
+    $this->assertSession()->pageTextContains('Rascunho criado.');
+    $this->assertSession()->pageTextContains('Política de claim');
+    $this->assertSession()->pageTextContains('Rascunho');
+    $this->assertSession()->pageTextContains('Usamos claim.');
+    $this->assertSession()->responseNotContains('<script>alert(1)</script>');
+    $this->assertSession()->buttonExists('Publicar');
+    $this->assertSession()->buttonExists('Arquivar');
+    $this->assertSession()->linkExists('Editar rascunho');
+
+    $this->clickLink('Editar rascunho');
+    $this->assertSession()->fieldValueEquals('title', 'Política de claim');
+    $this->submitForm([
+      'title' => 'Política de claim',
+      'content_markdown' => "Usamos claim e lease.\nSegunda linha.",
+      'tags' => 'claim, lease',
+      'change_reason' => 'Detalhe do lease',
+    ], 'Salvar revisão');
+    $this->assertSession()->pageTextContains('Revisão salva.');
+    $this->assertSession()->pageTextContains('Usamos claim e lease.');
+    $this->assertSession()->pageTextContains('Revisão 2');
+    $this->assertSession()->elementExists('css', 'section.ab-memory-revisions');
+    $this->assertSession()->pageTextContains('Diff entre revisões');
+
+    $this->submitForm([], 'Publicar');
+    $this->assertSession()->pageTextContains('Memória publicada.');
+    $this->assertSession()->pageTextContains('Publicada');
+    $this->assertSession()->linkNotExists('Editar rascunho');
+    $this->assertSession()->buttonNotExists('Publicar');
+    $this->assertSession()->buttonExists('Arquivar');
+
+    $uuid = $this->memoryUuidByTitle('Política de claim');
+    $this->drupalGet('memory/' . $uuid . '/edit');
+    $this->assertSession()->statusCodeEquals(403);
+
+    $this->drupalGet('memory/' . $uuid);
+    $this->submitForm([], 'Arquivar');
+    $this->assertSession()->pageTextContains('Memória arquivada.');
+    $this->assertSession()->pageTextContains('Arquivada');
+    $this->assertSession()->buttonNotExists('Arquivar');
+
+    $manager = $this->container->get(MembershipManager::class);
+    $this->assertInstanceOf(MembershipManager::class, $manager);
+    $manager->addMember($workspace, $viewer->getAccountName(), 'viewer');
+    $this->drupalLogin($viewer);
+    $this->drupalGet('workspaces');
+    $this->submitForm([
+      'workspace' => $workspace->uuid(),
+    ], 'Usar este workspace');
+    $this->drupalGet('memory');
+    $this->assertSession()->linkExists('Política de claim');
+    $this->assertSession()->linkNotExists('Criar memória');
+    $this->drupalGet('memory/add');
+    $this->assertSession()->statusCodeEquals(403);
+    $this->drupalGet('memory/' . $uuid);
+    $this->assertSession()->pageTextContains('Arquivada');
+    $this->assertSession()->buttonNotExists('Publicar');
+    $this->assertSession()->buttonNotExists('Arquivar');
   }
 
   /**

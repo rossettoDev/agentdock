@@ -52,6 +52,11 @@ services:
       - '@Drupal\ab_board\BoardRepository'
       - '@Drupal\ab_core\UuidLookup'
       - '@Drupal\ab_agent\AgentOperationGate'
+  Drupal\ab_api\Http\TaskMemoryContext:
+    arguments:
+      - '@Drupal\ab_api\Http\ApiCaller'
+      - '@Drupal\ab_memory\MemoryService'
+      - '@Drupal\ab_api\Http\MemoryDocument'
   Drupal\ab_api\Http\ExecutionCommands:
     arguments:
       - '@Drupal\ab_api\Http\ApiCaller'

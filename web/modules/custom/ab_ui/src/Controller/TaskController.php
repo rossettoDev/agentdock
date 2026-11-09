@@ -24,6 +24,7 @@ use Drupal\ab_core\Authorization\ScopedOperationDeniedException;
 use Drupal\ab_core\Authorization\ScopedResourceNotFoundException;
 use Drupal\ab_core\Authorization\WorkspacePermission;
 use Drupal\ab_core\Entity\Workspace;
+use Drupal\ab_memory\MemoryService;
 use Drupal\ab_ui\Form\BoardArchiveForm;
 use Drupal\ab_ui\Form\ColumnManageForm;
 use Drupal\ab_ui\Form\InputAnswerForm;
@@ -81,6 +82,7 @@ final class TaskController implements ContainerInjectionInterface {
     private readonly InputRequestService $requests,
     private readonly HumanActorContextFactory $actors,
     private readonly MessageService $messageService,
+    private readonly MemoryService $memory,
   ) {}
 
   /**
@@ -276,6 +278,9 @@ final class TaskController implements ContainerInjectionInterface {
       }
     }
     $tab = $this->taskTab($request);
+    $related = $workspace instanceof Workspace
+      ? $this->relatedMemories($workspace, (string) $task->uuid())
+      : [];
     $build = [
       '#theme' => 'ab_ui_task_view',
       '#label' => (string) $task->label(),
@@ -291,6 +296,7 @@ final class TaskController implements ContainerInjectionInterface {
       '#tabs' => $this->tabLinks($task, $tab),
       '#description' => $this->markup($task->get('description')->getString()),
       '#criteria' => $this->markup($task->get('acceptance_criteria')->getString()),
+      '#related_memories' => $related,
       '#edit_url' => $can_write ? Url::fromRoute('ab_ui.task_edit', [
         'uuid' => $task->uuid(),
       ])->toString() : '',
@@ -316,6 +322,7 @@ final class TaskController implements ContainerInjectionInterface {
     $build['#cache']['contexts'][] = 'url.query_args:before';
     if ($workspace instanceof Workspace && $workspace->id() !== NULL) {
       $build['#cache']['tags'][] = 'ab_workspace_messages:' . $workspace->id();
+      $build['#cache']['tags'][] = 'ab_workspace_memory:' . $workspace->id();
     }
     if ($can_write) {
       $build['#message_form'] = $this->formBuilder->getForm(
@@ -353,6 +360,47 @@ final class TaskController implements ContainerInjectionInterface {
       );
     }
     return $build;
+  }
+
+  /**
+   * Suggests published memories for the task without claiming it.
+   *
+   * @param \Drupal\ab_core\Entity\Workspace $workspace
+   *   Selected workspace.
+   * @param string $taskUuid
+   *   Public task id.
+   *
+   * @return list<array{title: string, kind: string, revision: int, source: string, excerpt: string, url: string}>
+   *   Related memory rows for the template.
+   */
+  private function relatedMemories(Workspace $workspace, string $taskUuid): array {
+    try {
+      $actor = $this->actors->create($workspace);
+      if (!$actor->allows(WorkspacePermission::READ)) {
+        return [];
+      }
+      $items = [];
+      foreach ($this->memory->relatedForTask($actor, $taskUuid) as $record) {
+        $source = $record->sourceType;
+        if (is_string($record->sourceId) && $record->sourceId !== '') {
+          $source .= ' · ' . $record->sourceId;
+        }
+        $items[] = [
+          'title' => $record->title,
+          'kind' => $record->kind,
+          'revision' => $record->revisionVersion,
+          'source' => $source,
+          'excerpt' => (string) ($record->searchExcerpt ?? ''),
+          'url' => Url::fromRoute('ab_ui.memory_view', [
+            'uuid' => $record->uuid,
+          ])->toString(),
+        ];
+      }
+      return $items;
+    }
+    catch (ScopedOperationDeniedException | ScopedResourceNotFoundException | \InvalidArgumentException | \RuntimeException) {
+      return [];
+    }
   }
 
   /**

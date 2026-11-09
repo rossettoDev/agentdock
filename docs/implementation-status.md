@@ -3731,7 +3731,51 @@ $ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,y
 
 **Bloqueios:** nenhum.
 
-**Próxima ação:** F2-US-36 — contexto de tarefa e piloto, somente após autorização.
+**Próxima ação:** F2-US-36 (concluída abaixo).
+
+### F2-US-36 — Contexto de tarefa e piloto
+
+**Status:** done
+**Objetivo:** Sugestões de memória no detalhe da tarefa e leitura pré-execução sem claim/lease; piloto A → humano → B; runbook operacional.
+
+#### F2-US-36/T01 — Sugestões e pré-execução
+
+**Status:** done
+**Entrega:** `MemoryService::relatedForTask()` (vínculo `task_id` + lexical no board, máx. 5). UI `Memórias relacionadas` no detalhe. `TaskMemoryContext` enriquece getTask com `related_memories` (omitido sem `memory:read`). OpenAPI 1.1.1.
+
+#### F2-US-36/T02 — Piloto A → humano → B
+
+**Status:** done
+**Entrega:** `ApiTaskMemoryPilotTest`: A cria draft, humano publica, B lê getTask/MCP com fonte/revisão; contagem de execuções permanece 0.
+
+#### F2-US-36/T03 — Runbook
+
+**Status:** done
+**Entrega:** `docs/phase2/F2-US-36-runbook.md` (fluxo, métricas, rollback, backup, limitações).
+
+**Validação:**
+
+```text
+$ lando exec appserver -- env SIMPLETEST_DB=... SIMPLETEST_BASE_URL=http://appserver \
+    php vendor/bin/phpunit \
+    web/modules/custom/ab_api/tests/src/Functional/ApiTaskMemoryPilotTest.php \
+    web/modules/custom/ab_ui/tests/src/Functional/TaskDetailUiTest.php
+OK (3 tests, 136 assertions)
+
+$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,yml \
+    web/modules/custom/ab_memory/src/MemoryService.php \
+    web/modules/custom/ab_memory/src/MemoryRepository.php \
+    web/modules/custom/ab_api/src/Http/TaskMemoryContext.php \
+    web/modules/custom/ab_api/src/Controller/ApiController.php \
+    web/modules/custom/ab_ui/src/Controller/TaskController.php \
+    web/modules/custom/ab_api/tests/src/Functional/ApiTaskMemoryPilotTest.php \
+    web/modules/custom/ab_ui/tests/src/Functional/TaskDetailUiTest.php
+(exit 0)
+```
+
+**Bloqueios:** nenhum.
+
+**Próxima ação:** F2-US-37 — captura assistida, somente após autorização.
 
 ---
 
@@ -3739,7 +3783,7 @@ $ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,y
 
 - **Total de tasks do backlog M0–M8:** 83, todas registradas como done no corpo histórico
 - **M9:** US-29 done; US-30 done; US-31 done; US-32 done; US-33 done; US-37 done; US-34 em diante todo
-- **Fase 2:** F2-US-29 done; F2-US-30 done; F2-US-31 done; F2-US-32 done (T01–T03); F2-US-33 done; F2-US-34 done; F2-US-35 done; F2-US-36 em diante todo
+- **Fase 2:** F2-US-29 done; F2-US-30 done; F2-US-31 done; F2-US-32 done (T01–T03); F2-US-33 done; F2-US-34 done; F2-US-35 done; F2-US-36 done; F2-US-37 em diante todo
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
@@ -3754,7 +3798,7 @@ $ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,y
 
 ## Próximos Passos
 
-1. Fase 2, aguardando autorização: F2-US-36 — contexto de tarefa e piloto (A → humano → B).
+1. Fase 2, aguardando autorização: F2-US-37 — captura assistida.
 2. M9 segue no histórico; a UI de colunas (US-38) já está done.
 
 ---

@@ -57,6 +57,23 @@
     {% if dependency_form %}
       {{ dependency_form }}
     {% endif %}
+    {% if related_memories %}
+      <h2>{{ 'Memórias relacionadas'|t }}</h2>
+      <ul class="ab-task-related-memories">
+        {% for item in related_memories %}
+          <li>
+            <a href="{{ item.url }}">{{ item.title }}</a>
+            <span>{{ item.kind }} · {{ 'rev. @n'|t({'@n': item.revision}) }}</span>
+            {% if item.source %}
+              <span>{{ item.source }}</span>
+            {% endif %}
+            {% if item.excerpt %}
+              <p>{{ item.excerpt }}</p>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
   </section>
 
   <section id="ab-task-conversas" data-ab-panel="conversas">

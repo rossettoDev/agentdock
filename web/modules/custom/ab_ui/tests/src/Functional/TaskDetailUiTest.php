@@ -22,6 +22,7 @@ use Drupal\ab_core\Authorization\WorkspacePermission;
 use Drupal\ab_core\Entity\Workspace;
 use Drupal\ab_core\MembershipManager;
 use Drupal\ab_core\WorkspaceCreator;
+use Drupal\ab_memory\MemoryService;
 use Drupal\Tests\BrowserTestBase;
 
 /**
@@ -192,6 +193,57 @@ class TaskDetailUiTest extends BrowserTestBase {
     $this->assertSession()->statusCodeEquals(404);
     $this->assertSession()->pageTextNotContains('comentario da casa');
     $this->assertSession()->pageTextNotContains('Tema vazio');
+  }
+
+  /**
+   * Related memories appear on the task detail without creating an execution.
+   */
+  public function testRelatedMemoriesOnDetailWithoutClaim(): void {
+    $ada = $this->drupalCreateUser();
+    $this->container->get('current_user')->setAccount($ada);
+    $workspace = $this->container->get(WorkspaceCreator::class)->create($ada, 'Casa Memória Tarefa', 'America/Sao_Paulo');
+    $this->assertInstanceOf(Workspace::class, $workspace);
+    $board = $this->container->get(BoardManager::class)->create($workspace, 'Quadro Memória Tarefa', '');
+    $this->assertInstanceOf(Board::class, $board);
+    $tasks = $this->container->get(TaskManager::class);
+    $this->assertInstanceOf(TaskManager::class, $tasks);
+    $task = $tasks->create($board, [
+      'title' => 'Ajustar lease heartbeat',
+      'description' => 'Registrar o intervalo de heartbeat.',
+    ]);
+    $this->assertInstanceOf(Task::class, $task);
+    $human = $this->container->get(HumanActorContextFactory::class)->create($workspace);
+    $memory = $this->container->get(MemoryService::class);
+    $this->assertInstanceOf(MemoryService::class, $memory);
+    $draft = $memory->createDraft($human, [
+      'title' => 'Lição relacionada ao lease',
+      'content_markdown' => 'Heartbeat a cada 30s no lease.',
+      'kind' => 'lesson',
+      'board_id' => (string) $board->uuid(),
+      'task_id' => (string) $task->uuid(),
+      'source_type' => 'task',
+      'source_id' => (string) $task->uuid(),
+    ]);
+    $published = $memory->publish($human, $draft->uuid, $draft->version);
+    $this->assertSame('published', $published->status);
+    $before = (int) $this->container->get('database')->query(
+      'SELECT COUNT(*) FROM {ab_execution} e INNER JOIN {ab_task} t ON t.id = e.task WHERE t.uuid = :uuid',
+      [':uuid' => (string) $task->uuid()],
+    )->fetchField();
+    $this->assertSame(0, $before);
+
+    $this->drupalLogin($ada);
+    $this->drupalGet('tasks/' . $task->uuid());
+    $this->assertSession()->statusCodeEquals(200);
+    $this->assertSession()->pageTextContains('Memórias relacionadas');
+    $this->assertSession()->pageTextContains('Lição relacionada ao lease');
+    $this->assertSession()->linkExists('Lição relacionada ao lease');
+    $this->assertSession()->pageTextContains('lesson');
+    $after = (int) $this->container->get('database')->query(
+      'SELECT COUNT(*) FROM {ab_execution} e INNER JOIN {ab_task} t ON t.id = e.task WHERE t.uuid = :uuid',
+      [':uuid' => (string) $task->uuid()],
+    )->fetchField();
+    $this->assertSame(0, $after);
   }
 
   /**

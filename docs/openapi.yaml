@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: AgentDock API
-  version: 1.1.0
+    version: 1.1.1
   license:
     name: GPL-2.0-or-later
     url: https://www.gnu.org/licenses/gpl-2.0.html
@@ -17,7 +17,9 @@ info:
     Responses use Cache-Control private, no-store. Version 1.1.0 adds the
     memory paths under the same /api/agent-board/v1 base without removing or
     renaming existing operations. Agent tokens may carry memory:read and
-    memory:write in addition to the Phase 1 scopes.
+    memory:write in addition to the Phase 1 scopes. Version 1.1.1 adds an
+    optional related_memories array on Task when the caller may read memory.
+    Reading related memories never claims a task or creates an execution.
 servers:
   - url: /api/agent-board/v1
 tags:
@@ -340,6 +342,11 @@ paths:
       operationId: getTask
       tags: [tasks]
       summary: Read one task.
+      description: >
+        When the caller holds memory:read (agents) or workspace read (humans),
+        the Task may include related_memories as MemorySearchHit items. The
+        field is omitted without that scope. This read does not claim the
+        task or touch a lease.
       parameters:
         - $ref: '#/components/parameters/WorkspaceId'
         - $ref: '#/components/parameters/TaskId'
@@ -1718,6 +1725,15 @@ components:
           type: string
           format: uuid
           nullable: true
+        related_memories:
+          type: array
+          description: >
+            Optional published memory hits related to this task. Present only
+            when the caller may read memory. At most five items. Does not
+            start an execution.
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/MemorySearchHit'
     TaskCreate:
       type: object
       additionalProperties: false

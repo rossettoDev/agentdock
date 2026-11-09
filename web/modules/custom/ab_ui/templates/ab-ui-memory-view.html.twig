@@ -1,7 +1,7 @@
 {#
 /**
  * @file
- * Shows one memory entry with status, origin and current revision.
+ * Shows one memory entry with status, origin, revisions and actions.
  */
 #}
 <article class="ab-memory-view">
@@ -22,6 +22,37 @@
     <div class="ab-memory-body">
       {{ body }}
     </div>
+  {% endif %}
+  {% if edit_url %}
+    <p><a class="ab-button" href="{{ edit_url }}">{{ 'Editar rascunho'|t }}</a></p>
+  {% endif %}
+  {% if status_form %}
+    <div class="ab-memory-status-form">
+      {{ status_form }}
+    </div>
+  {% endif %}
+  {% if revisions %}
+    <section class="ab-memory-revisions" aria-label="{{ 'Revisões'|t }}">
+      <h3>{{ 'Revisões'|t }}</h3>
+      <ul>
+        {% for item in revisions %}
+          <li>
+            <a href="{{ item.url }}"{% if item.current %} aria-current="page"{% endif %}>{{ item.label }}</a>
+            {% if item.reason %}
+              <span class="ab-memory-revision-reason">{{ item.reason }}</span>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+  {% if diff %}
+    <section class="ab-memory-diff-wrap" aria-label="{{ 'Diff entre revisões'|t }}">
+      <h3>{{ 'Diff entre revisões'|t }}</h3>
+      {{ diff }}
+    </section>
+  {% elseif diff_empty %}
+    <p class="ab-memory-diff-empty">{{ 'Sem diferenças entre as revisões selecionadas.'|t }}</p>
   {% endif %}
   {% if back_url %}
     <p><a href="{{ back_url }}">{{ 'Voltar à memória'|t }}</a></p>

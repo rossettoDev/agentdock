@@ -3555,86 +3555,49 @@ Sem rotas HTTP, MCP, UI, índice lexical ou embeddings. Residual do gate em `cou
 
 ### F2-US-32 — Central de Memória
 
-**Status:** in progress (T01 done)
-**Objetivo:** UI humana de listagem/leitura; depois draft/diff e publish/archive.
+**Status:** done
+**Objetivo:** UI humana de listagem/leitura, draft/diff e publish/archive com navegação de revisões.
 
 #### F2-US-32/T01 — Gate na contagem + listar/filtrar/abrir
 
 **Status:** done
 **Entrega:** `readableBoardIds` / `countVisible` / `listVisible` passam pelo `AgentOperationGate` (`memory:read` + token válido). `MemoryController` em `/memory` e `/memory/{uuid}` com filtros, estados vazio/erro/loading, Markdown sanitizado na abertura e cache tag `ab_workspace_memory:{id}`. `ab_ui` depende de `ab_memory`; item Memória no shell.
 
+#### F2-US-32/T02 — Criar/editar rascunho + diff
+
+**Status:** done
+**Entrega:** `MemoryDraftCreateForm` (`/memory/add`) e `MemoryDraftEditForm` (`/memory/{uuid}/edit`) com ActorContext, versão oculta e `MemoryDiff` (core Diff + `system/diff`). Markdown sanitizado via `TaskMarkdown`.
+
+#### F2-US-32/T03 — Publicar/arquivar + navegar versões
+
+**Status:** done
+**Entrega:** `MemoryStatusForm` (REVIEW: Publicar/Arquivar); lista de revisões e diff `?from=&to=` na view. Viewer sem WRITE/REVIEW não cria nem publica. Eventos `memory.*` via serviço.
+
 **Validação:**
 
 ```text
 $ lando exec appserver -- env SIMPLETEST_DB=... SIMPLETEST_BASE_URL=http://appserver \
     php vendor/bin/phpunit \
-    web/modules/custom/ab_memory/tests/src/Unit/MemoryContentGuardTest.php \
-    web/modules/custom/ab_memory/tests/src/Kernel/MemorySchemaKernelTest.php \
-    web/modules/custom/ab_memory/tests/src/Kernel/MemoryServiceKernelTest.php \
     web/modules/custom/ab_memory/tests/src/Kernel/MemoryIsolationKernelTest.php \
     web/modules/custom/ab_ui/tests/src/Functional/MemoryUiTest.php
-OK (17 tests, 287 assertions)
+OK (6 tests, 214 assertions)
 
 $ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,yml \
-    web/modules/custom/ab_memory/src/MemoryAccessPolicy.php \
-    web/modules/custom/ab_memory/src/MemoryService.php \
-    web/modules/custom/ab_memory/src/MemoryRepository.php \
     web/modules/custom/ab_ui/src/Controller/MemoryController.php \
+    web/modules/custom/ab_ui/src/Form/MemoryDraftCreateForm.php \
+    web/modules/custom/ab_ui/src/Form/MemoryDraftEditForm.php \
+    web/modules/custom/ab_ui/src/Form/MemoryStatusForm.php \
+    web/modules/custom/ab_ui/src/MemoryDiff.php \
     web/modules/custom/ab_ui/src/Hook/AbUiHooks.php \
-    web/modules/custom/ab_ui/ab_ui.info.yml \
+    web/modules/custom/ab_ui/ab_ui.services.yml \
     web/modules/custom/ab_ui/ab_ui.routing.yml \
-    web/modules/custom/ab_ui/tests/src/Functional/MemoryUiTest.php \
-    web/modules/custom/ab_memory/tests/src/Kernel/MemoryIsolationKernelTest.php
+    web/modules/custom/ab_ui/tests/src/Functional/MemoryUiTest.php
 (exit 0)
 ```
 
-**Bloqueios:** nenhum para F2-US-32/T02.
+**Bloqueios:** nenhum para F2-US-33.
 
-**Próxima ação:** F2-US-32/T02 permanece no backlog de UI; a API HTTP seguiu na F2-US-33 (abaixo).
-
-### F2-US-33 — API de memória
-
-**Status:** done
-**Objetivo:** Endpoints HTTP de busca/leitura e draft/revisão/publish/archive com escopo, idempotência, If-Match e Problem Details. OpenAPI 1.1.0 já documentava as rotas.
-
-#### F2-US-33/T01 — Busca e leitura
-
-**Status:** done
-**Entrega:** `GET .../memory` (status padrão `published`, filtros `kind`/`q`/`board`, cursor opaco) e `GET .../memory/{id}` + `GET .../revisions`. Resultados passam por `MemoryService`/`MemoryAccessPolicy`; fora de escopo → 404; sem `memory:read` → 403.
-
-#### F2-US-33/T02 — Draft, revisão, publish e archive
-
-**Status:** done
-**Entrega:** `POST .../memory`, `PATCH .../memory/{id}`, `POST .../publish`, `POST .../archive` via `MemoryCommands` + `IdempotencyService`. Whitelist de campos (sem `author_id`/`agent_id`); agentes exigem `board_id` e `memory:write`; publish/archive só humano com `review`. If-Match + `version` no body; 412 em conflito; CSRF para sessão humana.
-
-#### F2-US-33/T03 — Testes HTTP e OpenAPI
-
-**Status:** done
-**Entrega:** `ApiMemoryTest` (escopo, idempotência, autoria forjada, segredo, If-Match, publish negado a agente). OpenAPI inalterado (contrato aditivo da F2-US-29/T03). `ab_api` depende de `ab_memory`.
-
-**Validação:**
-
-```text
-$ lando exec appserver -- env SIMPLETEST_DB=... SIMPLETEST_BASE_URL=http://appserver \
-    php vendor/bin/phpunit \
-    web/modules/custom/ab_api/tests/src/Functional/ApiMemoryTest.php \
-    web/modules/custom/ab_api/tests/src/Unit/OpenApiContractTest.php
-OK (3 tests, 190 assertions)
-
-$ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,yml \
-    web/modules/custom/ab_api/src/Controller/MemoryController.php \
-    web/modules/custom/ab_api/src/Http/MemoryCommands.php \
-    web/modules/custom/ab_api/src/Http/MemoryDocument.php \
-    web/modules/custom/ab_api/tests/src/Functional/ApiMemoryTest.php \
-    web/modules/custom/ab_api/ab_api.info.yml \
-    web/modules/custom/ab_api/ab_api.routing.yml \
-    web/modules/custom/ab_api/ab_api.services.yml
-(exit 0)
-```
-
-**Bloqueios:** nenhum.
-
-**Próxima ação:** F2-US-34 — MCP de memória, somente após autorização.
+**Próxima ação:** F2-US-33/T01, somente após autorização.
 
 ---
 

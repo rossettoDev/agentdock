@@ -17,6 +17,12 @@
     <p class="ab-memory-count">{{ 'Total visível: @count'|t({'@count': count}) }}</p>
   {% endif %}
 
+  {% if add_url %}
+    <p>
+      <a class="ab-button" href="{{ add_url }}">{{ 'Criar memória'|t }}</a>
+    </p>
+  {% endif %}
+
   {% if filters %}
     <nav class="ab-memory-filters" aria-label="{{ 'Filtros da memória'|t }}">
       {% for item in filters %}

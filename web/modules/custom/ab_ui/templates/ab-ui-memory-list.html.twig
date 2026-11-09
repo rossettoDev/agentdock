@@ -1,0 +1,75 @@
+{#
+/**
+ * @file
+ * Lists shared memory of the workspace selected in the session.
+ *
+ * Empty, error and loading states keep roles for assistive tech.
+ */
+#}
+<div class="ab-memory-list">
+  {% if workspace_label %}
+    <p class="ab-workspace-current">{{ 'Workspace atual: @name'|t({'@name': workspace_label}) }}</p>
+  {% else %}
+    <p class="ab-workspace-current">{{ 'Nenhum workspace selecionado.'|t }}</p>
+  {% endif %}
+
+  {% if count is defined and workspace_label and not error %}
+    <p class="ab-memory-count">{{ 'Total visível: @count'|t({'@count': count}) }}</p>
+  {% endif %}
+
+  {% if filters %}
+    <nav class="ab-memory-filters" aria-label="{{ 'Filtros da memória'|t }}">
+      {% for item in filters %}
+        <a href="{{ item.url }}"{% if item.current %} aria-current="page"{% endif %}>{{ item.label }}</a>
+      {% endfor %}
+    </nav>
+  {% endif %}
+
+  {% if list_url and workspace_label %}
+    <form class="ab-memory-search" method="get" action="{{ list_url }}">
+      <label for="ab-memory-q">{{ 'Buscar'|t }}</label>
+      <input id="ab-memory-q" type="search" name="q" value="{{ q }}">
+      {% if status %}
+        <input type="hidden" name="status" value="{{ status }}">
+      {% endif %}
+      {% if kind %}
+        <input type="hidden" name="kind" value="{{ kind }}">
+      {% endif %}
+      <button class="ab-button" type="submit">{{ 'Buscar'|t }}</button>
+    </form>
+  {% endif %}
+
+  {% if loading %}
+    <div class="ab-state ab-state--loading" role="status">
+      <h3>{{ 'Carregando'|t }}</h3>
+      <p>{{ 'Buscando memórias deste workspace.'|t }}</p>
+    </div>
+  {% elseif error %}
+    <div class="ab-state ab-state--error" role="alert">
+      <h3>{{ 'Erro'|t }}</h3>
+      <p>{{ error }}</p>
+    </div>
+  {% elseif items %}
+    <ul class="ab-memory-items">
+      {% for item in items %}
+        <li class="ab-card">
+          <a href="{{ item.url }}">{{ item.title }}</a>
+          <span class="ab-memory-status">{{ item.status }}</span>
+          <span class="ab-memory-kind">{{ item.kind }}</span>
+          <span class="ab-memory-source">{{ item.source }}</span>
+          <span class="ab-memory-revision">{{ item.revision }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% elseif filter_empty %}
+    <div class="ab-state ab-state--empty" role="status">
+      <h3>{{ 'Nenhum resultado'|t }}</h3>
+      <p>{{ 'Nenhuma memória com este filtro.'|t }}</p>
+    </div>
+  {% elseif workspace_label %}
+    <div class="ab-state ab-state--empty" role="status">
+      <h3>{{ 'Vazio'|t }}</h3>
+      <p>{{ empty }}</p>
+    </div>
+  {% endif %}
+</div>

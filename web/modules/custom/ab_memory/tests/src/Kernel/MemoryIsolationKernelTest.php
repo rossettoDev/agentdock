@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\ab_memory\Kernel;
 
+use Drupal\ab_agent\AgentAccessDeniedException;
 use Drupal\ab_agent\AgentGrantManager;
 use Drupal\ab_agent\AgentManager;
 use Drupal\ab_agent\AgentTokenManager;
@@ -148,6 +149,59 @@ class MemoryIsolationKernelTest extends KernelTestBase {
     catch (ScopedResourceNotFoundException) {
       $this->assertSame(0, $this->memory()->countVisible($actor));
     }
+  }
+
+  /**
+   * Count and list require memory:read on a usable token, not only a grant.
+   */
+  public function testCountRequiresMemoryReadScope(): void {
+    [$ada, $workspace, $board] = $this->fixture('Escopo');
+    $human = $this->human($ada, $workspace);
+    $this->setCurrentUser($ada);
+    $agent = $this->agents()->create($workspace, 'SemMemoria', '', '', TRUE, 1);
+    $this->grants()->grant($agent, $board, [WorkspacePermission::READ, WorkspacePermission::WRITE]);
+    $narrow = $this->tokens()->issue($agent, [
+      AgentTokenScope::TASKS_READ,
+    ]);
+    $actor = new ActorContext(
+      ActorContext::TYPE_AGENT,
+      (string) $agent->uuid(),
+      (string) $workspace->uuid(),
+      [],
+      $narrow->publicId,
+    );
+    $created = $this->memory()->createDraft($human, [
+      'title' => 'Publicável',
+      'content_markdown' => 'Corpo.',
+      'kind' => 'fact',
+      'board_id' => (string) $board->uuid(),
+    ]);
+    $published = $this->memory()->publish($human, $created->uuid, $created->version);
+    $this->assertSame(0, $this->memory()->countVisible($actor));
+    $this->assertSame([], $this->memory()->listVisible($actor));
+    try {
+      $this->memory()->get($actor, $published->uuid);
+      $this->fail('An agent without memory:read loaded an entry.');
+    }
+    catch (AgentAccessDeniedException) {
+      $this->assertSame(0, $this->memory()->countVisible($actor));
+    }
+
+    $this->tokens()->revoke($agent, $narrow->publicId);
+    $wide = $this->tokens()->issue($agent, [
+      AgentTokenScope::MEMORY_READ,
+    ]);
+    $reader = new ActorContext(
+      ActorContext::TYPE_AGENT,
+      (string) $agent->uuid(),
+      (string) $workspace->uuid(),
+      [],
+      $wide->publicId,
+    );
+    $this->assertSame(1, $this->memory()->countVisible($reader));
+    $listed = $this->memory()->listVisible($reader);
+    $this->assertCount(1, $listed);
+    $this->assertSame($published->uuid, $listed[0]->uuid);
   }
 
   /**

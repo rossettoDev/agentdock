@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\ab_memory;
 
+use Drupal\ab_agent\AgentAccessDeniedException;
 use Drupal\ab_board\Entity\Board;
 use Drupal\ab_board\Entity\Task;
 use Drupal\ab_core\Authorization\ActorContext;
@@ -331,6 +332,9 @@ class MemoryService {
 
   /**
    * Counts entries the actor may discover without widening grants.
+   *
+   * Agents use the same gate as get(): board grant read, memory:read and a
+   * usable token. Boards that fail the gate are omitted from the count.
    */
   public function countVisible(ActorContext $actor): int {
     $workspace = $this->workspaceOfActor($actor);
@@ -344,16 +348,125 @@ class MemoryService {
     if (!$actor->allows(WorkspacePermission::READ)) {
       throw new ScopedOperationDeniedException();
     }
+    return (int) $this->database->select('ab_memory_entry', 'e')
+      ->condition('e.workspace', (int) $workspace->id())
+      ->condition('e.status', $this->humanListStatuses($actor), 'IN')
+      ->countQuery()
+      ->execute()
+      ->fetchField();
+  }
+
+  /**
+   * Lists entries the actor may discover, newest first.
+   *
+   * @param \Drupal\ab_core\Authorization\ActorContext $actor
+   *   Authenticated actor.
+   * @param array{status?: string, kind?: string, q?: string} $filters
+   *   Optional status, kind and title query. Status must be allowed for the
+   *   actor; unknown values yield an empty list.
+   * @param int $limit
+   *   Maximum entries to return.
+   *
+   * @return list<\Drupal\ab_memory\MemoryRecord>
+   *   Visible records.
+   */
+  public function listVisible(ActorContext $actor, array $filters = [], int $limit = 50): array {
+    $workspace = $this->workspaceOfActor($actor);
+    $statusFilter = isset($filters['status']) && is_string($filters['status'])
+      ? $filters['status']
+      : '';
+    $kind = isset($filters['kind']) && is_string($filters['kind']) ? $filters['kind'] : NULL;
+    $query = isset($filters['q']) && is_string($filters['q']) ? trim($filters['q']) : NULL;
+    if ($query === '') {
+      $query = NULL;
+    }
+    if ($kind !== NULL && $kind !== '' && !in_array($kind, self::KINDS, TRUE)) {
+      return [];
+    }
+    if ($actor->actorType === ActorContext::TYPE_AGENT) {
+      $statuses = ['published', 'archived'];
+      if ($statusFilter !== '') {
+        if (!in_array($statusFilter, $statuses, TRUE)) {
+          return [];
+        }
+        $statuses = [$statusFilter];
+      }
+      $boards = $this->access->readableBoardIds($actor, (int) $workspace->id());
+      $uuids = $this->repository->uuidsForBoards(
+        (int) $workspace->id(),
+        $boards,
+        $statuses,
+        $limit,
+        $kind !== '' ? $kind : NULL,
+        $query,
+      );
+      return $this->recordsForUuids($actor, $uuids);
+    }
+    if (!$actor->allows(WorkspacePermission::READ)) {
+      throw new ScopedOperationDeniedException();
+    }
+    $statuses = $this->humanListStatuses($actor);
+    if ($statusFilter !== '') {
+      if (!in_array($statusFilter, $statuses, TRUE)) {
+        return [];
+      }
+      $statuses = [$statusFilter];
+    }
+    $uuids = $this->repository->uuidsForWorkspace(
+      (int) $workspace->id(),
+      $statuses,
+      $limit,
+      $kind !== '' ? $kind : NULL,
+      $query,
+    );
+    $records = [];
+    foreach ($uuids as $uuid) {
+      try {
+        $records[] = $this->loadRecord($actor, (string) $uuid);
+      }
+      catch (ScopedOperationDeniedException | ScopedResourceNotFoundException) {
+        // Own-draft / review rules may hide a row the broad status query found.
+      }
+    }
+    return $records;
+  }
+
+  /**
+   * Statuses a human may discover in list and count.
+   *
+   * @return string[]
+   *   Allowed status values.
+   */
+  private function humanListStatuses(ActorContext $actor): array {
     $statuses = ['published', 'archived'];
     if ($actor->allows(WorkspacePermission::REVIEW) || $actor->allows(WorkspacePermission::WRITE)) {
       $statuses[] = 'draft';
     }
-    return (int) $this->database->select('ab_memory_entry', 'e')
-      ->condition('e.workspace', (int) $workspace->id())
-      ->condition('e.status', $statuses, 'IN')
-      ->countQuery()
-      ->execute()
-      ->fetchField();
+    return $statuses;
+  }
+
+  /**
+   * Loads records for UUIDs that already passed discovery filters.
+   *
+   * @param \Drupal\ab_core\Authorization\ActorContext $actor
+   *   Authenticated actor.
+   * @param string[] $uuids
+   *   Entry UUIDs.
+   *
+   * @return list<\Drupal\ab_memory\MemoryRecord>
+   *   Visible records.
+   */
+  private function recordsForUuids(ActorContext $actor, array $uuids): array {
+    $records = [];
+    foreach ($uuids as $uuid) {
+      try {
+        $records[] = $this->loadRecord($actor, (string) $uuid);
+      }
+      catch (ScopedOperationDeniedException | ScopedResourceNotFoundException | AgentAccessDeniedException) {
+        // Gate may have changed between list and load.
+      }
+    }
+    return $records;
   }
 
   /**

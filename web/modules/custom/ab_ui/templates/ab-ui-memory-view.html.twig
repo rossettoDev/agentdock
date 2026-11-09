@@ -1,0 +1,29 @@
+{#
+/**
+ * @file
+ * Shows one memory entry with status, origin and current revision.
+ */
+#}
+<article class="ab-memory-view">
+  <h2>{{ title }}</h2>
+  <p class="ab-memory-status">{{ status }}</p>
+  <p class="ab-memory-kind">{{ kind }}</p>
+  <p class="ab-memory-source">{{ 'Origem: @source'|t({'@source': source}) }}</p>
+  <p class="ab-memory-revision">{{ revision }}</p>
+  <p class="ab-memory-version">{{ 'Versão @n'|t({'@n': version}) }}</p>
+  {% if tags %}
+    <ul class="ab-memory-tags" aria-label="{{ 'Tags'|t }}">
+      {% for tag in tags %}
+        <li>{{ tag }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  {% if body %}
+    <div class="ab-memory-body">
+      {{ body }}
+    </div>
+  {% endif %}
+  {% if back_url %}
+    <p><a href="{{ back_url }}">{{ 'Voltar à memória'|t }}</a></p>
+  {% endif %}
+</article>

@@ -90,6 +90,35 @@ final class AbUiHooks {
           'archive_form' => NULL,
         ],
       ],
+      'ab_ui_memory_list' => [
+        'variables' => [
+          'workspace_label' => NULL,
+          'items' => [],
+          'filters' => [],
+          'status' => '',
+          'kind' => '',
+          'q' => '',
+          'list_url' => '',
+          'filter_empty' => FALSE,
+          'loading' => FALSE,
+          'error' => '',
+          'empty' => '',
+          'count' => 0,
+        ],
+      ],
+      'ab_ui_memory_view' => [
+        'variables' => [
+          'title' => '',
+          'status' => '',
+          'kind' => '',
+          'source' => '',
+          'revision' => '',
+          'version' => '',
+          'tags' => [],
+          'body' => [],
+          'back_url' => '',
+        ],
+      ],
       'ab_ui_agent_list' => [
         'variables' => [
           'workspace_label' => NULL,
@@ -435,6 +464,15 @@ final class AbUiHooks {
       'icon' => 'message',
     ];
     $items[] = [
+      'label' => (string) $this->t('Memória'),
+      'url' => Url::fromRoute('ab_ui.memory')->toString(),
+      'active' => in_array($route, [
+        'ab_ui.memory',
+        'ab_ui.memory_view',
+      ], TRUE),
+      'icon' => 'board',
+    ];
+    $items[] = [
       'label' => (string) $this->t('Agentes'),
       'url' => Url::fromRoute('ab_ui.agents')->toString(),
       'active' => in_array($route, [
@@ -611,6 +649,9 @@ final class AbUiHooks {
     ];
     if (in_array($route, $conversation, TRUE)) {
       $links = [Link::createFromRoute($this->t('Conversas'), 'ab_ui.conversations')];
+    }
+    if (in_array($route, ['ab_ui.memory_view'], TRUE)) {
+      $links = [Link::createFromRoute($this->t('Memória'), 'ab_ui.memory')];
     }
     if (in_array($route, ['ab_ui.agent_add', 'ab_ui.agent_view'], TRUE)) {
       $links = [Link::createFromRoute($this->t('Agentes'), 'ab_ui.agents')];

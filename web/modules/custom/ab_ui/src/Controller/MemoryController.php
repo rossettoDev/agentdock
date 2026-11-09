@@ -12,10 +12,13 @@ use Drupal\ab_core\Authorization\WorkspacePermission;
 use Drupal\ab_core\Entity\Workspace;
 use Drupal\ab_memory\MemoryRecord;
 use Drupal\ab_memory\MemoryService;
+use Drupal\ab_ui\Form\MemoryStatusForm;
+use Drupal\ab_ui\MemoryDiff;
 use Drupal\ab_ui\TaskMarkdown;
 use Drupal\ab_ui\WorkspaceContext;
 use Drupal\Core\DependencyInjection\AutowireTrait;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
+use Drupal\Core\Form\FormBuilderInterface;
 use Drupal\Core\Http\Exception\CacheableAccessDeniedHttpException;
 use Drupal\Core\Http\Exception\CacheableNotFoundHttpException;
 use Drupal\Core\Cache\CacheableMetadata;
@@ -41,6 +44,8 @@ final class MemoryController implements ContainerInjectionInterface {
     private readonly WorkspaceContext $context,
     private readonly MembershipScope $scope,
     private readonly TaskMarkdown $markdown,
+    private readonly MemoryDiff $diff,
+    private readonly FormBuilderInterface $formBuilder,
     private readonly AccountInterface $currentUser,
   ) {}
 
@@ -56,6 +61,7 @@ final class MemoryController implements ContainerInjectionInterface {
       return [
         '#theme' => 'ab_ui_memory_list',
         '#workspace_label' => NULL,
+        '#add_url' => '',
         '#items' => [],
         '#filters' => [],
         '#status' => '',
@@ -92,6 +98,7 @@ final class MemoryController implements ContainerInjectionInterface {
       return [
         '#theme' => 'ab_ui_memory_list',
         '#workspace_label' => (string) $workspace->label(),
+        '#add_url' => '',
         '#items' => [],
         '#filters' => [],
         '#status' => $status,
@@ -109,6 +116,7 @@ final class MemoryController implements ContainerInjectionInterface {
     foreach ($records as $record) {
       $items[] = $this->listItem($record);
     }
+    $can_write = $this->scope->allows($this->currentUser, $workspace, WorkspacePermission::WRITE);
     $cache = $this->cacheMeta($workspace);
     $cache['contexts'][] = 'url.query_args:status';
     $cache['contexts'][] = 'url.query_args:kind';
@@ -116,6 +124,7 @@ final class MemoryController implements ContainerInjectionInterface {
     return [
       '#theme' => 'ab_ui_memory_list',
       '#workspace_label' => (string) $workspace->label(),
+      '#add_url' => $can_write ? Url::fromRoute('ab_ui.memory_add')->toString() : '',
       '#items' => $items,
       '#filters' => $this->filterLinks($status, $kind, $q),
       '#status' => $status,
@@ -137,7 +146,7 @@ final class MemoryController implements ContainerInjectionInterface {
    * @return array<string, mixed>
    *   A render array.
    */
-  public function view(string $uuid): array {
+  public function view(string $uuid, Request $request): array {
     $workspace = $this->context->workspace();
     if (!$workspace instanceof Workspace) {
       throw new CacheableNotFoundHttpException($this->notFoundCache());
@@ -148,6 +157,7 @@ final class MemoryController implements ContainerInjectionInterface {
     $actor = $this->actors->create($workspace);
     try {
       $record = $this->memory->get($actor, $uuid);
+      $revisions = $this->memory->listRevisions($actor, $uuid);
     }
     catch (ScopedResourceNotFoundException) {
       throw new CacheableNotFoundHttpException($this->notFoundCache($workspace));
@@ -155,7 +165,28 @@ final class MemoryController implements ContainerInjectionInterface {
     catch (ScopedOperationDeniedException) {
       throw new CacheableAccessDeniedHttpException($this->notFoundCache($workspace), 'Access denied.');
     }
+    $from = $this->revisionQuery($request, 'from', $revisions);
+    $to = $this->revisionQuery($request, 'to', $revisions);
+    if ($from === 0 && $to === 0 && count($revisions) >= 2) {
+      $to = (int) $revisions[0]['version'];
+      $from = (int) $revisions[1]['version'];
+    }
+    $diff = [];
+    $fromBody = $this->revisionBody($revisions, $from);
+    $toBody = $this->revisionBody($revisions, $to);
+    if ($fromBody !== NULL && $toBody !== NULL && $from !== $to) {
+      $diff = $this->diff->table(
+        $fromBody,
+        $toBody,
+        (string) $this->t('Revisão @n', ['@n' => $from]),
+        (string) $this->t('Revisão @n', ['@n' => $to]),
+      );
+    }
     $body = $this->markdown->render($record->contentMarkdown);
+    $can_write = $this->scope->allows($this->currentUser, $workspace, WorkspacePermission::WRITE);
+    $cache = $this->cacheMeta($workspace);
+    $cache['contexts'][] = 'url.query_args:from';
+    $cache['contexts'][] = 'url.query_args:to';
     return [
       '#theme' => 'ab_ui_memory_view',
       '#title' => $record->title,
@@ -166,8 +197,15 @@ final class MemoryController implements ContainerInjectionInterface {
       '#version' => (string) $record->version,
       '#tags' => $record->tags,
       '#body' => $body !== '' ? ['#markup' => $body] : [],
+      '#edit_url' => ($can_write && $record->status === 'draft')
+        ? Url::fromRoute('ab_ui.memory_edit', ['uuid' => $record->uuid])->toString()
+        : '',
+      '#status_form' => $this->formBuilder->getForm(MemoryStatusForm::class, $record->uuid),
+      '#revisions' => $this->revisionItems($record->uuid, $revisions, $from, $to),
+      '#diff' => $diff,
+      '#diff_empty' => $from !== $to && $diff === [],
       '#back_url' => Url::fromRoute('ab_ui.memory')->toString(),
-      '#cache' => $this->cacheMeta($workspace),
+      '#cache' => $cache,
     ];
   }
 
@@ -188,6 +226,88 @@ final class MemoryController implements ContainerInjectionInterface {
       'source' => $this->sourceLabel($record->sourceType, $record->sourceId),
       'revision' => (string) $this->t('Revisão @n', ['@n' => $record->revisionVersion]),
     ];
+  }
+
+  /**
+   * Builds revision navigation links.
+   *
+   * @param string $uuid
+   *   Memory entry UUID.
+   * @param list<array<string, mixed>> $revisions
+   *   Revision rows newest first.
+   * @param int $from
+   *   Selected left revision number.
+   * @param int $to
+   *   Selected right revision number.
+   *
+   * @return list<array<string, mixed>>
+   *   Theme items.
+   */
+  private function revisionItems(string $uuid, array $revisions, int $from, int $to): array {
+    $items = [];
+    foreach ($revisions as $row) {
+      $version = (int) $row['version'];
+      $items[] = [
+        'label' => (string) $this->t('Revisão @n', ['@n' => $version]),
+        'reason' => $row['change_reason'] !== NULL ? (string) $row['change_reason'] : '',
+        'author' => (string) $row['author_type'] . ':' . (string) $row['author_id'],
+        'url' => Url::fromRoute('ab_ui.memory_view', ['uuid' => $uuid], [
+          'query' => [
+            'from' => $from > 0 ? $from : max(1, $version - 1),
+            'to' => $version,
+          ],
+        ])->toString(),
+        'current' => $version === $to,
+      ];
+    }
+    return $items;
+  }
+
+  /**
+   * Reads a revision number query argument.
+   *
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   Current request.
+   * @param string $key
+   *   Query key (from or to).
+   * @param list<array<string, mixed>> $revisions
+   *   Known revisions.
+   */
+  private function revisionQuery(Request $request, string $key, array $revisions): int {
+    $value = $request->query->get($key, '');
+    if (!is_string($value) && !is_int($value)) {
+      return 0;
+    }
+    $version = (int) $value;
+    if ($version < 1) {
+      return 0;
+    }
+    foreach ($revisions as $row) {
+      if ((int) $row['version'] === $version) {
+        return $version;
+      }
+    }
+    return 0;
+  }
+
+  /**
+   * Finds markdown for one revision number.
+   *
+   * @param list<array<string, mixed>> $revisions
+   *   Revision rows.
+   * @param int $version
+   *   Revision number.
+   */
+  private function revisionBody(array $revisions, int $version): ?string {
+    if ($version < 1) {
+      return NULL;
+    }
+    foreach ($revisions as $row) {
+      if ((int) $row['version'] === $version) {
+        return (string) $row['content_markdown'];
+      }
+    }
+    return NULL;
   }
 
   /**

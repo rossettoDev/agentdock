@@ -3555,42 +3555,49 @@ Sem rotas HTTP, MCP, UI, índice lexical ou embeddings. Residual do gate em `cou
 
 ### F2-US-32 — Central de Memória
 
-**Status:** in progress (T01 done)
-**Objetivo:** UI humana de listagem/leitura; depois draft/diff e publish/archive.
+**Status:** done
+**Objetivo:** UI humana de listagem/leitura, draft/diff e publish/archive com navegação de revisões.
 
 #### F2-US-32/T01 — Gate na contagem + listar/filtrar/abrir
 
 **Status:** done
 **Entrega:** `readableBoardIds` / `countVisible` / `listVisible` passam pelo `AgentOperationGate` (`memory:read` + token válido). `MemoryController` em `/memory` e `/memory/{uuid}` com filtros, estados vazio/erro/loading, Markdown sanitizado na abertura e cache tag `ab_workspace_memory:{id}`. `ab_ui` depende de `ab_memory`; item Memória no shell.
 
+#### F2-US-32/T02 — Criar/editar rascunho + diff
+
+**Status:** done
+**Entrega:** `MemoryDraftCreateForm` (`/memory/add`) e `MemoryDraftEditForm` (`/memory/{uuid}/edit`) com ActorContext, versão oculta e `MemoryDiff` (core Diff + `system/diff`). Markdown sanitizado via `TaskMarkdown`.
+
+#### F2-US-32/T03 — Publicar/arquivar + navegar versões
+
+**Status:** done
+**Entrega:** `MemoryStatusForm` (REVIEW: Publicar/Arquivar); lista de revisões e diff `?from=&to=` na view. Viewer sem WRITE/REVIEW não cria nem publica. Eventos `memory.*` via serviço.
+
 **Validação:**
 
 ```text
 $ lando exec appserver -- env SIMPLETEST_DB=... SIMPLETEST_BASE_URL=http://appserver \
     php vendor/bin/phpunit \
-    web/modules/custom/ab_memory/tests/src/Unit/MemoryContentGuardTest.php \
-    web/modules/custom/ab_memory/tests/src/Kernel/MemorySchemaKernelTest.php \
-    web/modules/custom/ab_memory/tests/src/Kernel/MemoryServiceKernelTest.php \
     web/modules/custom/ab_memory/tests/src/Kernel/MemoryIsolationKernelTest.php \
     web/modules/custom/ab_ui/tests/src/Functional/MemoryUiTest.php
-OK (17 tests, 287 assertions)
+OK (6 tests, 214 assertions)
 
 $ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,yml \
-    web/modules/custom/ab_memory/src/MemoryAccessPolicy.php \
-    web/modules/custom/ab_memory/src/MemoryService.php \
-    web/modules/custom/ab_memory/src/MemoryRepository.php \
     web/modules/custom/ab_ui/src/Controller/MemoryController.php \
+    web/modules/custom/ab_ui/src/Form/MemoryDraftCreateForm.php \
+    web/modules/custom/ab_ui/src/Form/MemoryDraftEditForm.php \
+    web/modules/custom/ab_ui/src/Form/MemoryStatusForm.php \
+    web/modules/custom/ab_ui/src/MemoryDiff.php \
     web/modules/custom/ab_ui/src/Hook/AbUiHooks.php \
-    web/modules/custom/ab_ui/ab_ui.info.yml \
+    web/modules/custom/ab_ui/ab_ui.services.yml \
     web/modules/custom/ab_ui/ab_ui.routing.yml \
-    web/modules/custom/ab_ui/tests/src/Functional/MemoryUiTest.php \
-    web/modules/custom/ab_memory/tests/src/Kernel/MemoryIsolationKernelTest.php
+    web/modules/custom/ab_ui/tests/src/Functional/MemoryUiTest.php
 (exit 0)
 ```
 
-**Bloqueios:** nenhum para F2-US-32/T02.
+**Bloqueios:** nenhum para F2-US-33.
 
-**Próxima ação:** F2-US-32/T02, somente após autorização.
+**Próxima ação:** F2-US-33/T01, somente após autorização.
 
 ---
 
@@ -3598,7 +3605,7 @@ $ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,y
 
 - **Total de tasks do backlog M0–M8:** 83, todas registradas como done no corpo histórico
 - **M9:** US-29 done; US-30 done; US-31 done; US-32 done; US-33 done; US-37 done; US-34 em diante todo
-- **Fase 2:** F2-US-29 done; F2-US-30 done; F2-US-31 done; F2-US-32/T01 done; F2-US-32/T02 em diante todo
+- **Fase 2:** F2-US-29 done; F2-US-30 done; F2-US-31 done; F2-US-32 done (T01–T03); F2-US-33 em diante todo
 - **M0:** US-01, US-02 e US-03 registradas como done no corpo deste documento
 - **M1:** US-04 done; US-05 done; US-06 done
 - **M2:** US-07 done; US-08 done; US-09 done; US-10 done; US-11 done
@@ -3613,7 +3620,7 @@ $ lando php vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,y
 
 ## Próximos Passos
 
-1. Fase 2, aguardando autorização: F2-US-32/T02 — criar/editar rascunho e diff.
+1. Fase 2, aguardando autorização: F2-US-33/T01 — API de memória (busca/leitura).
 2. M9 segue no histórico; a UI de colunas (US-38) já está done.
 
 ---
